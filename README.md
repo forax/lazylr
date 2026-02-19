@@ -1,2 +1,3 @@
-# lazy_lalr
-A dynamic parser that parse LALR(1) grammar
+# lazylr
+A dynamic LR parser
+
