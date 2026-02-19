@@ -38,7 +38,6 @@ final class LRAlgorithm {
 
         for (var production : grammar.productionsFor(nonTerminal)) {
           // Create the new Item.
-          // Note: In LR(1), lookaheads are part of the Item's identity.
           var newItem = new Item(production, 0, nextLookaheads);
 
           // If this exact item (including lookaheads) isn't in the closure, add it

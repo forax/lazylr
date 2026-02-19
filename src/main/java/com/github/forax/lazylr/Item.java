@@ -34,7 +34,9 @@ record Item(Production production, int dotPosition, Set<Terminal> lookaheads) {
 
   @Override
   public String toString() {
-    var joiner = new StringJoiner(" ", production.head().name() + " -> ", " " + lookaheads);
+    var joiner = new StringJoiner(" ",
+        production.head().name() + " -> ",
+        " " + lookaheads.stream().map(Terminal::name).sorted().toList());
     var body = production.body();
     for( var i = 0; i < body.size(); i++ ) {
       if (i == dotPosition) {
