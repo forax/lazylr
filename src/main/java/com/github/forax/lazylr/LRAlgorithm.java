@@ -36,7 +36,7 @@ final class LRAlgorithm {
         // Calculate FIRST(βa)
         var nextLookaheads = calculateNextLookaheads(item);
 
-        for (var production : grammar.getProductionsFor(nonTerminal)) {
+        for (var production : grammar.productionsFor(nonTerminal)) {
           // Create the new Item.
           // Note: In LR(1), lookaheads are part of the Item's identity.
           var newItem = new Item(production, 0, nextLookaheads);

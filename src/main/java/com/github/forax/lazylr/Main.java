@@ -2,7 +2,6 @@ package com.github.forax.lazylr;
 
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
 
 public class Main {
   static void main() {
@@ -16,7 +15,7 @@ public class Main {
     var prod_plus = new Production(E, List.of(E, plus, E));
     var prod_mult = new Production(E, List.of(E, mul, E));
     var prod_id = new Production(E, List.of(id));
-    var grammar = new Grammar(E, Set.of(prod_plus, prod_mult, prod_id));
+    var grammar = new Grammar(E, List.of(prod_plus, prod_mult, prod_id));
 
     // 3. Define Precedences
     var precedence = Map.<PrecedenceEntity, Precedence>of(
