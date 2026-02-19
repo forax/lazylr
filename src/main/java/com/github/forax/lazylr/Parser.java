@@ -134,7 +134,7 @@ public final class Parser {
               return;
             }
             var subList = stack.subList(stack.size() - production.body().size(), stack.size());
-            var result = evaluator.evaluate(production, Collections.unmodifiableList(subList));
+            var result = evaluator.evaluate(production, Collections.unmodifiableList(new ArrayList<>(subList)));
             subList.clear();
             stack.add(result);
           }
