@@ -4,12 +4,15 @@ import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
 import java.util.Objects;
+import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Stream;
 
 public final class Parser {
   private final LRTransitionEngine engine;
@@ -17,7 +20,7 @@ public final class Parser {
   private final Production startProduction;
   private final Map<PrecedenceEntity, Precedence> precedenceMap;
 
-  Parser(LRTransitionEngine engine, State initialState, Production startProduction, Map<PrecedenceEntity, Precedence> precedenceMap) {
+  private Parser(LRTransitionEngine engine, State initialState, Production startProduction, Map<PrecedenceEntity, Precedence> precedenceMap) {
     this.engine = engine;
     this.initialState = initialState;
     this.startProduction = startProduction;
@@ -27,13 +30,16 @@ public final class Parser {
 
   public static Parser createParser(Grammar grammar, Map<PrecedenceEntity, Precedence> precedenceMap) {
     Objects.requireNonNull(grammar);
-    precedenceMap = Map.copyOf(precedenceMap);
+    Objects.requireNonNull(precedenceMap);
 
-    // 1. Compute FIRST and FOLLOW sets
+    // Complete the precedence map by computing the precedence of the production if necessary
+    precedenceMap = complete(grammar, precedenceMap);
+
+    // Compute FIRST and FOLLOW sets
     var firstSets = LRAlgorithm.computeFirstSets(grammar);
     //var followSets = LRAlgorithm.computeFollowSets(grammar, firstSets);
 
-    // 2. Prepare the Initial State (S' -> . S $)
+    // Prepare the Initial State (S' -> . S $)
     // We create an "Augmented" production to represent the entry point
     var augmentedStart = new NonTerminal(grammar.startSymbol().name() + "'");
     var startProd = new Production(augmentedStart, List.of(grammar.startSymbol()));
@@ -41,16 +47,36 @@ public final class Parser {
     // Initial Item: [S' -> . S, { $ }]
     var startItem = new Item(startProd, 0, Set.of(Terminal.EOF));
 
-    // 3. Initialize the LALR Builder and Transition Engine
+    // Initialize the LALR Builder and Transition Engine
     var algorithm = new LRAlgorithm(grammar, firstSets);
     var engine = new LRTransitionEngine(algorithm);
 
-    // 4. Compute the Closure of the initial item to create State 0
+    // Compute the Closure of the initial item to create State 0
     var initialItems = algorithm.computeClosure(Set.of(startItem));
     var initialState = new State(initialItems);
 
-    // 5. Create the Parser
+    // Create the Parser
     return new Parser(engine, initialState, startProd, precedenceMap);
+  }
+
+  private static Precedence computePrecedence(Production production, Map<PrecedenceEntity, Precedence> precedenceMap) {
+    // inherits from the precedence of the last terminal of the production
+    return production.body().reversed().stream()
+        .flatMap(s -> switch(s) {
+          case Terminal t -> Stream.of(t);
+          case NonTerminal _ -> null;
+        })
+        .findFirst()
+        .flatMap(terminal -> Optional.ofNullable(precedenceMap.get(terminal)))
+        .orElseGet(() -> new Precedence(0, Precedence.Associativity.LEFT));
+  }
+
+  private static Map<PrecedenceEntity, Precedence> complete(Grammar grammar, Map<PrecedenceEntity, Precedence> precedenceMap) {
+    var newPrecedenceMap = new HashMap<>(precedenceMap);
+    for(var production : grammar.productions()) {
+      newPrecedenceMap.computeIfAbsent(production, _ -> computePrecedence(production, newPrecedenceMap));
+    }
+    return newPrecedenceMap;
   }
 
   private Item bestCandidateForReduction(List<Item> possibleReductions) {
@@ -60,13 +86,13 @@ public final class Parser {
       default -> possibleReductions.stream()
           .max(Comparator.comparingInt(i -> {
             var precedence = precedenceMap.get(i.production());
-            return precedence == null? 0 : precedence.level();
+            return precedence.level();
           }))
           .orElseThrow();
     };
   }
 
-  private static Iterator<Terminal> wrapAndAppendEOF(Iterator<Terminal> iterator) {
+  private static Iterator<Terminal> wrapAndAppendEOF(Iterator<? extends Terminal> iterator) {
     return new Iterator<>() {
       private boolean eofSeen;
 

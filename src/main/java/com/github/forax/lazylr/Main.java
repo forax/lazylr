@@ -12,17 +12,16 @@ public class Main {
     var id = new Terminal("id");
 
     // 2. Define Grammar: E -> E + E | E * E | id
-    var prod_plus = new Production(E, List.of(E, plus, E));
-    var prod_mult = new Production(E, List.of(E, mul, E));
-    var prod_id = new Production(E, List.of(id));
-    var grammar = new Grammar(E, List.of(prod_plus, prod_mult, prod_id));
+    var grammar = new Grammar(E, List.of(
+        new Production(E, List.of(E, plus, E)),
+        new Production(E, List.of(E, mul, E)),
+        new Production(E, List.of(id))
+    ));
 
     // 3. Define Precedences
     var precedence = Map.<PrecedenceEntity, Precedence>of(
         plus, new Precedence(10, Precedence.Associativity.LEFT),
-        mul, new Precedence(20, Precedence.Associativity.LEFT),
-        prod_plus, new Precedence(10, Precedence.Associativity.LEFT),
-        prod_mult, new Precedence(20, Precedence.Associativity.LEFT)
+        mul, new Precedence(20, Precedence.Associativity.LEFT)
     );
 
     // 4. Create the Parser
@@ -30,9 +29,9 @@ public class Main {
 
     // 5. Create the Lexer
     var lexer = Lexer.createLexer( List.of(
-        new Rule("id", "[a-z]+"),
         new Rule("+", "\\+"),
-        new Rule("*", "\\*")));
+        new Rule("*", "\\*"),
+        new Rule("id", "[a-z]+")));
 
     // 6. Define The Syntax Tree
     interface Expr {}
@@ -63,6 +62,6 @@ public class Main {
       }
     });
 
-    System.out.println(result);
+    IO.println(result);
   }
 }
