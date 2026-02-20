@@ -1,7 +1,6 @@
 package com.github.forax.lazylr;
 
 import java.util.Objects;
-import java.util.Set;
 import java.util.List;
 import java.util.StringJoiner;
 
@@ -12,6 +11,19 @@ record Item(Production production, int dotPosition, Terminal lookahead) {
       throw new IllegalArgumentException("Dot position must be between 0 and body size");
     }
     Objects.requireNonNull(lookahead);
+  }
+
+  @Override
+  public boolean equals(Object o) {
+    return o instanceof Item item &&
+        production == item.production &&    // production are unique
+        dotPosition == item.dotPosition &&
+        lookahead.equals(item.lookahead);
+  }
+
+  @Override
+  public int hashCode() {
+    return (System.identityHashCode(production) * 31 + dotPosition) * 31 + lookahead.hashCode();
   }
 
   public Symbol getNextSymbol() {
