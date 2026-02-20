@@ -448,4 +448,134 @@ public final class ParserTest {
         """, parse(grammar, precedence,
         List.of(id, mul, id, div, id, plus, id, sub, id)));
   }
+
+  @Test
+  public void jsonTest() {
+    // Terminals
+    var objStart = new Terminal("{");
+    var objEnd   = new Terminal("}");
+    var arrStart = new Terminal("[");
+    var arrEnd   = new Terminal("]");
+    var comma    = new Terminal(",");
+    var colon    = new Terminal(":");
+    var string   = new Terminal("STRING");
+    var number   = new Terminal("NUMBER");
+    var boolTrue = new Terminal("true");
+    var boolFalse= new Terminal("false");
+    var nullVal  = new Terminal("null");
+
+    // Non-Terminals
+    var Value    = new NonTerminal("Value");
+    var Object   = new NonTerminal("Object");
+    var Array    = new NonTerminal("Array");
+    var Members  = new NonTerminal("Members");
+    var Elements = new NonTerminal("Elements");
+    var Pair     = new NonTerminal("Pair");
+
+    var grammar = new Grammar(Value, List.of(
+        new Production(Value, List.of(Object)),
+        new Production(Value, List.of(Array)),
+        new Production(Value, List.of(string)),
+        new Production(Value, List.of(number)),
+        new Production(Value, List.of(boolTrue)),
+        new Production(Value, List.of(boolFalse)),
+        new Production(Value, List.of(nullVal)),
+
+        new Production(Object,  List.of(objStart, objEnd)),
+        new Production(Object,  List.of(objStart, Members, objEnd)),
+        new Production(Pair,    List.of(string, colon, Value)),
+        new Production(Members, List.of(Pair)),
+        new Production(Members, List.of(Members, comma, Pair)),
+
+        new Production(Array,    List.of(arrStart, arrEnd)),
+        new Production(Array,    List.of(arrStart, Elements, arrEnd)),
+        new Production(Elements, List.of(Value)),
+        new Production(Elements, List.of(Elements, comma, Value))
+    ));
+
+    var precedence = Map.<PrecedenceEntity, Precedence>of();
+
+    // Input: {"a": [false, {"b": [true, null, 123]}, "nested"], "c": {"d": {}}}
+    var input = List.of(
+        objStart,
+        string, colon, arrStart,
+        boolFalse, comma,
+        objStart,
+        string, colon, arrStart,
+        boolTrue, comma, nullVal, comma, number,
+        arrEnd,
+        objEnd, comma,
+        string,
+        arrEnd, comma,
+        string, colon, objStart,
+        string, colon, objStart, objEnd,
+        objEnd,
+        objEnd
+    );
+
+    assertEquals("""
+        Shift {
+        Shift STRING
+        Shift :
+        Shift [
+        Shift false
+        Reduce Value : false
+        Reduce Elements : Value
+        Shift ,
+        Shift {
+        Shift STRING
+        Shift :
+        Shift [
+        Shift true
+        Reduce Value : true
+        Reduce Elements : Value
+        Shift ,
+        Shift null
+        Reduce Value : null
+        Reduce Elements : Elements , Value
+        Shift ,
+        Shift NUMBER
+        Reduce Value : NUMBER
+        Reduce Elements : Elements , Value
+        Shift ]
+        Reduce Array : [ Elements ]
+        Reduce Value : Array
+        Reduce Pair : STRING : Value
+        Reduce Members : Pair
+        Shift }
+        Reduce Object : { Members }
+        Reduce Value : Object
+        Reduce Elements : Elements , Value
+        Shift ,
+        Shift STRING
+        Reduce Value : STRING
+        Reduce Elements : Elements , Value
+        Shift ]
+        Reduce Array : [ Elements ]
+        Reduce Value : Array
+        Reduce Pair : STRING : Value
+        Reduce Members : Pair
+        Shift ,
+        Shift STRING
+        Shift :
+        Shift {
+        Shift STRING
+        Shift :
+        Shift {
+        Shift }
+        Reduce Object : { }
+        Reduce Value : Object
+        Reduce Pair : STRING : Value
+        Reduce Members : Pair
+        Shift }
+        Reduce Object : { Members }
+        Reduce Value : Object
+        Reduce Pair : STRING : Value
+        Reduce Members : Members , Pair
+        Shift }
+        Reduce Object : { Members }
+        Reduce Value : Object
+        Reduce Value' : Value
+        """, parse(grammar, precedence, input));
+  }
 }
