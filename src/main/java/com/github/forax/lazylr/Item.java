@@ -5,13 +5,13 @@ import java.util.Set;
 import java.util.List;
 import java.util.StringJoiner;
 
-record Item(Production production, int dotPosition, Set<Terminal> lookaheads) {
+record Item(Production production, int dotPosition, Terminal lookahead) {
   public Item {
     Objects.requireNonNull(production);
     if (dotPosition < 0 || dotPosition > production.body().size()) {
       throw new IllegalArgumentException("Dot position must be between 0 and body size");
     }
-    lookaheads = Set.copyOf(lookaheads);
+    Objects.requireNonNull(lookahead);
   }
 
   public Symbol getNextSymbol() {
@@ -36,7 +36,7 @@ record Item(Production production, int dotPosition, Set<Terminal> lookaheads) {
   public String toString() {
     var joiner = new StringJoiner(" ",
         production.head().name() + " -> ",
-        " " + lookaheads.stream().map(Terminal::name).sorted().toList());
+        " {" + lookahead.name() + "}");
     var body = production.body();
     for( var i = 0; i < body.size(); i++ ) {
       if (i == dotPosition) {

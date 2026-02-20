@@ -37,12 +37,14 @@ final class LRAlgorithm {
         var nextLookaheads = calculateNextLookaheads(item);
 
         for (var production : grammar.productionsFor(nonTerminal)) {
-          // Create the new Item.
-          var newItem = new Item(production, 0, nextLookaheads);
+          // Create the new Items.
+          for(var nextLookahead : nextLookaheads) {
+            var newItem = new Item(production, 0, nextLookahead);
 
-          // If this exact item (including lookaheads) isn't in the closure, add it
-          if (closure.add(newItem)) {
-            workList.add(newItem);
+            // If this exact item (including lookaheads) isn't in the closure, add it
+            if (closure.add(newItem)) {
+              workList.add(newItem);
+            }
           }
         }
       }
@@ -56,21 +58,25 @@ final class LRAlgorithm {
 
     var betaCanBeEmpty = true;
     for (var symbol : beta) {
+
+      // Add all terminals from FIRST but ε
       var firstSet = firstSets.get(symbol);
       for (var terminal : firstSet) {
         if (!terminal.equals(Terminal.EPSILON)) {
           result.add(terminal);
         }
       }
+
+      // if no ε, we can stop here
       if (!firstSet.contains(Terminal.EPSILON)) {
         betaCanBeEmpty = false;
         break;
       }
     }
 
-    // If β is empty or can derive epsilon, add the parent's lookaheads 'a'
+    // If β is empty or can derive epsilon, add the parent's lookahead 'a'
     if (betaCanBeEmpty) {
-      result.addAll(item.lookaheads());
+      result.add(item.lookahead());
     }
     return result;
   }

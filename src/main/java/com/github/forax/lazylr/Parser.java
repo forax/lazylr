@@ -45,7 +45,7 @@ public final class Parser {
     var startProd = new Production(augmentedStart, List.of(grammar.startSymbol()));
 
     // Initial Item: [S' -> . S, { $ }]
-    var startItem = new Item(startProd, 0, Set.of(Terminal.EOF));
+    var startItem = new Item(startProd, 0, Terminal.EOF);
 
     // Initialize the LALR Builder and Transition Engine
     var algorithm = new LRAlgorithm(grammar, firstSets);
@@ -161,7 +161,7 @@ public final class Parser {
       var _currentToken = currentToken;
       var possibleReductions = currentState.items().stream()
           .filter(Item::isCompleted)
-          .filter(item -> item.lookaheads().contains(_currentToken))
+          .filter(item -> item.lookahead().equals(_currentToken))
           .toList();
 
       var bestCandidate = bestCandidateForReduction(possibleReductions);

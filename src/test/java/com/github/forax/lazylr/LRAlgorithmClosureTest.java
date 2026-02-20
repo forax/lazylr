@@ -16,8 +16,8 @@ public final class LRAlgorithmClosureTest {
     return new LRAlgorithm(grammar, firstSets);
   }
 
-  private static Item item(Production p, int dot, Terminal... lookaheads) {
-    return new Item(p, dot, Set.of(lookaheads));
+  private static Item item(Production p, int dot, Terminal lookahead) {
+    return new Item(p, dot, lookahead);
   }
 
   // ── 1. Dot at end: no new items added ────────────────────────────────────
@@ -345,9 +345,14 @@ public final class LRAlgorithmClosureTest {
     assertEquals(
         Set.of(
             item(prodETEp,   0, $),
-            item(prodTFTp,   0, plus, $),    // FIRST(E' $) = {+, $}
-            item(prodFparen, 0, mul, plus, $),  // FIRST(T' {+,$}) = {*, +, $}
-            item(prodFid,    0, mul, plus, $)
+            item(prodTFTp,   0, plus),    // FIRST(E' $) = {+, $}
+            item(prodTFTp,   0, $),
+            item(prodFparen, 0, mul),     // FIRST(T' {+,$}) = {*, +, $}
+            item(prodFparen, 0, plus),
+            item(prodFparen, 0, $),
+            item(prodFid,    0, mul),     // FIRST(F {+,$}) = {*, +, $}
+            item(prodFid,    0, plus),
+            item(prodFid,    0, $)
         ),
         algorithm(grammar).computeClosure(seed));
   }

@@ -67,6 +67,6 @@ final class LRTransitionEngine {
    * In LR(1), lookaheads are carried forward exactly as they are.
    */
   private Item advanceItem(Item item) {
-    return new Item(item.production(), item.dotPosition() + 1, item.lookaheads());
+    return new Item(item.production(), item.dotPosition() + 1, item.lookahead());
   }
 }
