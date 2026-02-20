@@ -1,5 +1,7 @@
 package com.github.forax.lazylr;
 
+import com.github.forax.lazylr.LRTransitionEngine.Item;
+
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;

@@ -1,5 +1,8 @@
 package com.github.forax.lazylr;
 
+import com.github.forax.lazylr.LRTransitionEngine.Item;
+import com.github.forax.lazylr.LRTransitionEngine.State;
+
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
@@ -148,11 +151,11 @@ public final class Parser {
       }
 
       switch (action) {
-        case Action.Shift(var nextState) -> {
+        case LRTransitionEngine.Action.Shift(var nextState) -> {
           executeShift(stack, currentToken, nextState, listener);
           currentToken = tokens.next();
         }
-        case Action.Reduce(var production) -> {
+        case LRTransitionEngine.Action.Reduce(var production) -> {
           if (executeReduction(stack, production, listener)) {
             return;
           }

@@ -1,5 +1,6 @@
 package com.github.forax.lazylr;
 
+import com.github.forax.lazylr.LRTransitionEngine.Item;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -9,7 +10,7 @@ import static org.junit.jupiter.api.Assertions.assertEquals;
 
 public final class LRAlgorithmClosureTest {
 
-  // ── helpers ───────────────────────────────────────────────────────────────
+  // -- helpers
 
   private static LRAlgorithm algorithm(Grammar grammar) {
     var firstSets = LRAlgorithm.computeFirstSets(grammar);
@@ -20,7 +21,7 @@ public final class LRAlgorithmClosureTest {
     return new Item(p, dot, lookahead);
   }
 
-  // ── 1. Dot at end: no new items added ────────────────────────────────────
+  // -- Dot at end: no new items added
   // [E -> id ., $]  is a reduce item; closure adds nothing
 
   @Test
@@ -41,7 +42,7 @@ public final class LRAlgorithmClosureTest {
         algorithm(grammar).computeClosure(seed));
   }
 
-  // ── 2. Dot before a terminal: no new items added ─────────────────────────
+  // -- Dot before a terminal: no new items added
   // [E -> . id, $]  — next symbol is a terminal, nothing to expand
 
   @Test
@@ -62,7 +63,7 @@ public final class LRAlgorithmClosureTest {
         algorithm(grammar).computeClosure(seed));
   }
 
-  // ── 3. Simple expansion: dot before a non-terminal ───────────────────────
+  // -- Simple expansion: dot before a non-terminal
   // Grammar:  E -> A,  A -> id
   // Seed:     [E -> . A, $]
   // Expected: [E -> . A, $]  +  [A -> . id, $]
@@ -88,7 +89,7 @@ public final class LRAlgorithmClosureTest {
         algorithm(grammar).computeClosure(seed));
   }
 
-  // ── 4. Lookahead is FIRST of the β suffix ────────────────────────────────
+  // -- Lookahead is FIRST of the β suffix
   // Grammar:  E -> A id,  A -> num
   // Seed:     [E -> . A id, $]
   // FIRST(id $) = {id}, so the expanded item is [A -> . num, id]
@@ -115,7 +116,7 @@ public final class LRAlgorithmClosureTest {
         algorithm(grammar).computeClosure(seed));
   }
 
-  // ── 5. Nullable suffix: lookahead includes parent lookahead ──────────────
+  // -- Nullable suffix: lookahead includes parent lookahead
   // Grammar:  E -> A B,  B -> ε,  A -> id
   // Seed:     [E -> . A B, $]
   // FIRST(B $) = {$} since B ->* ε, so ε is stripped and $ flows through
@@ -144,7 +145,7 @@ public final class LRAlgorithmClosureTest {
         algorithm(grammar).computeClosure(seed));
   }
 
-  // ── 6. Multiple productions for the same non-terminal ────────────────────
+  // -- Multiple productions for the same non-terminal
   // Grammar:  E -> A,  A -> id | num
   // Seed:     [E -> . A, $]
   // Both A-productions must appear in closure
@@ -173,7 +174,7 @@ public final class LRAlgorithmClosureTest {
         algorithm(grammar).computeClosure(seed));
   }
 
-  // ── 7. Transitive expansion ───────────────────────────────────────────────
+  // -- Transitive expansion
   // Grammar:  E -> A,  A -> B,  B -> id
   // Seed:     [E -> . A, $]
   // Closure must reach B -> . id transitively
@@ -202,7 +203,7 @@ public final class LRAlgorithmClosureTest {
         algorithm(grammar).computeClosure(seed));
   }
 
-  // ── 8. Left-recursive grammar does not loop ───────────────────────────────
+  // -- Left-recursive grammar does not loop
   // Grammar:  E -> E + id | id
   // Seed:     [E -> . E + id, $]
   // E expands to itself again; must terminate with exactly 2 items
@@ -229,7 +230,7 @@ public final class LRAlgorithmClosureTest {
         algorithm(grammar).computeClosure(seed));
   }
 
-  // ── 9. Lookaheads union-ed across multiple seed items ─────────────────────
+  // -- Lookaheads union-ed across multiple seed items
   // Grammar:  S -> E x | E y,  E -> A | B,  A -> id,  B -> id
   // Seed:     [S -> . E x, $]  and  [S -> . E y, $]
   // FIRST(x $) = {x},  FIRST(y $) = {y}
@@ -272,7 +273,7 @@ public final class LRAlgorithmClosureTest {
         algorithm(grammar).computeClosure(seed));
   }
 
-  // ── 10. Seed with dot in the middle ──────────────────────────────────────
+  // -- Seed with dot in the middle
   // Grammar:  E -> id + A,  A -> num
   // Seed:     [E -> id + . A, $]   (dot after two symbols, before A)
   // Closure:  same item  +  [A -> . num, $]
@@ -300,7 +301,7 @@ public final class LRAlgorithmClosureTest {
         algorithm(grammar).computeClosure(seed));
   }
 
-  // ── 11. Classic arithmetic grammar: initial closure ──────────────────────
+  // -- Classic arithmetic grammar: initial closure
   // E  -> T E'     E' -> + T E' | ε
   // T  -> F T'     T' -> * F T' | ε
   // F  -> ( E ) | id
