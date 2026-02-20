@@ -223,7 +223,7 @@ public final class Parser {
    * Pushes the token's destination state onto the stack and
    * consumes the token from the input.
    */
-  private void executeShift(ArrayDeque<State> stack, Terminal token, State nextState, ParserListener listener) {
+  private static void executeShift(ArrayDeque<State> stack, Terminal token, State nextState, ParserListener listener) {
     listener.onShift(token);
     stack.push(nextState);
   }
