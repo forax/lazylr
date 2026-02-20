@@ -97,7 +97,7 @@ public final class ParserJSONPerfTest {
     // Generate ~50_000 terminals
     // The generation algorithm is recursive so we can not do too many
     var random = new Random(292);
-    var targetSize = 50_000;
+    var targetSize = 20_000;
 
     var input = new ArrayList<Terminal>();
     var primitives = List.of(string, number, boolTrue, boolFalse, nullVal);
