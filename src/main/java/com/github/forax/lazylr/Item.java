@@ -4,13 +4,41 @@ import java.util.Objects;
 import java.util.List;
 import java.util.StringJoiner;
 
-record Item(Production production, int dotPosition, Terminal lookahead) {
-  public Item {
+final class Item {
+  private final Production production;
+  private final int dotPosition;
+  private final Terminal lookahead;
+  private final int hashCode;  // cached hashCode for perf reason
+
+  public Item(Production production, int dotPosition, Terminal lookahead) {
     Objects.requireNonNull(production);
     if (dotPosition < 0 || dotPosition > production.body().size()) {
       throw new IllegalArgumentException("Dot position must be between 0 and body size");
     }
     Objects.requireNonNull(lookahead);
+    var hashCode = (System.identityHashCode(production) * 31 + dotPosition) * 31 + lookahead.hashCode();
+    this.production = production;
+    this.dotPosition = dotPosition;
+    this.lookahead = lookahead;
+    this.hashCode = hashCode;
+    super();
+  }
+
+  public Production production() {
+    return production;
+  }
+
+  public int dotPosition() {
+    return dotPosition;
+  }
+
+  public Terminal lookahead() {
+    return lookahead;
+  }
+
+  @Override
+  public int hashCode() {
+    return hashCode;
   }
 
   @Override
@@ -19,11 +47,6 @@ record Item(Production production, int dotPosition, Terminal lookahead) {
         production == item.production &&    // production are unique
         dotPosition == item.dotPosition &&
         lookahead.equals(item.lookahead);
-  }
-
-  @Override
-  public int hashCode() {
-    return (System.identityHashCode(production) * 31 + dotPosition) * 31 + lookahead.hashCode();
   }
 
   public Symbol getNextSymbol() {
@@ -50,7 +73,7 @@ record Item(Production production, int dotPosition, Terminal lookahead) {
         production.head().name() + " -> ",
         " {" + lookahead.name() + "}");
     var body = production.body();
-    for( var i = 0; i < body.size(); i++ ) {
+    for (var i = 0; i < body.size(); i++) {
       if (i == dotPosition) {
         joiner.add(".");
       }

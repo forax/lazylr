@@ -26,8 +26,9 @@ final class LRTransitionEngine {
    */
   public State move(State currentState, Symbol symbol) {
     // 1. Check if the transition is already cached
-    if (transitionTable.containsKey(currentState)) {
-      var cachedNext = transitionTable.get(currentState).get(symbol);
+    var stateMap = transitionTable.get(currentState);
+    if (stateMap != null) {
+      var cachedNext = stateMap.get(symbol);
       if (cachedNext != null) {
         return cachedNext;
       }
