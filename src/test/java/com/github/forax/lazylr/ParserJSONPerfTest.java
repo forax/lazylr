@@ -94,7 +94,7 @@ public final class ParserJSONPerfTest {
 
     var parser = Parser.createParser(grammar, precedence);
 
-    // Generate ~50_000 terminals
+    // Generate terminals
     // The generation algorithm is recursive so we can not do too many
     var random = new Random(292);
     var targetSize = 20_000;
