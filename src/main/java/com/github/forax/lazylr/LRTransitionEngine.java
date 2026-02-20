@@ -1,13 +1,15 @@
 package com.github.forax.lazylr;
 
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
 final class LRTransitionEngine {
   private final LRAlgorithm algorithm;
+  private final Map<PrecedenceEntity, Precedence> precedenceMap;
 
   // The "Canonical Map": Maps a set of Items (including lookaheads) to a unique State
   private final HashMap<Set<Item>, State> stateCache = new HashMap<>();
@@ -15,9 +17,87 @@ final class LRTransitionEngine {
   // The Transition Table: (CurrentState -> Symbol) -> NextState
   private final HashMap<State, Map<Symbol, State>> transitionTable = new HashMap<>();
 
-  LRTransitionEngine(LRAlgorithm algorithm) {
-    this.algorithm = Objects.requireNonNull(algorithm);
+  // The Action Table: (CurrentState -> Symbol) -> Action
+  private final HashMap<State, Map<Symbol, Action>> actionTable = new HashMap<>();
+
+  LRTransitionEngine(LRAlgorithm algorithm, Map<PrecedenceEntity, Precedence> precedenceMap) {
+    this.algorithm = algorithm;
+    this.precedenceMap = precedenceMap;
     super();
+  }
+
+  public Action getAction(State currentState, Terminal lookahead) {
+    var stateActions = actionTable.get(currentState);
+    if (stateActions != null) {
+      var cached = stateActions.get(lookahead);
+      if (cached != null) {
+        return cached;
+      }
+    }
+
+    var action = resolveAction(currentState, lookahead);
+    if (action != null) {
+      actionTable
+          .computeIfAbsent(currentState, _ -> new HashMap<>())
+          .put(lookahead, action);
+    }
+    return action;
+  }
+
+  private Action resolveAction(State currentState, Terminal lookahead) {
+    // Find all possible Reductions
+    var possibleReductions = currentState.items().stream()
+        .filter(Item::isCompleted)
+        .filter(item -> item.lookahead().equals(lookahead))
+        .toList();
+
+    // Find a possible Shift
+    var shiftState = move(currentState, lookahead);
+
+    var bestCandidate = bestCandidateForReduction(possibleReductions);
+
+    if (bestCandidate != null && shiftState != null) {
+      // Shift/Reduce conflict resolution via precedence
+      return shouldReduce(bestCandidate.production(), lookahead)
+          ? new Action.Reduce(bestCandidate.production())
+          : new Action.Shift(shiftState);
+    }
+    if (bestCandidate != null) {
+      return new Action.Reduce(bestCandidate.production());
+    }
+    if (shiftState != null)    {
+      return new Action.Shift(shiftState);
+    }
+    return null;
+  }
+
+  private Item bestCandidateForReduction(List<Item> possibleReductions) {
+    return switch (possibleReductions.size()) {
+      case 0 -> null;
+      case 1 -> possibleReductions.getFirst();
+      default -> possibleReductions.stream()
+          .max(Comparator.comparingInt(i -> {
+            var precedence = precedenceMap.get(i.production());
+            return precedence.level();
+          }))
+          .orElseThrow();
+    };
+  }
+
+  private boolean shouldReduce(Production production, Terminal lookahead) {
+    var rulePrec = precedenceMap.get(production);
+    var tokenPrec = precedenceMap.get(lookahead);
+
+    if (rulePrec != null && tokenPrec != null) {
+      if (rulePrec.level() > tokenPrec.level()) return true;  // Reduce (Rule is stronger)
+      if (rulePrec.level() < tokenPrec.level()) return false; // Shift (Token is stronger)
+
+      // Levels are equal? Use associativity
+      return rulePrec.assoc() == Precedence.Associativity.LEFT; // Left-assoc means Reduce
+    }
+
+    // Default: Shift wins (standard yacc/bison behavior)
+    return false;
   }
 
   /**

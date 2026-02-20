@@ -3,7 +3,6 @@ package com.github.forax.lazylr;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.Collections;
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -18,13 +17,11 @@ public final class Parser {
   private final LRTransitionEngine engine;
   private final State initialState;
   private final Production startProduction;
-  private final Map<PrecedenceEntity, Precedence> precedenceMap;
 
-  private Parser(LRTransitionEngine engine, State initialState, Production startProduction, Map<PrecedenceEntity, Precedence> precedenceMap) {
+  private Parser(LRTransitionEngine engine, State initialState, Production startProduction) {
     this.engine = engine;
     this.initialState = initialState;
     this.startProduction = startProduction;
-    this.precedenceMap = precedenceMap;
     super();
   }
 
@@ -49,14 +46,14 @@ public final class Parser {
 
     // Initialize the LALR Builder and Transition Engine
     var algorithm = new LRAlgorithm(grammar, firstSets);
-    var engine = new LRTransitionEngine(algorithm);
+    var engine = new LRTransitionEngine(algorithm, precedenceMap);
 
     // Compute the Closure of the initial item to create State 0
     var initialItems = algorithm.computeClosure(Set.of(startItem));
     var initialState = new State(initialItems);
 
     // Create the Parser
-    return new Parser(engine, initialState, startProd, precedenceMap);
+    return new Parser(engine, initialState, startProd);
   }
 
   private static Precedence computePrecedence(Production production, Map<PrecedenceEntity, Precedence> precedenceMap) {
@@ -77,19 +74,6 @@ public final class Parser {
       newPrecedenceMap.computeIfAbsent(production, _ -> computePrecedence(production, newPrecedenceMap));
     }
     return newPrecedenceMap;
-  }
-
-  private Item bestCandidateForReduction(List<Item> possibleReductions) {
-    return switch (possibleReductions.size()) {
-      case 0 -> null;
-      case 1 -> possibleReductions.getFirst();
-      default -> possibleReductions.stream()
-          .max(Comparator.comparingInt(i -> {
-            var precedence = precedenceMap.get(i.production());
-            return precedence.level();
-          }))
-          .orElseThrow();
-    };
   }
 
   private static Iterator<Terminal> wrapAndAppendEOF(Iterator<? extends Terminal> iterator) {
@@ -158,65 +142,23 @@ public final class Parser {
     for (;;) {
       var currentState = stack.peek();
 
-      // Find all possible Reductions
-      var _currentToken = currentToken;
-      var possibleReductions = currentState.items().stream()
-          .filter(Item::isCompleted)
-          .filter(item -> item.lookahead().equals(_currentToken))
-          .toList();
+      var action = engine.getAction(currentState, currentToken);
+      if (action == null) {
+        throw new RuntimeException("Syntax error at: " + currentToken.name());
+      }
 
-      var bestCandidate = bestCandidateForReduction(possibleReductions);
-
-      // Find a possible Shift
-      var shiftState = engine.move(currentState, currentToken);
-
-      // Conflict resolution
-      if (bestCandidate != null && shiftState != null) {
-        // Shift/Reduce Conflict!
-        // Default rule: Shift wins, UNLESS we have precedence rules.
-        if (shouldReduce(bestCandidate.production(), currentToken)) {
-          if (executeReduction(stack, bestCandidate.production(), listener)) {
+      switch (action) {
+        case Action.Shift(var nextState) -> {
+          executeShift(stack, currentToken, nextState, listener);
+          currentToken = tokens.next();
+        }
+        case Action.Reduce(var production) -> {
+          if (executeReduction(stack, production, listener)) {
             return;
           }
-          continue;
-        } else {
-          executeShift(stack, currentToken, shiftState, listener);
-          currentToken = tokens.next();
-          continue;
         }
       }
-
-      if (bestCandidate != null) {
-        if (executeReduction(stack, bestCandidate.production(), listener)) {
-          return;
-        }
-        continue;
-      }
-      if (shiftState != null) {
-        executeShift(stack, currentToken, shiftState, listener);
-        currentToken = tokens.next();
-        continue;
-      }
-
-      // ERROR
-      throw new RuntimeException("Syntax Error at token: " + currentToken.name());
     }
-  }
-
-  private boolean shouldReduce(Production production, Terminal lookahead) {
-    var rulePrec = precedenceMap.get(production);
-    var tokenPrec = precedenceMap.get(lookahead);
-
-    if (rulePrec != null && tokenPrec != null) {
-      if (rulePrec.level() > tokenPrec.level()) return true;  // Reduce (Rule is stronger)
-      if (rulePrec.level() < tokenPrec.level()) return false; // Shift (Token is stronger)
-
-      // Levels are equal? Use associativity
-      return rulePrec.assoc() == Precedence.Associativity.LEFT; // Left-assoc means Reduce
-    }
-
-    // Default: Shift wins (standard yacc/bison behavior)
-    return false;
   }
 
   /**
