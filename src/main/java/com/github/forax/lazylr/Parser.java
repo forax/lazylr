@@ -62,7 +62,7 @@ public final class Parser {
   private static Precedence computePrecedence(Production production, Map<PrecedenceEntity, Precedence> precedenceMap) {
     // inherits from the precedence of the last terminal of the production
     return production.body().reversed().stream()
-        .flatMap(s -> switch(s) {
+        .flatMap(s -> switch (s) {
           case Terminal t -> Stream.of(t);
           case NonTerminal _ -> null;
         })
@@ -73,7 +73,7 @@ public final class Parser {
 
   private static Map<PrecedenceEntity, Precedence> complete(Grammar grammar, Map<PrecedenceEntity, Precedence> precedenceMap) {
     var newPrecedenceMap = new HashMap<>(precedenceMap);
-    for(var production : grammar.productions()) {
+    for (var production : grammar.productions()) {
       newPrecedenceMap.computeIfAbsent(production, _ -> computePrecedence(production, newPrecedenceMap));
     }
     return newPrecedenceMap;
@@ -100,6 +100,7 @@ public final class Parser {
       public boolean hasNext() {
         return iterator.hasNext() || !eofSeen;
       }
+
       @Override
       public Terminal next() {
         if (iterator.hasNext()) {
@@ -154,7 +155,7 @@ public final class Parser {
     stack.push(initialState);
 
     var currentToken = tokens.next();
-    for(;;) {
+    for (;;) {
       var currentState = stack.peek();
 
       // Find all possible Reductions

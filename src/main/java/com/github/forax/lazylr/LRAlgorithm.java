@@ -38,7 +38,7 @@ final class LRAlgorithm {
 
         for (var production : grammar.productionsFor(nonTerminal)) {
           // Create the new Items.
-          for(var nextLookahead : nextLookaheads) {
+          for (var nextLookahead : nextLookaheads) {
             var newItem = new Item(production, 0, nextLookahead);
 
             // If this exact item (including lookaheads) isn't in the closure, add it
@@ -138,7 +138,7 @@ final class LRAlgorithm {
       firstSets.put(symbol, terminalSet);
       switch (symbol) {
         case Terminal t -> terminalSet.add(t);
-        case NonTerminal _ -> { }
+        case NonTerminal _ -> {}
       }
     }
   }

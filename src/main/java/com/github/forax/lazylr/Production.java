@@ -16,7 +16,7 @@ public record Production(NonTerminal head, List<Symbol> body) implements Precede
     }
     return body.stream()
         .map(Symbol::name)
-        .collect(Collectors.joining(" ", head.name() +  " -> ", ""));
+        .collect(Collectors.joining(" ", head.name() + " -> ", ""));
   }
 
   @Override
