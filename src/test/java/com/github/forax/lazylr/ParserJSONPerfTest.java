@@ -2,48 +2,68 @@ package com.github.forax.lazylr;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Random;
 
 public final class ParserJSONPerfTest {
-  private static void populateJSONValue(
-      ArrayList<Terminal> tokens, Random random, List<Terminal> primitives,
+  private static List<Terminal> populateJSONValue(
+      Random random, List<Terminal> primitives,
       Terminal objStart, Terminal objEnd, Terminal arrStart, Terminal arrEnd,
       Terminal comma, Terminal colon, Terminal string, int targetSize) {
 
-    // If we've reached the size limit or a random roll hits, pick a primitive
-    // The branching factor of 0.4 is not realistic, but I want to test nested structures
-    if (tokens.size() >= targetSize || random.nextDouble() < 0.4) {
-      tokens.add(primitives.get(random.nextInt(primitives.size())));
-      return;
-    }
-    if (random.nextBoolean()) {
-      // Generate Object
-      tokens.add(objStart);
-      var entryCount = random.nextInt(3) + 1;
-      for (int i = 0; i < entryCount; i++) {
-        tokens.add(string);
-        tokens.add(colon);
-        populateJSONValue(tokens, random, primitives, objStart, objEnd, arrStart, arrEnd, comma, colon, string, targetSize);
-        if (i < entryCount - 1) {
-          tokens.add(comma);
-        }
+    // Each task is either "generate a value" or "add a specific terminal"
+    // We use a special marker to mean "generate a value"
+    var MARKER = new Terminal("marker");
+
+    var terminals = new ArrayList<Terminal>();
+
+    var stack = new ArrayDeque<Terminal>();
+    stack.push(MARKER); // Start by generating one value
+
+    Terminal task;
+    while ((task = stack.poll()) != null) {
+      if (task != MARKER) {
+        // Just emit this terminal
+        terminals.add(task);
+        continue;
       }
-      tokens.add(objEnd);
-    } else {
-      // Generate Array
-      tokens.add(arrStart);
-      var elementCount = random.nextInt(3) + 1;
-      for (var i = 0; i < elementCount; i++) {
-        populateJSONValue(tokens, random, primitives, objStart, objEnd, arrStart, arrEnd, comma, colon, string, targetSize);
-        if (i < elementCount - 1) {
-          tokens.add(comma);
-        }
+
+      // Generate a primitive value
+      if (terminals.size() >= targetSize || random.nextDouble() < 0.4) {
+        terminals.add(primitives.get(random.nextInt(primitives.size())));
+        continue;
       }
-      tokens.add(arrEnd);
+
+      if (random.nextBoolean()) {
+        // Generate Object — push everything in reverse order
+        var entryCount = random.nextInt(3) + 1;
+        stack.push(objEnd);
+        for (var i = entryCount; --i >= 0; ) {
+          if (i < entryCount - 1) {
+            stack.push(comma);
+          }
+          stack.push(MARKER);   // generate the value
+          stack.push(colon);
+          stack.push(string);
+        }
+        terminals.add(objStart);
+      } else {
+        // Generate Array — push everything in reverse order
+        var elementCount = random.nextInt(3) + 1;
+        stack.push(arrEnd);
+        for (var i = elementCount; --i >= 0;) {
+          if (i < elementCount - 1) {
+            stack.push(comma);
+          }
+          stack.push(MARKER);  // generate the value
+        }
+        terminals.add(arrStart);
+      }
     }
+    return terminals;
   }
 
   @Test
@@ -94,16 +114,14 @@ public final class ParserJSONPerfTest {
 
     var parser = Parser.createParser(grammar, precedence);
 
-    // Generate terminals
-    // The generation algorithm is recursive so we can not do too many
+    // Generate more than 1_000_000 terminals
     var random = new Random(292);
-    var targetSize = 20_000;
+    var targetSize = 1_000_000;
 
-    var input = new ArrayList<Terminal>();
     var primitives = List.of(string, number, boolTrue, boolFalse, nullVal);
-    populateJSONValue(input, random, primitives, objStart, objEnd, arrStart, arrEnd, comma, colon, string, targetSize);
+    var input = populateJSONValue(random, primitives, objStart, objEnd, arrStart, arrEnd, comma, colon, string, targetSize);
 
-    //IO.println("Generated " + input.size() + " tokens.");
+    //IO.println("Generated " + input.size() + " terminals");
 
     parser.parse(input.iterator(), new ParserListener() {
       @Override
