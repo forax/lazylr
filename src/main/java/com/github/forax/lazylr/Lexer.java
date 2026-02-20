@@ -36,8 +36,8 @@ public final class Lexer {
         if (!matcher.find(index)) {
           return null;
         }
-        for(var i = 1; i <= matcher.groupCount(); i++) {
-          if(matcher.start(i) != -1) {
+        for (var i = 1; i <= matcher.groupCount(); i++) {
+          if (matcher.start(i) != -1) {
             var rule = rules.get(i - 1);
             return new Terminal(rule.name(), matcher.group(i));
           }
