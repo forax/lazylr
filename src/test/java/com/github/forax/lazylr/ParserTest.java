@@ -44,20 +44,20 @@ public final class ParserTest {
 
     assertEquals("""
         Shift id
-        Reduce E -> id
+        Reduce E : id
         Shift +
         Shift id
-        Reduce E -> id
-        Reduce E -> E + E
+        Reduce E : id
+        Reduce E : E + E
         Shift +
         Shift id
-        Reduce E -> id
+        Reduce E : id
         Shift *
         Shift id
-        Reduce E -> id
-        Reduce E -> E * E
-        Reduce E -> E + E
-        Reduce E' -> E
+        Reduce E : id
+        Reduce E : E * E
+        Reduce E : E + E
+        Reduce E' : E
         """, parse(grammar, precedence, List.of(id, plus, id, plus, id, mul, id)));
   }
 
@@ -73,8 +73,8 @@ public final class ParserTest {
 
     assertEquals("""
         Shift id
-        Reduce E -> id
-        Reduce E' -> E
+        Reduce E : id
+        Reduce E' : E
         """, parse(grammar, precedence, List.of(id)));
   }
 
@@ -87,7 +87,7 @@ public final class ParserTest {
     var grammar = new Grammar(E, List.of(
         new Production(E, List.of(E, plus, E)),
         new Production(E, List.of(id)),
-        new Production(E, List.of())          // E -> ε
+        new Production(E, List.of())          // E : ε
     ));
     var precedence = Map.<PrecedenceEntity, Precedence>of(
         plus, new Precedence(10, Precedence.Associativity.LEFT)
@@ -96,11 +96,11 @@ public final class ParserTest {
     // id + ε  =>  the second operand is empty, reducing to E via ε-production
     assertEquals("""
       Shift id
-      Reduce E -> id
+      Reduce E : id
       Shift +
-      Reduce E -> ε
-      Reduce E -> E + E
-      Reduce E' -> E
+      Reduce E : ε
+      Reduce E : E + E
+      Reduce E' : E
       """, parse(grammar, precedence, List.of(id, plus)));
   }
 
@@ -113,7 +113,7 @@ public final class ParserTest {
     var grammar = new Grammar(E, List.of(
         new Production(E, List.of(E, plus, E)),
         new Production(E, List.of(id)),
-        new Production(E, List.of())          // E -> ε
+        new Production(E, List.of())          // E : ε
     ));
     var precedence = Map.<PrecedenceEntity, Precedence>of(
         plus, new Precedence(10, Precedence.Associativity.LEFT)
@@ -121,12 +121,12 @@ public final class ParserTest {
 
     // ε + id =>  the first operand is empty, reducing to E via ε-production
     assertEquals("""
-      Reduce E -> ε
+      Reduce E : ε
       Shift +
       Shift id
-      Reduce E -> id
-      Reduce E -> E + E
-      Reduce E' -> E
+      Reduce E : id
+      Reduce E : E + E
+      Reduce E' : E
       """, parse(grammar, precedence, List.of(plus, id)));
   }
 
@@ -146,16 +146,16 @@ public final class ParserTest {
 
     assertEquals("""
         Shift id
-        Reduce E -> id
+        Reduce E : id
         Shift +
         Shift id
-        Reduce E -> id
-        Reduce E -> E + E
+        Reduce E : id
+        Reduce E : E + E
         Shift +
         Shift id
-        Reduce E -> id
-        Reduce E -> E + E
-        Reduce E' -> E
+        Reduce E : id
+        Reduce E : E + E
+        Reduce E' : E
         """, parse(grammar, precedence, List.of(id, plus, id, plus, id)));
   }
 
@@ -176,16 +176,16 @@ public final class ParserTest {
     // id ^ id ^ id  =>  id ^ (id ^ id)
     assertEquals("""
         Shift id
-        Reduce E -> id
+        Reduce E : id
         Shift ^
         Shift id
-        Reduce E -> id
+        Reduce E : id
         Shift ^
         Shift id
-        Reduce E -> id
-        Reduce E -> E ^ E
-        Reduce E -> E ^ E
-        Reduce E' -> E
+        Reduce E : id
+        Reduce E : E ^ E
+        Reduce E : E ^ E
+        Reduce E' : E
         """, parse(grammar, precedence, List.of(id, pow, id, pow, id)));
   }
 
@@ -209,16 +209,16 @@ public final class ParserTest {
     // id + id * id  =>  id + (id * id)
     assertEquals("""
         Shift id
-        Reduce E -> id
+        Reduce E : id
         Shift +
         Shift id
-        Reduce E -> id
+        Reduce E : id
         Shift *
         Shift id
-        Reduce E -> id
-        Reduce E -> E * E
-        Reduce E -> E + E
-        Reduce E' -> E
+        Reduce E : id
+        Reduce E : E * E
+        Reduce E : E + E
+        Reduce E' : E
         """, parse(grammar, precedence, List.of(id, plus, id, mul, id)));
   }
 
@@ -242,16 +242,16 @@ public final class ParserTest {
     // id * id + id  =>  (id * id) + id
     assertEquals("""
         Shift id
-        Reduce E -> id
+        Reduce E : id
         Shift *
         Shift id
-        Reduce E -> id
-        Reduce E -> E * E
+        Reduce E : id
+        Reduce E : E * E
         Shift +
         Shift id
-        Reduce E -> id
-        Reduce E -> E + E
-        Reduce E' -> E
+        Reduce E : id
+        Reduce E : E + E
+        Reduce E' : E
         """, parse(grammar, precedence, List.of(id, mul, id, plus, id)));
   }
 
@@ -278,20 +278,20 @@ public final class ParserTest {
     // id + id * id ^ id  =>  id + (id * (id ^ id))
     assertEquals("""
         Shift id
-        Reduce E -> id
+        Reduce E : id
         Shift +
         Shift id
-        Reduce E -> id
+        Reduce E : id
         Shift *
         Shift id
-        Reduce E -> id
+        Reduce E : id
         Shift ^
         Shift id
-        Reduce E -> id
-        Reduce E -> E ^ E
-        Reduce E -> E * E
-        Reduce E -> E + E
-        Reduce E' -> E
+        Reduce E : id
+        Reduce E : E ^ E
+        Reduce E : E * E
+        Reduce E : E + E
+        Reduce E' : E
         """, parse(grammar, precedence, List.of(id, plus, id, mul, id, pow, id)));
   }
 
@@ -315,16 +315,16 @@ public final class ParserTest {
     // id + id - id  =>  (id + id) - id
     assertEquals("""
         Shift id
-        Reduce E -> id
+        Reduce E : id
         Shift +
         Shift id
-        Reduce E -> id
-        Reduce E -> E + E
+        Reduce E : id
+        Reduce E : E + E
         Shift -
         Shift id
-        Reduce E -> id
-        Reduce E -> E - E
-        Reduce E' -> E
+        Reduce E : id
+        Reduce E : E - E
+        Reduce E' : E
         """, parse(grammar, precedence, List.of(id, plus, id, sub, id)));
   }
 
@@ -344,24 +344,24 @@ public final class ParserTest {
 
     assertEquals("""
         Shift id
-        Reduce E -> id
+        Reduce E : id
         Shift +
         Shift id
-        Reduce E -> id
-        Reduce E -> E + E
+        Reduce E : id
+        Reduce E : E + E
         Shift +
         Shift id
-        Reduce E -> id
-        Reduce E -> E + E
+        Reduce E : id
+        Reduce E : E + E
         Shift +
         Shift id
-        Reduce E -> id
-        Reduce E -> E + E
+        Reduce E : id
+        Reduce E : E + E
         Shift +
         Shift id
-        Reduce E -> id
-        Reduce E -> E + E
-        Reduce E' -> E
+        Reduce E : id
+        Reduce E : E + E
+        Reduce E' : E
         """, parse(grammar, precedence,
         List.of(id, plus, id, plus, id, plus, id, plus, id)));
   }
@@ -383,20 +383,20 @@ public final class ParserTest {
     // id ^ id ^ id ^ id  =>  id ^ (id ^ (id ^ id))
     assertEquals("""
         Shift id
-        Reduce E -> id
+        Reduce E : id
         Shift ^
         Shift id
-        Reduce E -> id
+        Reduce E : id
         Shift ^
         Shift id
-        Reduce E -> id
+        Reduce E : id
         Shift ^
         Shift id
-        Reduce E -> id
-        Reduce E -> E ^ E
-        Reduce E -> E ^ E
-        Reduce E -> E ^ E
-        Reduce E' -> E
+        Reduce E : id
+        Reduce E : E ^ E
+        Reduce E : E ^ E
+        Reduce E : E ^ E
+        Reduce E' : E
         """, parse(grammar, precedence,
         List.of(id, pow, id, pow, id, pow, id)));
   }
@@ -427,24 +427,24 @@ public final class ParserTest {
     // id * id / id + id - id  =>  ((id * id) / id) + id) - id
     assertEquals("""
         Shift id
-        Reduce E -> id
+        Reduce E : id
         Shift *
         Shift id
-        Reduce E -> id
-        Reduce E -> E * E
+        Reduce E : id
+        Reduce E : E * E
         Shift /
         Shift id
-        Reduce E -> id
-        Reduce E -> E / E
+        Reduce E : id
+        Reduce E : E / E
         Shift +
         Shift id
-        Reduce E -> id
-        Reduce E -> E + E
+        Reduce E : id
+        Reduce E : E + E
         Shift -
         Shift id
-        Reduce E -> id
-        Reduce E -> E - E
-        Reduce E' -> E
+        Reduce E : id
+        Reduce E : E - E
+        Reduce E' : E
         """, parse(grammar, precedence,
         List.of(id, mul, id, div, id, plus, id, sub, id)));
   }

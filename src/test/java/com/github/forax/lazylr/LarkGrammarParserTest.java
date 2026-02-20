@@ -166,50 +166,50 @@ public final class LarkGrammarParserTest {
         Shift RULE_NAME
         Shift COLON
         Shift RULE_NAME
-        Reduce atom -> RULE_NAME
-        Reduce expr -> atom
-        Reduce expr_list -> expr
+        Reduce atom : RULE_NAME
+        Reduce expr : atom
+        Reduce expr_list : expr
         Shift TERM_NAME
-        Reduce atom -> TERM_NAME
+        Reduce atom : TERM_NAME
         Shift PLUS
-        Reduce expr -> atom PLUS
-        Reduce expr_list -> expr_list expr
-        Reduce expansion -> expr_list
+        Reduce expr : atom PLUS
+        Reduce expr_list : expr_list expr
+        Reduce expansion : expr_list
         Shift EOL
-        Reduce expansion_list -> expansion EOL
-        Reduce rule_def -> RULE_NAME COLON expansion_list
-        Reduce definition -> rule_def
-        Reduce definition_list -> definition
+        Reduce expansion_list : expansion EOL
+        Reduce rule_def : RULE_NAME COLON expansion_list
+        Reduce definition : rule_def
+        Reduce definition_list : definition
         Shift TERM_NAME
         Shift COLON
         Shift STRING
-        Reduce atom -> STRING
-        Reduce expr -> atom
-        Reduce expr_list -> expr
-        Reduce expansion -> expr_list
+        Reduce atom : STRING
+        Reduce expr : atom
+        Reduce expr_list : expr
+        Reduce expansion : expr_list
         Shift EOL
-        Reduce expansion_list -> expansion EOL
+        Reduce expansion_list : expansion EOL
         Shift PIPE
         Shift STRING
-        Reduce atom -> STRING
-        Reduce expr -> atom
-        Reduce expr_list -> expr
+        Reduce atom : STRING
+        Reduce expr : atom
+        Reduce expr_list : expr
         Shift STRING
-        Reduce atom -> STRING
+        Reduce atom : STRING
         Shift QUESTION
-        Reduce expr -> atom QUESTION
-        Reduce expr_list -> expr_list expr
-        Reduce expansion -> expr_list
+        Reduce expr : atom QUESTION
+        Reduce expr_list : expr_list expr
+        Reduce expansion : expr_list
         Shift EOL
-        Reduce expansion_list -> expansion_list PIPE expansion EOL
-        Reduce terminal_def -> TERM_NAME COLON expansion_list
-        Reduce definition -> terminal_def
-        Reduce definition_list -> definition_list definition
+        Reduce expansion_list : expansion_list PIPE expansion EOL
+        Reduce terminal_def : TERM_NAME COLON expansion_list
+        Reduce definition : terminal_def
+        Reduce definition_list : definition_list definition
         Shift EOL
-        Reduce definition -> EOL
-        Reduce definition_list -> definition_list definition
-        Reduce start -> definition_list
-        Reduce start' -> start
+        Reduce definition : EOL
+        Reduce definition_list : definition_list definition
+        Reduce start : definition_list
+        Reduce start' : start
         """, result.toString());
   }
 }

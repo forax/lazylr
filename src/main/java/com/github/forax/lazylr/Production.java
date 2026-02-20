@@ -12,11 +12,11 @@ public record Production(NonTerminal head, List<Symbol> body) implements Precede
 
   public String name() {
     if (body.isEmpty()) {
-      return head.name() + " -> ε";
+      return head.name() + " : ε";
     }
     return body.stream()
         .map(Symbol::name)
-        .collect(Collectors.joining(" ", head.name() + " -> ", ""));
+        .collect(Collectors.joining(" ", head.name() + " : ", ""));
   }
 
   @Override

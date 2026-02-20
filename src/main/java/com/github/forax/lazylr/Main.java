@@ -11,7 +11,7 @@ public class Main {
     var mul = new Terminal("*");
     var id = new Terminal("id");
 
-    // 2. Define Grammar: E -> E + E | E * E | id
+    // 2. Define Grammar: E : E + E | E * E | id
     var grammar = new Grammar(E, List.of(
         new Production(E, List.of(E, plus, E)),
         new Production(E, List.of(E, mul, E)),
@@ -54,9 +54,9 @@ public class Main {
       @Override
       public Expr evaluate(Production production, List<Expr> arguments) {
         return switch (production.name()) {
-          case "E -> E + E" -> new Add(arguments.get(0), arguments.get(2));
-          case "E -> E * E" -> new Mul(arguments.get(0), arguments.get(2));
-          case "E -> id" -> arguments.getFirst();
+          case "E : E + E" -> new Add(arguments.get(0), arguments.get(2));
+          case "E : E * E" -> new Mul(arguments.get(0), arguments.get(2));
+          case "E : id" -> arguments.getFirst();
           default -> throw new AssertionError("unknown " + production);
         };
       }
