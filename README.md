@@ -1,3 +1,3 @@
-# LazyLR
+# 🦥LazyLR
 A dynamic lazy LR parser
 
