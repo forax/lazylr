@@ -19,7 +19,6 @@ with the agility of a modern library.
 * **Built for Modern Java:**
   Designed to work seamlessly with records, sealed types, and pattern matching (Java 25+).
 
----
 
 ## Getting Started
 
@@ -111,9 +110,12 @@ class NodeEvaluator implements Evaluator<Node> {
 }
 ```
 
-### Usage Example
+### Bringing it all together
 
 ```java
+Lexer lexer = Lexer.createLexer(...);
+Parser parser = Parser.createParser(...);
+
 String input = "2 + 3 * 4";
 
 // Tokenize using token names
