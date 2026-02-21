@@ -1,4 +1,4 @@
-# 🦥 LazyLR
+# 🦥 Lazy LR
 
 **Lazy LR** is a lightweight, high-performance Java library for creating LR(1) parsers.
 
