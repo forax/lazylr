@@ -1,6 +1,7 @@
 # 🦥 LazyLR
 
 **Lazy LR** is a lightweight, high-performance Java library for creating LR(1) parsers.
+
 Unlike traditional parser generators (like Yacc or ANTLR) that require a separate compilation step,
 **Lazy LR** builds its states and lookahead sets on-the-fly, combining the power of LR(1) grammars
 with the agility of a modern library.
