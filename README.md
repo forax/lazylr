@@ -75,7 +75,8 @@ record NumLit(int value) implements Node {}
 record BinaryOp(String op, Node left, Node right) implements Node {}
 ```
 
-Implement the evaluate methods to map terminals and production names to your records.
+Implement the evaluate methods to map terminals and productions to your AST nodes.
+Because Terminal carries the matched value, you can extract the raw text here:
 
 ```java
 class NodeEvaluator implements Evaluator<Node> {
