@@ -112,6 +112,8 @@ class NodeEvaluator implements Evaluator<Node> {
 
 ### Bringing it all together
 
+We can now tokenize the input, parse, and create an AST for any expressions:
+
 ```java
 Lexer lexer = Lexer.createLexer(...);
 Parser parser = Parser.createParser(...);
