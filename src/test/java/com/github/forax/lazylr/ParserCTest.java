@@ -350,38 +350,38 @@ public final class ParserCTest {
 
   private static String toText(Node node) {
     return switch (node) {
-      case TranslationUnit(var items) ->
+      case TranslationUnit(List<Node> items) ->
           items.stream().map(ParserCTest::toText).collect(joining("\n"));
-      case FunctionDef(var returnType, var name, var params, var body) -> {
+      case FunctionDef(TypeSpec returnType, String name, List<Decl> params, Block body) -> {
         var paramStr = params.stream()
             .map(p -> toText(p.type()) + " " + p.name())
             .collect(joining(", "));
         yield toText(returnType) + " " + name + "(" + paramStr + ") " + toText(body);
       }
-      case TypeSpec(var name) -> name;
-      case Block(var stmts) ->
-          "{ " + stmts.stream().map(ParserCTest::toText).collect(joining(" ")) + " }";
-      case Decl(var type, var name, var init) when init == null ->
+      case TypeSpec(String name) -> name;
+      case Block(List<Stmt> stmts) ->
+          stmts.stream().map(ParserCTest::toText).collect(joining(" ", "{ "," }"));
+      case Decl(TypeSpec type, String name, Expr init) when init == null ->
           toText(type) + " " + name + ";";
-      case Decl(var type, var name, var init) ->
+      case Decl(TypeSpec type, String name, Expr init) ->
           toText(type) + " " + name + " = " + toText(init) + ";";
-      case ExprStmt(var expr) -> toText(expr) + ";";
-      case ReturnStmt(var expr) when expr == null -> "return;";
-      case ReturnStmt(var expr) -> "return " + toText(expr) + ";";
-      case IfStmt(var cond, var then, var _else) when _else == null ->
+      case ExprStmt(Expr expr) -> toText(expr) + ";";
+      case ReturnStmt(Expr expr) when expr == null -> "return;";
+      case ReturnStmt(Expr expr) -> "return " + toText(expr) + ";";
+      case IfStmt(Expr cond, Stmt then, Stmt _else) when _else == null ->
           "if (" + toText(cond) + ") " + toText(then);
-      case IfStmt(var cond, var then, var else_) ->
+      case IfStmt(Expr cond, Stmt then, var else_) ->
           "if (" + toText(cond) + ") " + toText(then) + " else " + toText(else_);
-      case WhileStmt(var cond, var body) ->
+      case WhileStmt(Expr cond, Stmt body) ->
           "while (" + toText(cond) + ") " + toText(body);
-      case NumLit(var value) -> String.valueOf(value);
-      case IdRef(var name) -> name;
-      case BinaryOp(var op, var left, var right) ->
+      case NumLit(int value) -> String.valueOf(value);
+      case IdRef(String name) -> name;
+      case BinaryOp(String op, Expr left, Expr right) ->
           toText(left) + " " + op + " " + toText(right);
-      case UnaryOp(var op, var operand) -> op + toText(operand);
-      case Assign(var target, var value) -> toText(target) + " = " + toText(value);
-      case Call(var callee, var args) ->
-          toText(callee) + "(" + args.stream().map(ParserCTest::toText).collect(joining(", ")) + ")";
+      case UnaryOp(String op, Expr operand) -> op + toText(operand);
+      case Assign(Expr target, Expr value) -> toText(target) + " = " + toText(value);
+      case Call(Expr callee, List<Expr> args) ->
+          toText(callee) + args.stream().map(ParserCTest::toText).collect(joining(", ", "(", ")"));
       // parse-time accumulators — should never appear in a finished tree
       case ArgList _, ParamList _ -> throw new AssertionError("unexpected parse-time node: " + node);
     };
