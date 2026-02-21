@@ -2,38 +2,47 @@ package com.github.forax.lazylr;
 
 import java.util.Objects;
 
-/// Represents a terminal symbol in a formal grammar.
+/// Represents a terminal symbol (token) in the grammar.
 ///
-/// A terminal is a basic symbol from which strings are formed by the [Lexer]
-/// and which cannot be further broken down by the rules of the [Grammar].
+/// Terminals are the "atoms" of the parsing process. They serve two roles:
+/// * **Grammar Definition**: Used as placeholders in a [Production].
+/// * **Lexical Analysis**: Created by the [Lexer] to represent actual text fragments.
 ///
-/// This record implements [Symbol] for grammar construction and
-/// [PrecedenceEntity] for resolving operator priority during parsing.
+/// This record implements [PrecedenceEntity], allowing it to participate in
+/// conflict resolution when multiple productions could be applied (e.g., in
+/// expressions with mixed operators).
 ///
-/// @param name The unique identifier for the terminal (e.g., "ID", "PLUS").
-/// @param value The actual text fragment matched in the source code, null otherwise.
+/// In this library, two terminals are considered equals if their [name]s
+/// match, even if their [value]s differ.
+///
+/// @param name  The unique identifier for the terminal (e.g., `"num"`, `"+"`).
+/// @param value The actual text fragment matched in the source, or `null` if this
+///              is a grammar template.
 public record Terminal(String name, String value) implements Symbol, PrecedenceEntity {
 
-  /// Represents the empty string symbol (epsilon) in grammar rules.
+  /// Represents the empty string symbol (epsilon) used in grammar rules.
+  /// This terminal is used internally by the grammar.
   public static final Terminal EPSILON = new Terminal("ε");
 
-  /// Represents the end-of-file or end-of-stream marker.
+  /// Represents the end-of-stream marker ($), indicating no more tokens are available.
+  /// This terminal is used internally by the grammar.
   public static final Terminal EOF = new Terminal("$");
 
-  /// A Terminal with non-null name and a nullable value.
+  /// Validates that every terminal has a non-null identifier.
   ///
-  /// This is typically a terminal emitted by the [Lexer] during
-  /// the [tokenization][Lexer#tokenize(CharSequence)].
-  ///
-  /// @throws NullPointerException if the name is null.
+  /// @throws NullPointerException if `name` is null.
   public Terminal {
-    Objects.requireNonNull(name);
+    Objects.requireNonNull(name, "Terminal name cannot be null");
   }
 
-  /// Convenience constructor for creating a terminal without a specific matched value.
+  /// Creates a template terminal without a specific matched value.
   ///
-  /// This is typically a terminal used when defining
-  /// [grammar productions][Grammar#Grammar(NonTerminal, java.util.List)].
+  /// This constructor is typically used when defining a [Grammar]:
+  /// ```java
+  /// var plus = new Terminal("+");
+  /// var expr = new NonTerminal("expr");
+  /// var prod = new Production(expr, List.of(expr, plus, expr));
+  /// ```
   ///
   /// @param name The unique identifier for the terminal.
   public Terminal(String name) {
@@ -42,26 +51,23 @@ public record Terminal(String name, String value) implements Symbol, PrecedenceE
 
   /// Compares this terminal with another object for equality.
   ///
-  /// Two terminals are considered equal if they share the same [name],
-  /// regardless of their specific matched [value].
+  /// Equality is based **strictly on the name**. This allows a terminal produced
+  /// by the lexer (with a value like `"42"`) to match a terminal defined in
+  /// the grammar (with the name `"num"`).
   ///
-  /// @param o The object to compare with.
-  /// @return true if the objects are functionally identical terminals.
+  /// @param o The object to compare.
+  /// @return {@code true} if the names match.
   @Override
   public boolean equals(Object o) {
     return o instanceof Terminal terminal && name.equals(terminal.name);
   }
 
-  /// Generates a hash code based solely on the terminal's name.
-  ///
-  /// @return A hash code based solely on the terminal's name.
+  /// @return A hash code derived from the terminal's name.
   @Override
   public int hashCode() {
     return name.hashCode();
   }
 
-  /// Returns a string representation of the terminal.
-  ///
   /// @return A string representation of the terminal.
   @Override
   public String toString() {

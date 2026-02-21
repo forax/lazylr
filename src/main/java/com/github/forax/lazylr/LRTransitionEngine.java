@@ -9,7 +9,31 @@ import java.util.Set;
 import java.util.StringJoiner;
 import java.util.stream.Collectors;
 
+/// Manage state transitions and resolve grammar conflicts using precedence.
+///
+/// `LRTransitionEngine` implements the "Lazy" aspect of the parser by computing
+/// states and transitions on-demand. It maintains a canonical map of [State]s
+/// to ensure that equivalent item sets (including lookaheads) are represented
+/// by the same object.
+///
+/// ### Conflict Resolution
+/// The engine implements standard LR(1) resolution rules:
+/// * **Shift/Reduce**: Resolved using the [Precedence] levels of the [Production]
+///    and the [Terminal]. If levels are tied, [Precedence.Associativity] is used.
+/// * **Reduce/Reduce**: Resolved by picking the [Production] with the highest
+///    explicitly assigned precedence.
+///
+/// ### State Identity
+/// In LR(1), a [State] is defined by its set of [Item]s, where each item includes
+/// a lookahead. This engine uses the [stateCache] to ensure state uniqueness,
+/// which is critical for the parser's correctness and performance.
+///
 final class LRTransitionEngine {
+
+  /// Represents an LR(1) item: a production rule, a dot position, and a lookahead.
+  ///
+  /// This record includes performance optimizations like identity-based hashing
+  /// for [Production]s and a cached hash code.
   static final class Item {
     private final Production production;
     private final int dotPosition;
@@ -55,6 +79,7 @@ final class LRTransitionEngine {
           lookahead.equals(item.lookahead);
     }
 
+    /// @return The symbol immediately following the dot, or `null` if the rule is completed.
     public Symbol getNextSymbol() {
       if (dotPosition < production.body().size()) {
         return production.body().get(dotPosition);
@@ -62,6 +87,7 @@ final class LRTransitionEngine {
       return null; // Dot is at the end (Reduce state)
     }
 
+    /// @return The sequence of symbols following the symbol after the dot.
     public List<Symbol> getSymbolsAfterNext() {
       if (dotPosition + 1 < production.body().size()) {
         return production.body().subList(dotPosition + 1, production.body().size());
@@ -69,6 +95,7 @@ final class LRTransitionEngine {
       return List.of();
     }
 
+    /// @return `true` if the dot is at the end of the production.
     public boolean isCompleted() {
       return dotPosition == production.body().size();
     }
@@ -89,6 +116,7 @@ final class LRTransitionEngine {
     }
   }
 
+  /// A set of [Item]s representing a specific state in the LR automaton.
   static final class State {
     private final Set<Item> items;
     private final int hashCode;  // cached hashCode for perf reason
@@ -120,12 +148,15 @@ final class LRTransitionEngine {
     }
   }
 
+  /// Represents a parser decision for a given state and lookahead.
   sealed interface Action {
+    /// Move to a [nextState] and consume the current token.
     record Shift(State nextState) implements Action {
       public Shift {
         Objects.requireNonNull(nextState);
       }
     }
+    /// Apply a [production] and pop symbols from the stack.
     record Reduce(Production production) implements Action {
       public Reduce {
         Objects.requireNonNull(production);
@@ -151,6 +182,10 @@ final class LRTransitionEngine {
     super();
   }
 
+  /// Retrieves or computes the action for a given state and lookahead.
+  ///
+  /// If the action has not been encountered before, it is calculated via
+  /// [#resolveAction] and cached in the [actionTable].
   public Action getAction(State currentState, Terminal lookahead) {
     var stateActions = actionTable.get(currentState);
     if (stateActions != null) {
@@ -209,6 +244,12 @@ final class LRTransitionEngine {
     };
   }
 
+  /// Decides between a shift and a reduction based on precedence rules.
+  ///
+  /// Logic:
+  /// * Higher [Precedence#level()] wins.
+  /// * If levels are equal, [Precedence.Associativity#LEFT] results in a reduction.
+  /// * Default is to **Shift** if no precedence is defined.
   private boolean shouldReduce(Production production, Terminal lookahead) {
     var rulePrec = precedenceMap.get(production);
     var tokenPrec = precedenceMap.get(lookahead);
@@ -225,10 +266,11 @@ final class LRTransitionEngine {
     return false;
   }
 
-  /**
-   * The Goto function: Moves the parser from currentState via symbol.
-   * In LR(1), lookaheads are part of the state's identity.
-   */
+  /// Implements the GOTO function of LR parsing.
+  ///
+  /// This method calculates the next state when transitioning from [currentState]
+  /// via [symbol]. It computes the kernel, expands it via [LRAlgorithm#computeClosure],
+  /// and retrieves the canonical [State] from the cache.
   public State move(State currentState, Symbol symbol) {
     // 1. Check if the transition is already cached
     var stateMap = transitionTable.get(currentState);

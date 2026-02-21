@@ -16,6 +16,16 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Stream;
 
+/// The primary engine for performing LR(1) parsing.
+///
+/// The parser uses a bottom-up approach to recognize languages defined by a [Grammar].
+///
+/// ### Evaluation
+/// The parser supports two ways to process the input:
+/// 1. **Functional**: Using [#parse(Iterator, Evaluator)] to directly produce a result.
+/// 2. **Event-driven**: Using [#parse(Iterator, ParserListener)] to observe transitions
+///    as they occur.
+///
 public final class Parser {
   private final LRTransitionEngine engine;
   private final State initialState;
@@ -28,6 +38,15 @@ public final class Parser {
     super();
   }
 
+  /// Creates a LR parser.
+  ///
+  /// This factory method augments the grammar with a unique start production
+  /// (`S' -> S $`) and then create a parser on the grammar.
+  ///
+  /// @param grammar       The context-free grammar to parse.
+  /// @param precedenceMap A map defining priority and associativity for operators/rules.
+  /// @return A parser ready to process token streams.
+  /// @throws NullPointerException if grammar or precedenceMap is null.
   public static Parser createParser(Grammar grammar, Map<? extends PrecedenceEntity, ? extends Precedence> precedenceMap) {
     Objects.requireNonNull(grammar);
     Objects.requireNonNull(precedenceMap);
@@ -102,6 +121,17 @@ public final class Parser {
     };
   }
 
+  /// Parses a stream of tokens and evaluates them into a single result.
+  ///
+  /// This method manages an internal value stack. On a shift, the [Terminal] is
+  /// evaluated; on a reduction, the [Production] and its collected arguments
+  /// are passed to the [Evaluator#evaluate(Production, List)].
+  ///
+  /// @param <V>       The type of the final result (e.g., an AST `Node`).
+  /// @param input     An iterator of tokens, typically provided by a [Lexer].
+  /// @param evaluator The strategy for building results from tokens and rules.
+  /// @return The final evaluated result of the start production.
+  /// @throws RuntimeException if a syntax error is encountered.
   public <V> V parse(Iterator<Terminal> input, Evaluator<V> evaluator) {
     Objects.requireNonNull(input);
     Objects.requireNonNull(evaluator);
@@ -131,6 +161,13 @@ public final class Parser {
     return listener.stack.removeLast();
   }
 
+  /// Parses a stream of tokens and notifies a listener of every transition.
+  ///
+  /// This is a low-level method that allows for custom handling of shift and
+  /// reduce events without necessarily building a value stack.
+  ///
+  /// @param input    An iterator of tokens.
+  /// @param listener The listener to receive parser events.
   public void parse(Iterator<Terminal> input, ParserListener listener) {
     Objects.requireNonNull(input);
     Objects.requireNonNull(listener);
@@ -164,19 +201,15 @@ public final class Parser {
     }
   }
 
-  /**
-   * Pushes the token's destination state onto the stack and
-   * consumes the token from the input.
-   */
+  /// Pushes the token's destination state onto the stack and
+  /// consumes the token from the input.
   private static void executeShift(ArrayDeque<State> stack, Terminal token, State nextState, ParserListener listener) {
     listener.onShift(token);
     stack.push(nextState);
   }
 
-  /**
-   * Shrinks the stack and then performs a 'GOTO' transition.
-   * Returns true if the reduction leads to an accept state, false otherwise.
-   */
+  /// Shrinks the stack and then performs a 'GOTO' transition.
+  /// Returns true if the reduction leads to an accept state, false otherwise.
   private boolean executeReduction(ArrayDeque<State> stack, Production production, ParserListener listener) {
     listener.onReduce(production);
 

@@ -9,6 +9,24 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
+/// Internal utility providing the fundamental algorithms for LR(1) parser generation.
+///
+/// This class encapsulates the mathematical logic required to analyze a [Grammar],
+/// specifically the computation of FIRST sets and the **Closure** of item sets.
+/// These are the building blocks used by the [Parser] to construct the state machine.
+///
+/// ### FIRST Set Computation
+/// The [computeFirstSets(Grammar)] method implements a fixed-point iteration algorithm.
+/// For each [Symbol], it determines the set of [Terminal]s that can appear at the
+/// beginning of a string derived from that symbol. It correctly handles
+/// [Terminal#EPSILON] derivations to propagate lookaheads.
+///
+/// ### LR(1) Closure
+/// The [computeClosure(Set)] method expands a "seed" set of [Item]s into a full
+/// state. It follows the rule:
+/// If an item `[A -> α . B β, a]` is in the closure, then for every production
+/// `B -> γ`, the item `[B -> . γ, b]` is added for every `b` in `FIRST(βa)`.
+///
 final class LRAlgorithm {
   private final Grammar grammar;
   private final Map<Symbol, Set<Terminal>> firstSets;
@@ -19,11 +37,14 @@ final class LRAlgorithm {
     super();
   }
 
-  /**
-   * Computes the LR(1) closure.
-   * For every item [A -> α . B β, a], for each production B -> γ,
-   * add item [B -> . γ, FIRST(βa)]
-   */
+  /// Computes the LR(1) closure of a set of items.
+  ///
+  /// This expansion is what allows the parser to predict which productions
+  /// might be encountered next. It uses an internal worklist to iteratively
+  /// add items until a fixed point is reached.
+  ///
+  /// @param seedItems The kernel or initial items of a state.
+  /// @return A complete set of items representing a full LR(1) state.
   public Set<Item> computeClosure(Set<Item> seedItems) {
     var closure = new HashSet<>(seedItems);
     var workList = new ArrayList<>(seedItems);
@@ -54,6 +75,14 @@ final class LRAlgorithm {
     return closure;
   }
 
+  /// Calculates the FIRST(βa) lookahead set for a given item expansion.
+  ///
+  /// It looks at the symbols following a non-terminal (β) and determines
+  /// which terminals can start them. If β can derive epsilon, it includes
+  /// the parent item's lookahead (a).
+  ///
+  /// @param item The item being expanded.
+  /// @return The set of terminals that can follow the expanded non-terminal.
   private Set<Terminal> calculateNextLookaheads(Item item) {
     var result = new HashSet<Terminal>();
     var beta = item.getSymbolsAfterNext(); // Symbols following the NonTerminal
@@ -83,6 +112,16 @@ final class LRAlgorithm {
     return result;
   }
 
+  /// Computes the FIRST sets for all symbols in the grammar.
+  ///
+  /// This is a static analysis phase that runs before the parser state machine
+  /// is constructed. It accounts for:
+  /// 1. Terminals (FIRST is the terminal itself).
+  /// 2. Non-Terminals (FIRST is the union of the FIRST sets of its productions).
+  /// 3. Epsilon derivations.
+  ///
+  /// @param grammar The grammar to analyze.
+  /// @return A mapping from each [Symbol] to its set of starting [Terminal]s.
   public static Map<Symbol, Set<Terminal>> computeFirstSets(Grammar grammar) {
     Objects.requireNonNull(grammar);
 
@@ -144,65 +183,4 @@ final class LRAlgorithm {
       }
     }
   }
-
-
-  /*public static Map<NonTerminal, Set<Terminal>> computeFollowSets(Grammar grammar, Map<Symbol, Set<Terminal>> firstSets) {
-    Objects.requireNonNull(grammar);
-    Objects.requireNonNull(firstSets);
-
-    // Initialize
-    var followSets = new HashMap<NonTerminal, Set<Terminal>>();
-    for (var production : grammar.productions()) {
-      followSets.putIfAbsent(production.head(), new HashSet<>());
-    }
-
-    // Rule 1: Start symbol gets EOF ($)
-    followSets.get(grammar.startSymbol()).add(Terminal.EOF);
-
-    var changed = true;
-    while (changed) {
-      changed = false;
-      for (var production : grammar.productions()) {
-        var head = production.head();
-        var body = production.body();
-
-        for (var i = 0; i < body.size(); i++) {
-          if (body.get(i) instanceof NonTerminal nonTerminal) {
-            var followSet = followSets.get(nonTerminal);
-            var beforeSize = followSet.size();
-
-            // Rule 2: If A -> αBβ, add FIRST(β) \ {ε} to FOLLOW(A)
-            var beta = body.subList(i + 1, body.size());
-            var betaCanBeEmpty = true;
-
-            for (var symbol : beta) {
-              var firstSet = firstSets.get(symbol);
-              for (var terminal : firstSet) {
-                if (!terminal.equals(Terminal.EPSILON)) {
-                  followSet.add(terminal);
-                }
-              }
-              if (!firstSet.contains(Terminal.EPSILON)) {
-                betaCanBeEmpty = false;
-                break;
-              }
-            }
-
-            // Rule 3: If A -> αB or A -> αBβ where β -> ε,
-            // add FOLLOW(B) to FOLLOW(A)
-            if (betaCanBeEmpty) {
-              followSet.addAll(followSets.get(head));
-            }
-
-            if (followSet.size() > beforeSize) {
-              changed = true;
-            }
-          }
-        }
-      }
-    }
-
-    followSets.replaceAll((_, set) -> Set.copyOf(set));
-    return Map.copyOf(followSets);
-  }*/
 }
