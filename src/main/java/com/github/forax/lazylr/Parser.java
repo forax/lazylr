@@ -28,12 +28,12 @@ public final class Parser {
     super();
   }
 
-  public static Parser createParser(Grammar grammar, Map<PrecedenceEntity, Precedence> precedenceMap) {
+  public static Parser createParser(Grammar grammar, Map<? extends PrecedenceEntity, ? extends Precedence> precedenceMap) {
     Objects.requireNonNull(grammar);
     Objects.requireNonNull(precedenceMap);
 
     // Complete the precedence map by computing the precedence of the production if necessary
-    precedenceMap = complete(grammar, precedenceMap);
+    var fullPrecedenceMap = complete(grammar, precedenceMap);
 
     // Compute FIRST and FOLLOW sets
     var firstSets = LRAlgorithm.computeFirstSets(grammar);
@@ -49,7 +49,7 @@ public final class Parser {
 
     // Initialize the LALR Builder and Transition Engine
     var algorithm = new LRAlgorithm(grammar, firstSets);
-    var engine = new LRTransitionEngine(algorithm, precedenceMap);
+    var engine = new LRTransitionEngine(algorithm, fullPrecedenceMap);
 
     // Compute the Closure of the initial item to create State 0
     var initialItems = algorithm.computeClosure(Set.of(startItem));
@@ -71,8 +71,8 @@ public final class Parser {
         .orElseGet(() -> new Precedence(0, Precedence.Associativity.LEFT));
   }
 
-  private static Map<PrecedenceEntity, Precedence> complete(Grammar grammar, Map<PrecedenceEntity, Precedence> precedenceMap) {
-    var newPrecedenceMap = new HashMap<>(precedenceMap);
+  private static Map<PrecedenceEntity, Precedence> complete(Grammar grammar, Map<? extends PrecedenceEntity, ? extends Precedence> precedenceMap) {
+    var newPrecedenceMap = new HashMap<PrecedenceEntity, Precedence>(precedenceMap);
     for (var production : grammar.productions()) {
       newPrecedenceMap.computeIfAbsent(production, _ -> computePrecedence(production, newPrecedenceMap));
     }
