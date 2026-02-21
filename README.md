@@ -3,7 +3,7 @@
 **Lazy LR** is a lightweight, high-performance Java library for creating LR(1) parsers.
 
 Unlike traditional parser generators (like Yacc or ANTLR) that require a separate compilation step,
-**Lazy LR** builds its states and lookahead sets on-the-fly, combining the power of LR(1) grammars
+**Lazy LR** builds its states and lookahead sets on-the-fly, combining the power of LR(1) context-free grammars
 with the agility of a modern library.
 
 ## Key Features
@@ -34,6 +34,10 @@ Lexer lexer = Lexer.createLexer(List.of(
 ));
 ```
 
+In case a text can be recognized by several regexes
+- the longest text is preferred
+- if the same text is recognized by several rules, the first defined rule wins. 
+
 ### Define your Grammar
 
 Construct your grammar using Terminal, NonTerminal, and Production objects.
@@ -53,7 +57,13 @@ Grammar grammar = new Grammar(expr, List.of(
 
 ### Handle Precedence and create the Parser
 
-Avoid "expression ladders" in your grammar. Define precedence and associativity on terminals and/or productions.
+You may have noticed that the grammar above is ambiguous, the parser need to know
+- for 2 + 3 * 4, should it be (2 + 3) * 4 or 2 + (3 * 4) ? 
+- for 2 - 3 - 4, should it be (2 - 3) - 4 or 2 - (3 - 4) ? 
+
+To avoid "expression ladders" in your grammar, you can define precedence
+(which terminal is more important) and associativity (LEFT or RIGHT)
+on terminals and/or productions.
 
 ```java
 var precedence = Map.of(
@@ -66,7 +76,8 @@ Parser parser = Parser.createParser(grammar, precedence);
 
 ### Transforming to an AST using an Evaluator
 
-Lazy LR uses an Evaluator<T> to transform the parse tree into your desired result (usually an AST).
+Lazy LR uses an Evaluator<T> to transform the parse tree into your desired result, usually an AST,
+but you can also evaluate the productions directly.
 
 Using Java Records makes for a concise AST:
 ```java
