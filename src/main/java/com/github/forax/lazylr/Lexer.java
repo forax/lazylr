@@ -39,9 +39,18 @@ public final class Lexer {
 
   /// Returns an iterator that lazily tokenizes the provided input.
   ///
-  /// The iterator matches the input from the beginning, producing a [Terminal]
-  /// for each match found. The process is "lazy"—it only scans the input as
-  /// [Iterator#next()] is called.
+  /// The iterator matches input based on the order of the [Rule]s
+  /// provided to [#createLexer(List)].
+  ///
+  /// ### Match Outcomes:
+  /// * **Standard Match:** Returns a [Terminal] with the rule's name and matched text.
+  /// * **Ignorable Match:** If a rule has no name ([Rule#isIgnorable()] is `true`),
+  ///    the matched text is skipped, and the lexer immediately attempts to find
+  ///    the next match starting from the end of the skipped segment.
+  /// * **No Match:** If no rule matches at the current index, a [Terminal#ERROR]
+  ///    is returned for the single invalid character.
+  ///
+  /// The process is lazy, the input is only scanned as [Iterator#next()] is called.
   ///
   /// @param input The character sequence to tokenize.
   /// @return An [Iterator] of [Terminal]s.
@@ -53,16 +62,27 @@ public final class Lexer {
       private Terminal token = nextTerminal(0);
 
       private Terminal nextTerminal(int index) {
-        if (!matcher.find(index)) {
-          return null;
-        }
-        for (var i = 1; i <= matcher.groupCount(); i++) {
-          if (matcher.start(i) != -1) {
-            var rule = rules.get(i - 1);
-            return new Terminal(rule.name(), matcher.group(i));
+        loop: for(;;) {
+          if (!matcher.find(index)) {
+            return null;
           }
+          for (var i = 1; i <= matcher.groupCount(); i++) {
+            var start = matcher.start(i);
+            if (start != -1) {
+              if (start != index) {
+                // The matcher state is on the next token, so the error can be skipped
+                return new Terminal(Terminal.ERROR.name(), "invalid character " + input.charAt(index));
+              }
+              var rule = rules.get(i - 1);
+              if (rule.isIgnorable()) {
+                index = matcher.end();
+                continue loop;
+              }
+              return new Terminal(rule.name(), matcher.group(i));
+            }
+          }
+          throw new AssertionError();
         }
-        throw new AssertionError();
       }
 
       @Override

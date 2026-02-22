@@ -13,7 +13,8 @@ public final class ReadmeExampleTest {
     Lexer lexer = Lexer.createLexer(List.of(
         new Rule("num", "[0-9]+"),
         new Rule("+", "\\+"),
-        new Rule("*", "\\*")
+        new Rule("*", "\\*"),
+        new Rule("[ ]+")
     ));
 
 

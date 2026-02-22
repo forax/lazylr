@@ -48,7 +48,10 @@ public final class ParserCTest {
 
         // Identifiers and Literals
         new Rule("id", "[a-zA-Z_][a-zA-Z0-9_]*"),
-        new Rule("num", "[0-9]+")
+        new Rule("num", "[0-9]+"),
+
+        // Whitespaces
+        new Rule("[ |\\t|\\r|\\n]+")
     ));
   }
 

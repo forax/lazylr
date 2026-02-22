@@ -29,13 +29,12 @@ The `Lexer` is created by defining a list of `Rule` objects consisting of a toke
 Lexer lexer = Lexer.createLexer(List.of(
     new Rule("num", "[0-9]+"),
     new Rule("+", "\\+"),
-    new Rule("*", "\\*")
+    new Rule("*", "\\*"),
+    new Rule("[ ]+")
 ));
 ```
 
-In case a text can be recognized by several regexes
-- the longest text is preferred
-- if the same text is recognized by several rules, the first defined rule wins. 
+Rules are matched in the order they are defined, rules with no name are ignored by the parser.
 
 ### Define your Grammar
 

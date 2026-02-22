@@ -21,12 +21,18 @@ import java.util.Objects;
 public record Terminal(String name, String value) implements Symbol, PrecedenceEntity {
 
   /// Represents the empty string symbol (epsilon) used in grammar rules.
-  /// This terminal is used internally by the grammar.
+  /// The parser uses this terminal internally.
   public static final Terminal EPSILON = new Terminal("ε");
 
   /// Represents the end-of-stream marker ($), indicating no more tokens are available.
-  /// This terminal is used internally by the grammar.
+  /// The parser uses this terminal internally.
   public static final Terminal EOF = new Terminal("$");
+
+  /// Represents a lexical error encountered during tokenization.
+  ///
+  /// This terminal is returned by the [Lexer] when the input character sequence
+  /// at the current position does not match any provided [Rule].
+  public static final Terminal ERROR = new Terminal("error");
 
   /// Validates that every terminal has a non-null identifier.
   ///
