@@ -1,6 +1,5 @@
 package com.github.forax.lazylr;
 
-import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -11,8 +10,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public final class LexerTest {
 
   @Test
-  @DisplayName("Should tokenize a simple sequence of terminals")
-  public void testSimpleTokenization() {
+  public void simpleTokenization() {
     var rules = List.of(
         new Rule("ID", "[a-z]+"),
         new Rule("NUMBER", "[0-9]+")
@@ -36,8 +34,7 @@ public final class LexerTest {
   }
 
   @Test
-  @DisplayName("Should respect rule priority (first rule wins)")
-  public void testRulePriority() {
+  public void rulePriority() {
     // Both rules match "if", but "KEYWORD" is first
     var rules = List.of(
         new Rule("KEYWORD", "if"),
@@ -52,8 +49,7 @@ public final class LexerTest {
   }
 
   @Test
-  @DisplayName("Should skip ignorable rules")
-  public void testIgnorableRules() {
+  public void ignorableRules() {
     var rules = List.of(
         new Rule("\\s+"),  // Ignorable whitespace
         new Rule("ID", "[a-z]+")
@@ -73,8 +69,7 @@ public final class LexerTest {
   }
 
   @Test
-  @DisplayName("Should return ERROR terminal for invalid characters")
-  public void testErrorHandling() {
+  public void errorHandling() {
     var rules = List.of(
         new Rule("ID", "[a-z]+")
     );
@@ -91,8 +86,7 @@ public final class LexerTest {
   }
 
   @Test
-  @DisplayName("Should handle empty input")
-  public void testEmptyInput() {
+  public void emptyInput() {
     var lexer = Lexer.createLexer(List.of(new Rule("ID", "[a-z]+")));
     var tokens = lexer.tokenize("");
     
@@ -101,8 +95,7 @@ public final class LexerTest {
   }
 
   @Test
-  @DisplayName("Should handle input with only errors")
-  public void testOnlyErrors() {
+  public void onlyError() {
     var lexer = Lexer.createLexer(List.of(new Rule("ID", "[a-z]+")));
     var tokens = lexer.tokenize("!!");
 
