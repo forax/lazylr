@@ -57,7 +57,7 @@ Grammar grammar = new Grammar(expr, List.of(
 
 You may have noticed that the grammar above is ambiguous, the parser need to know
 - for 2 + 3 * 4, should it be (2 + 3) * 4 or 2 + (3 * 4) ? 
-- for 2 - 3 - 4, should it be (2 - 3) - 4 or 2 - (3 - 4) ? 
+- for 2 + 3 + 4, should it be (2 + 3) + 4 or 2 + (3 + 4) ? 
 
 To avoid "expression ladders" in your grammar, you can define precedence
 (which terminal is more important) and associativity (LEFT or RIGHT)
