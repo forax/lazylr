@@ -52,12 +52,14 @@ public final class Grammar {
     return production;
   }
 
+  /// Returns the entry-point [NonTerminal] of this grammar.
   /// @return The entry-point [NonTerminal] of this grammar.
   public NonTerminal startSymbol() {
     return startSymbol;
   }
 
-  /// @return A list of all [Production]s defined in this grammar.
+  /// Returns the list of all [Production]s defined in this grammar.
+  /// @return The list of all [Production]s defined in this grammar.
   public List<Production> productions() {
     return productions;
   }

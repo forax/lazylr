@@ -40,6 +40,6 @@ public interface Evaluator<T> {
   ///
   /// @param production The derivation rule being reduced.
   /// @param arguments The evaluated results of each [Symbol] in the production's body.
-  /// @return The result of the reduction (the new value for the production's [head]).
+  /// @return The result of the reduction (the new value for the production non-terminal
   T evaluate(Production production, List<T> arguments);
 }
