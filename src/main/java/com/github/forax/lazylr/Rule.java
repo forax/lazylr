@@ -24,30 +24,51 @@ import java.util.Objects;
 /// new Rule("num", "[0-9]+"); // Produces a "num" terminal
 /// new Rule("[ ]+");          // Ignorable: matches spaces but produces no terminal
 /// ```
-///
-/// @param name  The identifier for the token type. If `null`, the rule
-///              is treated as ignorable.
-/// @param regex The regular expression pattern used to match input text.
-public record Rule(String name, String regex) {
+public final class Rule {
+   private final String name;
+   private final String regex;
+
+   private Rule(String name, String regex, boolean unused) {
+     this.name = name;
+     this.regex = regex;
+   }
 
   /// Creates a new Rule.
   ///
   /// @param name  The symbolic name of the token. If `null`, the rule is
   ///              treated as ignorable and its matches will be skipped by the lexer.
   /// @param regex The regular expression pattern to match.
-  /// @throws NullPointerException if [regex] is null.
-  public Rule {
+  /// @throws NullPointerException if name or regex is null.
+  public Rule(String name, String regex) {
+    Objects.requireNonNull(name);
     Objects.requireNonNull(regex);
+    this(name, regex, false);
   }
 
-  /// Creates an ignorable rule with no name.
+  /// Creates an ignorable rule, with no name.
   ///
   /// Matches against this rule will be consumed by the [Lexer] but will not
   /// produce a [Terminal] in the terminal stream.
   ///
   /// @param regex The regular expression pattern to match and skip.
   public Rule(String regex) {
-    this(null, regex);
+    Objects.requireNonNull(regex);
+    this(null, regex, false);
+  }
+
+  /// Returns The identifier for the token type or `null` if the rule
+  /// is treated as ignorable.
+  ///
+  /// @return The symbolic name of the token or `null`.
+  public String name() {
+    return name;
+  }
+
+  /// Returns The regular expression pattern used to match input text.
+  ///
+  /// @return The regular expression pattern.
+  public String regex() {
+    return regex;
   }
 
   /// Returns whether this rule is considered ignorable.
