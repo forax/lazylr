@@ -146,7 +146,7 @@ So first, you need to add Jitpack as a repository in the POM file,
       </repository>
   </repositories>
 ```
-and then add Lazy LR as a dependency
+and then add Lazy LR as dependency
 ```xml
   <dependencies>
       ...
