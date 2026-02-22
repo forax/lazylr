@@ -131,7 +131,7 @@ public final class Parser {
   /// @param input     An iterator of tokens, typically provided by a [Lexer].
   /// @param evaluator The strategy for building results from tokens and rules.
   /// @return The final evaluated result of the start production.
-  /// @throws RuntimeException if a syntax error is encountered.
+  /// @throws ParsingException if a syntax error occurs during parsing
   public <V> V parse(Iterator<Terminal> input, Evaluator<V> evaluator) {
     Objects.requireNonNull(input);
     Objects.requireNonNull(evaluator);
@@ -168,6 +168,7 @@ public final class Parser {
   ///
   /// @param input    An iterator of tokens.
   /// @param listener The listener to receive parser events.
+  /// @throws ParsingException if a syntax error occurs during parsing
   public void parse(Iterator<Terminal> input, ParserListener listener) {
     Objects.requireNonNull(input);
     Objects.requireNonNull(listener);
@@ -184,7 +185,7 @@ public final class Parser {
 
       var action = engine.getAction(currentState, currentToken);
       if (action == null) {
-        throw new RuntimeException("Syntax error at: " + currentToken.name());
+        throw new ParsingException("Syntax error at: " + currentToken.name());
       }
 
       switch (action) {
@@ -217,9 +218,6 @@ public final class Parser {
     // symbols on the right-hand side of the rule.
     // (e.g., if E -> E + E, pop 3 states)
     for (var i = 0; i < production.body().size(); i++) {
-      if (stack.isEmpty()) {
-        throw new RuntimeException("Stack underflow during reduction of " + production);
-      }
       stack.pop();
     }
 
@@ -235,7 +233,7 @@ public final class Parser {
         return true;  // Accept
       }
 
-      throw new RuntimeException("GOTO Error: No transition from " +
+      throw new ParsingException("GOTO Error: No transition from " +
           topState + " on symbol " + production.head().name());
     }
 
