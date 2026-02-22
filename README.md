@@ -131,5 +131,30 @@ System.out.println(ast);
 ```
 
 
+## Using with Maven
 
+The binary distribution is available on JitPack repository.
+
+So first, you need to add Jitpack as a repository in the POM file,
+
+```xml
+...
+  <repositories>
+      <repository>
+          <id>jitpack.io</id>
+          <url>https://jitpack.io</url>
+      </repository>
+  </repositories>
+```
+and then add Lazy LR as a dependency
+```xml
+  <dependencies>
+      ...
+      <dependency>
+          <groupId>com.github.forax</groupId>
+          <artifactId>zen</artifactId>
+          <version>6.0</version>
+      </dependency>
+  </dependencies>
+```
 
