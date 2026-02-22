@@ -23,7 +23,7 @@ with the agility of a modern library.
 ## Getting Started
 
 ### Define your Lexer
-The `Lexer` is created by defining a list of `Rule` objects consisting of a token name and a Regex pattern.
+Create a `Lexer` by defining a list of `Rule` objects consisting of a token name and a Regex pattern.
 
 ```java
 Lexer lexer = Lexer.createLexer(List.of(
@@ -111,7 +111,7 @@ class NodeEvaluator implements Evaluator<Node> {
 
 ### Bringing it all together
 
-We can now tokenize the input, parse, and create the AST:
+Tokenize the input, parse, and create the AST:
 
 ```java
 Lexer lexer = Lexer.createLexer(...);
@@ -133,9 +133,9 @@ System.out.println(ast);
 
 ## Using with Maven
 
-The binary distribution is available on JitPack repository.
+The binary distribution is available on jitPack.io repository.
 
-So first, you need to add Jitpack as a repository in the POM file,
+So first, you need to add jitpack.io as a repository in the POM file,
 
 ```xml
 ...
