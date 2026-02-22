@@ -38,7 +38,7 @@ public final class Parser {
     super();
   }
 
-  /// Creates a LR parser.
+  /// Creates an LR parser.
   ///
   /// This factory method augments the grammar with a unique start production
   /// (`S' -> S $`) and then create a parser on the grammar.

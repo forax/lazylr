@@ -20,8 +20,8 @@ package com.github.forax.lazylr;
 ///
 /// ### Resolution Hierarchy
 /// If a [Production] does not have an explicit [Precedence] assigned in the
-/// configuration map, it typically inherits the precedence of its **right-most
-/// terminal** (e.g., `expr : expr * expr` would inherit the precedence of `*`).
+/// configuration map, it typically inherits the precedence of its right-most
+/// terminal (e.g., `expr : expr * expr` would inherit the precedence of `*`).
 ///
 /// @see Precedence
 /// @see Parser#createParser(Grammar, java.util.Map)

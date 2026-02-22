@@ -6,8 +6,8 @@ import java.util.stream.Collectors;
 
 /// Represents a derivation rule in the grammar.
 ///
-/// A production consists of a [NonTerminal] **head** and a sequence of [Symbol]s
-/// known as the **body**. It defines how the head can be expanded or reduced during
+/// A production consists of a [NonTerminal] head and a sequence of [Symbol]s
+/// known as the body. It defines how the head can be expanded or reduced during
 /// the parsing process.
 ///
 /// This record implements [PrecedenceEntity], allowing it to participate in
