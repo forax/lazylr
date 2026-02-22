@@ -14,15 +14,36 @@ import java.util.Objects;
 /// var expr = new NonTerminal("expr");
 /// var prod = new Production(expr, List.of(expr, plus, expr));
 /// ```
-///
-/// @param name The unique identifier for this non-terminal (e.g., `"expr"`, `"stmt"`).
-public record NonTerminal(String name) implements Symbol {
+public final class NonTerminal implements Symbol {
+  private final String name;
 
-  /// Validates that the non-terminal has a unique name.
+  /// Create an immutable non-terminal from a unique name.
   ///
+  /// @param name The unique identifier for the non-terminal.
   /// @throws NullPointerException if the `name` is null.
-  public NonTerminal {
+  public NonTerminal(String name) {
     Objects.requireNonNull(name);
+    this.name = name;
+    super();
+  }
+
+  /// Returns the unique identifier for this non-terminal (e.g., `"expr"`, `"stmt"`).
+  ///
+  /// @return The unique identifier for this non-terminal.
+  public String name() {
+    return name;
+  }
+
+  /// @return A hash code derived from the non-terminal's name.
+  @Override
+  public int hashCode() {
+    return name.hashCode();
+  }
+
+  /// Compares this non-terminal with another object for equality.
+  @Override
+  public boolean equals(Object o) {
+    return o instanceof NonTerminal nonTerminal && name.equals(nonTerminal.name);
   }
 
   /// @return A string representation of the non-terminal.

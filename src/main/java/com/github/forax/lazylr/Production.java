@@ -18,18 +18,54 @@ import java.util.stream.Collectors;
 /// The [name()] of a production is used as a unique identifier for
 /// [evaluation][Evaluator#evaluate(Production, List)]. It follows the format:
 /// `head : symbol1 symbol2 ...` (or `head : ε` for empty productions).
-///
-/// @param head The left-hand side [NonTerminal] of the production.
-/// @param body An ordered list of [Symbol]s (terminals and non-terminals)
-///             that form the right-hand side of the production.
-public record Production(NonTerminal head, List<Symbol> body) implements PrecedenceEntity {
+public final class Production implements PrecedenceEntity {
+  private final NonTerminal head;
+  private final List<Symbol> body;
+  private final int hashCode;
+  private String name;   // lazy initialized
 
   /// Creates an immutable production rule.
   ///
+  /// @param head The left-hand side [NonTerminal] of the production.
+  /// @param body The right-hand side [Symbol]s of the production.
   /// @throws NullPointerException if the head is null.
-  public Production {
+  public Production(NonTerminal head, List<Symbol> body) {
     Objects.requireNonNull(head);
     body = List.copyOf(body);
+    var hashCode = head.hashCode() ^ body.hashCode();
+    this.head = head;
+    this.body = body;
+    this.hashCode = hashCode;
+    super();
+  }
+
+  /// Returns The left-hand side [NonTerminal] of the production.
+  ///
+  /// @return The left-hand side [NonTerminal] of the production.
+  public NonTerminal head() {
+    return head;
+  }
+
+  /// Returns An ordered list of [Symbol]s (terminals and non-terminals)
+  /// that form the right-hand side of the production.
+  ///
+  /// @return The right-hand side symbols of the production.
+  public List<Symbol> body() {
+    return body;
+  }
+
+  /// Returns the hash code for this production.
+  @Override
+  public int hashCode() {
+    return hashCode;
+  }
+
+  /// Compares this production with another object for equality.
+  @Override
+  public boolean equals(Object o) {
+    return o instanceof Production production &&
+        head.equals(production.head) &&
+        body.equals(production.body);
   }
 
   /// Returns a string identifier for this production.
@@ -43,10 +79,13 @@ public record Production(NonTerminal head, List<Symbol> body) implements Precede
   ///
   /// @return A formatted string representation of the rule.
   public String name() {
-    if (body.isEmpty()) {
-      return head.name() + " : ε";
+    if (name != null) {
+      return name;
     }
-    return body.stream()
+    if (body.isEmpty()) {
+      return name = head.name() + " : ε";
+    }
+    return name = body.stream()
         .map(Symbol::name)
         .collect(Collectors.joining(" ", head.name() + " : ", ""));
   }

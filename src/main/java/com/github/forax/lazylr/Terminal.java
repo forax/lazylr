@@ -14,11 +14,7 @@ import java.util.Objects;
 ///
 /// In this library, two terminals are considered equals if their [name]s
 /// match, even if their [value]s differ.
-///
-/// @param name  The unique identifier for the terminal (e.g., `"num"`, `"+"`).
-/// @param value The actual text fragment matched in the source, or `null` if this
-///              is a grammar template.
-public record Terminal(String name, String value) implements Symbol, PrecedenceEntity {
+public final class Terminal implements Symbol, PrecedenceEntity {
 
   /// Represents the empty string symbol (epsilon) used in grammar rules.
   /// The parser uses this terminal internally.
@@ -34,14 +30,27 @@ public record Terminal(String name, String value) implements Symbol, PrecedenceE
   /// at the current position does not match any provided [Rule].
   public static final Terminal ERROR = new Terminal("error");
 
-  /// Validates that every terminal has a non-null identifier.
-  ///
-  /// @throws NullPointerException if `name` is null.
-  public Terminal {
-    Objects.requireNonNull(name, "Terminal name cannot be null");
+  private final String name;
+  private final String value;
+
+  private Terminal(String name, String value, boolean unused) {
+    this.name = name;
+    this.value = value;
+    super();
   }
 
-  /// Creates a template terminal without a specific matched value.
+  /// Create an immutable terminal with a unique name and a value.
+  ///
+  /// @param name The unique identifier for the terminal.
+  /// @param value The actual text fragment matched in the source.
+  /// @throws NullPointerException if `name` is null or `value` is null.
+  public Terminal(String name, String value) {
+    Objects.requireNonNull(name);
+    Objects.requireNonNull(value);
+    this(name, value, false);
+  }
+
+  /// Creates an immutable grammar's terminal without a specific matched value.
   ///
   /// This constructor is typically used when defining a [Grammar]:
   /// ```java
@@ -52,7 +61,23 @@ public record Terminal(String name, String value) implements Symbol, PrecedenceE
   ///
   /// @param name The unique identifier for the terminal.
   public Terminal(String name) {
-    this(name, null);
+    Objects.requireNonNull(name);
+    this(name, null, false);
+  }
+
+  /// Returns the unique identifier for the terminal.
+  ///
+  /// @return The terminal's name'.
+  public String name() {
+    return name;
+  }
+
+  /// The actual text fragment matched in the source, or `null` if this
+  /// is a grammar's terminal.
+  ///
+  /// @return The terminal's matched value, or `null`.
+  public String value() {
+    return value;
   }
 
   /// Compares this terminal with another object for equality.
