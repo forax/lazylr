@@ -10,7 +10,7 @@ package com.github.forax.lazylr;
 /// Because this is an LR (bottom-up) parser, [#onReduce] is called only after
 /// all components of that production have been shifted or reduced.
 ///
-/// Refer to [Evaluator] for a more high level functional interface.
+/// Refer to [Evaluator] for a more high-level functional interface.
 ///
 /// @see Parser#parse(java.util.Iterator, ParserListener)
 public interface ParserListener {
