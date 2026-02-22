@@ -13,6 +13,6 @@ public sealed interface Symbol permits Terminal, NonTerminal {
 
   /// Returns the unique identifying name of this symbol.
   ///
-  /// @return The non-null identifier for this symbol.
+  /// @return The identifier for this symbol.
   String name();
 }
