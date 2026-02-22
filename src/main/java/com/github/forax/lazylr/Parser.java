@@ -132,7 +132,7 @@ public final class Parser {
   /// @param evaluator The strategy for building results from tokens and rules.
   /// @return The final evaluated result of the start production.
   /// @throws ParsingException if a syntax error occurs during parsing
-  public <V> V parse(Iterator<Terminal> input, Evaluator<V> evaluator) {
+  public <V> V parse(Iterator<Terminal> input, Evaluator<V> evaluator) throws ParsingException {
     Objects.requireNonNull(input);
     Objects.requireNonNull(evaluator);
 
@@ -169,7 +169,7 @@ public final class Parser {
   /// @param input    An iterator of tokens.
   /// @param listener The listener to receive parser events.
   /// @throws ParsingException if a syntax error occurs during parsing
-  public void parse(Iterator<Terminal> input, ParserListener listener) {
+  public void parse(Iterator<Terminal> input, ParserListener listener) throws ParsingException {
     Objects.requireNonNull(input);
     Objects.requireNonNull(listener);
 
