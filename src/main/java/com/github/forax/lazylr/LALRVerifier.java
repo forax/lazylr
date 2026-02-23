@@ -36,6 +36,7 @@ public final class LALRVerifier {
   /// @param grammar       the grammar to verify
   /// @param precedenceMap maps terminals and productions to their precedence;
   ///                      used to resolve shift/reduce conflicts
+  /// @param errorReporter report conflicts error messages
   public static void verify(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap,
                             Consumer<String> errorReporter) {
     var augmentedStart = buildAugmentedGrammar(grammar);
