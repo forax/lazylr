@@ -3,6 +3,7 @@ package com.github.forax.lazylr;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 /// A formal representation of a Context-Free Grammar (CFG) used by the [Parser].
@@ -50,6 +51,10 @@ public final class Grammar {
       throw new IllegalArgumentException("unknown nonTerminal " + nonTerminal);
     }
     return production;
+  }
+
+  Set<NonTerminal> nonTerminals() {
+    return productionMap.keySet();
   }
 
   /// Returns the entry-point [NonTerminal] of this grammar.
