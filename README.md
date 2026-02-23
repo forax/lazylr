@@ -72,6 +72,16 @@ var precedence = Map.of(
 Parser parser = Parser.createParser(grammar, precedence);
 ```
 
+### Check if your grammar is correct
+
+The class `LALRVerifier` can be used to check if a grammar is LALR(1) or not.
+
+```java
+LALRVerifier.verify(grammar, precedence, error -> {
+    System.err.println("Conflict detected: " + error);
+});
+```
+
 ### Transforming to an AST using an Evaluator
 
 Lazy LR uses an Evaluator<T> to transform the parse tree into your desired result, usually an AST,
