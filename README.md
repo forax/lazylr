@@ -130,6 +130,8 @@ System.out.println(ast);
   // BinaryOp[op=+, left=NumLit[value=2], right=BinaryOp[op=*, left=NumLit[value=3], right=NumLit[value=4]]]
 ```
 
+If you want to know more about how to design you grammar,
+there is a step-by-step [GUIDE.md].
 
 ## Using with Maven
 

@@ -5,7 +5,7 @@
 This guide walks you through building a fully-featured arithmetic language parser
 from the ground up — starting with a single number and ending with conditional expressions.
 
-Along the way, you'll learn how context-free  grammars work, how conflicts arise,
+Along the way, you'll learn how context-free grammars work, how conflicts arise,
 and how precedence rules tame ambiguity.
 
 ---
@@ -48,10 +48,10 @@ void main() {
 }
 ```
 
-> 💡 **Insight:** With only one production and one terminal.
->    The parser has exactly one thing it can do at every step.
+> 💡 **Insight:** With only one production and one terminal,
+>    the parser has exactly one thing it can do at every step.
 
-Once we know that the grammar is correct, it can be evaluated !
+Once we know that the grammar is correct, it can be evaluated!
 
 ```java
 var input = "42";
@@ -77,6 +77,18 @@ var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
 System.out.println(result);
 ```
 
+```
+// Output:
+// seen terminal num
+// seen production E : num
+// 42
+```
+
+> 💡 **Insight:** Notice the order of output: the terminal is always seen *before* the production that contains it.
+>    This is bottom-up parsing in action — the parser fully resolves leaves before reducing them into
+>    larger structures. The evaluator mirrors this: `evaluate(Terminal t)` runs first, and its return value
+>    is then passed as an element of `args` into `evaluate(Production p, ...)`.
+
 ---
 
 ## Step 2: The Reduce/Reduce Conflict
@@ -95,18 +107,25 @@ LALRVerifier.verify(grammar, Map.of(), error -> {
 });
 ```
 
+```
+// Output:
+// Conflict detected: reduce/reduce conflict on token '$' between [E : num] and [E : num]
+```
+
 > ⚠️ **What's happening?** After reading `42`, the parser knows it should *reduce* — but to `pNum1` or `pNum2`?
 >    It has no way to decide. This is a **Reduce/Reduce conflict**.
 
 > 💡 **Insight:** Reduce/Reduce conflicts almost always signal **redundant or overlapping logic** in your grammar.
 >    The fix is simple: delete the duplicate. In real-world grammars, these conflicts can be subtle — e.g.,
 >    two different non-terminals that can both derive the same string.
+>    The `$` token in the error message represents the **end of input** — the point at which the parser
+>    realizes it has two equally valid ways to finish, and doesn't know which to pick.
 
 ---
 
 ## Step 3: Recursion
 
-> **Goal:** Parse and evaluate function calls like `sum(10, 20)`, `sum(3)` or `sum()`.
+> **Goal:** Parse and evaluate function calls like `sum(10, 20)`, `sum(3)`, or `sum()`.
 
 Now we introduce recursion and an **epsilon production** (a rule that derives nothing — the empty terminal).
 
@@ -117,9 +136,9 @@ var SUM = new Terminal("sum");
 var ARGS = new NonTerminal("ARGS");
 
 var pArgsSingle = new Production(ARGS, List.of(E));
-var pArgsMulti = new Production(ARGS, List.of(ARGS, new Terminal(","), E));
-var pArgsEmpty = new Production(ARGS, List.of()); // ε (epsilon)
-var pCall = new Production(E, List.of(SUM, new Terminal("("), ARGS, new Terminal(")")));
+var pArgsMulti  = new Production(ARGS, List.of(ARGS, new Terminal(","), E));
+var pArgsEmpty  = new Production(ARGS, List.of()); // ε (epsilon)
+var pCall       = new Production(E,    List.of(SUM, new Terminal("("), ARGS, new Terminal(")")));
 
 var grammar = new Grammar(E, List.of(pNum, pArgsSingle, pArgsMulti, pArgsEmpty, pCall));
 
@@ -137,14 +156,14 @@ var input = "sum(42, 17)";
 var lexer = Lexer.createLexer(List.of(
     new Rule("sum", "sum"),
     new Rule(",", ","),
-    new Rule("(", "("),
-    new Rule(")", ")"),
+    new Rule("(", "\\("),
+    new Rule(")", "\\)"),
     new Rule("num", "[0-9]+"),
     new Rule("[ ]+")     // whitespaces are ignored
 ));
 
 var parser = Parser.createParser(grammar, Map.of());
-int result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
+var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
   public Integer evaluate(Terminal t) {
     return switch (t.name()) {
       case "num" -> Integer.parseInt(t.value());
@@ -153,16 +172,31 @@ int result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
   }
 
   public Integer evaluate(Production p, List<Integer> args) {
-    return switch(p.name()) {
-      case "E : num" -> args.get(0);
-      case "ARGS : E" -> args.get(0);
-      case "ARGS : ARGS , E" -> args.get(0) + args.get(2);
-      case "ARGS : ε" -> 0;
+    return switch (p.name()) {
+      case "E : num"          -> args.get(0);
+      case "ARGS : E"         -> args.get(0);
+      case "ARGS : ARGS , E"  -> args.get(0) + args.get(2);
+      case "ARGS : ε"         -> 0;
       case "E : sum ( ARGS )" -> args.get(2);
       default -> throw new IllegalStateException("unknown production " + p.name());
     };
-  });
+  }
+});
+System.out.println(result);
 ```
+
+```
+// Output:
+// 59
+```
+
+> 💡 **Insight:** Follow how `42, 17` accumulates through the grammar.
+>    First, `42` is reduced to `ARGS` via `ARGS : E` (value: 42).
+>    Then, when `, 17` is read, `ARGS : ARGS , E` fires — adding `args.get(0)` (42) and `args.get(2)` (17).
+>    The fully reduced `ARGS` (value: 59) is then passed as `args.get(2)` into `E : sum ( ARGS )`,
+>    which returns it directly. The outer `sum(...)` call simply surfaces the total its arguments accumulated.
+
+---
 
 ## Step 4: Addition and Associativity
 
@@ -171,7 +205,7 @@ int result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
 The rule `E → E + E` is inherently **ambiguous** — does `1 + 2 + 3` mean `(1 + 2) + 3`
 or `1 + (2 + 3)`?
 
-In addition, it doesn't change the result, but you still need to tell the parser which way to group.
+It doesn't change the result, but you still need to tell the parser which way to group.
 
 ```java
 var PLUS = new Terminal("+");
@@ -183,12 +217,7 @@ var precedenceMap = Map.of(PLUS, precAdd, pPlus, precAdd);
 
 var grammar = new Grammar(E, List.of(pNum, pPlus));
 
-// Evaluator
-  ...
-  case "E : E + E" -> {
-    System.out.println("called with " + args);
-    yield args.get(0) + args.get(2);
-  }    
+LALRVerifier.verify(grammar, precedenceMap, System.err::println);
 ```
 
 > 💡 **Insight:** Associativity resolves **Shift/Reduce conflicts** that arise from rules like `E → E + E`.
@@ -196,19 +225,61 @@ var grammar = new Grammar(E, List.of(pNum, pPlus));
 >    it must choose: reduce now (left-assoc) or shift and wait (right-assoc).
 >    The `Precedence` map encodes this decision.
 
+
+```java
+var input = "1 + 2 + 3";
+
+var parser = Parser.createParser(grammar, precedenceMap);
+var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
+  public Integer evaluate(Terminal t) {
+    return switch (t.name()) {
+      case "num" -> Integer.parseInt(t.value());
+      default -> 0;
+    };
+  }
+
+  public Integer evaluate(Production p, List<Integer> args) {
+    return switch (p.name()) {
+      case "E : num"   -> args.get(0);
+      case "E : E + E" -> {
+        System.out.println("called with " + args);
+        yield args.get(0) + args.get(2);
+      }
+      default -> throw new IllegalStateException("unknown production " + p.name());
+    };
+  }
+});
+System.out.println(result);
+```
+
+```
+// Output:
+// called with [1, 0, 2]
+// called with [3, 0, 3]
+// 6
+```
+
+> 💡 **Insight:** The `args` list for `E : E + E` always has three elements — left operand, the `+` terminal
+>    (whose evaluated value is `0` from the `default` branch), and right operand.
+>    The print trace confirms left-associativity: `1 + 2` is reduced *first* (producing 3),
+>    and only then is `3 + 3` evaluated. If associativity were RIGHT, you would see `2 + 3` evaluated first.
+
 ---
 
 ## Step 5: Multiplication and Priority
 
-> **Goal:** Evaluate `2 + 3 * 4 → 14` (not 20).
+> **Goal:** Evaluate `2 + 3 * 4` → 14 (not 20).
 
 Different operators need different **priority levels**. Multiplication should bind more tightly than addition.
 
 ```java
-var MUL = new Terminal("*");
-var pMul = new Production(E, List.of(E, MUL, E));
+var PLUS = new Terminal("+");
+var MUL  = new Terminal("*");
+var pPlus = new Production(E, List.of(E, PLUS, E));
+var pMul  = new Production(E, List.of(E, MUL,  E));
 
 // Level 20 > Level 10: multiplication wins over addition
+var precAdd = new Precedence(10, Precedence.Associativity.LEFT);
 var precMul = new Precedence(20, Precedence.Associativity.LEFT);
 
 var precedenceMap = Map.of(
@@ -216,15 +287,53 @@ var precedenceMap = Map.of(
     MUL,  precMul, pMul,  precMul
 );
 
-// Evaluator
-  ...
-  case "E : E * E" -> args.get(0) * args.get(2);
+var grammar = new Grammar(E, List.of(pNum, pPlus, pMul));
+
+LALRVerifier.verify(grammar, precedenceMap, System.err::println);
 ```
 
 > 💡 **Insight:** Precedence numbers are relative, not absolute — only their ordering matters.
->    When the parser has `E + E` on its stack and sees `*`, it compares precedence levels.
+>    When the parser has `E + E` on its stack and sees `*` as lookahead, it compares precedence levels.
 >    Since `*` (20) > `+` (10), the parser **shifts** (reads more input) rather than reducing,
 >    effectively giving `*` higher priority.
+
+```java
+var parser = Parser.createParser(grammar, precedenceMap);
+var result = parser.parse(lexer.tokenize("2 + 3 * 4"), new Evaluator<Integer>() {
+  public Integer evaluate(Terminal t) {
+    return switch (t.name()) {
+      case "num" -> Integer.parseInt(t.value());
+      default -> 0;
+    };
+  }
+
+  public Integer evaluate(Production p, List<Integer> args) {
+    return switch (p.name()) {
+      case "E : num"   -> args.get(0);
+      case "E : E + E" -> {
+        System.out.println("+ called with " + args);
+        yield args.get(0) + args.get(2);
+      }
+      case "E : E * E" -> {
+        System.out.println("* called with " + args);
+        yield args.get(0) * args.get(2);
+      }
+      default -> throw new IllegalStateException("unknown production " + p.name());
+    };
+  }
+});
+System.out.println(result);
+```
+
+```
+// Output:
+// * called with [3, 0, 4]
+// + called with [2, 0, 12]
+// 14
+```
+
+> 💡 **Insight:** The output confirms that `*` fires before `+`: `3 * 4` is reduced to `12` first,
+>    then `2 + 12` is evaluated.
 
 ---
 
@@ -240,14 +349,64 @@ var POW = new Terminal("^");
 var pPow = new Production(E, List.of(E, POW, E));
 var precPow = new Precedence(30, Precedence.Associativity.RIGHT);
 
-// Evaluator
-  ...
-  case "E : E ^ E" -> (int) Math.pow(args.get(0), args.get(2));
+var precedenceMap = Map.of(
+    PLUS, precAdd, pPlus, precAdd,
+    MUL,  precMul, pMul,  precMul,
+    POW,  precPow, pPow,  precPow
+);
+
+var grammar = new Grammar(E, List.of(pNum, pPlus, pMul, pPow));
+
+LALRVerifier.verify(grammar, precedenceMap, System.err::println);
 ```
 
-> 💡 **Insight:** With **RIGHT** associativity, when the parser sees `E ^ E` on its stack and a `^` lookahead,
->    it **shifts** instead of reducing — deferring the reduction and effectively grouping from the right.
->    This is the only operator in standard arithmetic that requires right-associativity.
+> 💡 **Insight:** With **RIGHT** associativity, when the parser sees `E ^ E` on its stack
+>    and a `^` lookahead, it **shifts** instead of reducing — deferring the reduction
+>    and effectively grouping from the right.
+
+```java
+var input = "2 ^ 3 ^ 2";
+
+var parser = Parser.createParser(grammar, precedenceMap);
+var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
+  public Integer evaluate(Terminal t) {
+    return switch (t.name()) {
+      case "num" -> Integer.parseInt(t.value());
+      default -> 0;
+    };
+  }
+
+  public Integer evaluate(Production p, List<Integer> args) {
+    return switch (p.name()) {
+      case "E : num"   -> args.get(0);
+      case "E : E + E" -> args.get(0) + args.get(2);
+      case "E : E * E" -> args.get(0) * args.get(2);
+      case "E : E ^ E" -> {
+        System.out.println("^ called with " + args);
+        yield (int) Math.pow(args.get(0), args.get(2));
+      }
+      default -> throw new IllegalStateException("unknown production " + p.name());
+    };
+  }
+});
+System.out.println(result);
+```
+
+```
+// Output:
+// ^ called with [3, 0, 2]
+// ^ called with [2, 0, 9]
+// 512
+```
+
+> 💡 **Insight:** The output reveals right-associativity in action: `3 ^ 2`
+>    is reduced *first* (to 9), then `2 ^ 9` is computed (giving 512).
+>    Compare this to Step 4's addition trace — left-associative operators reduce
+>    the *leftmost* pair first, while right-associative operators defer and reduce
+>    the *rightmost* pair first.
+>    With **RIGHT** associativity, when the parser sees `E ^ E` on its stack
+>    and a `^` lookahead, it **shifts** instead of reducing — deferring
+>    the left reduction and effectively grouping from the right.
 
 ---
 
@@ -269,16 +428,66 @@ var pIfElse = new Production(E, List.of(IF, E, THEN, E, ELSE, E));  // if with e
 var precIf   = new Precedence(0,  Precedence.Associativity.RIGHT);
 var precElse = new Precedence(40, Precedence.Associativity.RIGHT);
 
-// Evaluator
-  ...
-  case "E : if E then E else E" -> args.get(1) != 0 ? args.get(3) : args.get(5);
+var precedenceMap = Map.of(
+    PLUS, precAdd, pPlus, precAdd,
+    MUL,  precMul, pMul,  precMul,
+    POW,  precPow, pPow,  precPow,
+    IF,   precIf,  pIf,   precIf,
+    ELSE, precElse
+);
+
+var grammar = new Grammar(E, List.of(pNum, pPlus, pMul, pPow, pIf, pIfElse));
+
+LALRVerifier.verify(grammar, precedenceMap, System.err::println);
 ```
 
-> 💡 **Insight:** This is a **Shift/Reduce conflict** by design. When the parser sees `if E then E`
+> 💡 **Insight:** This is a **Shift/Reduce conflict**. When the parser sees `if E then E`
 >    on the stack and an `else` as lookahead, should it reduce (`pIf`) or shift the `else`?
 >    By giving `ELSE` a high precedence (40), we force a **shift**, which means the `else`
 >    always binds to the **nearest** (innermost) `if`.
->    This matches standard language semantics (C, Java, etc.).
+
+```java
+var input = "if 1 then 10 else 20";
+
+var parser = Parser.createParser(grammar, precedenceMap);
+var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
+  public Integer evaluate(Terminal t) {
+    return switch (t.name()) {
+      case "num" -> Integer.parseInt(t.value());
+      default -> 0;
+    };
+  }
+
+  public Integer evaluate(Production p, List<Integer> args) {
+    return switch (p.name()) {
+      case "E : num"                -> args.get(0);
+      case "E : E + E"              -> args.get(0) + args.get(2);
+      case "E : E * E"              -> args.get(0) * args.get(2);
+      case "E : E ^ E"              -> (int) Math.pow(args.get(0), args.get(2));
+      case "E : if E then E"        -> {
+        System.out.println("if E then E with condition=" + args.get(1));
+        yield args.get(1) != 0 ? args.get(3) : 0;
+      }
+      case "E : if E then E else E" -> {
+        System.out.println("if E then E else E with condition=" + args.get(1));
+        yield args.get(1) != 0 ? args.get(3) : args.get(5);
+      }
+      default -> throw new IllegalStateException("unknown production " + p.name());
+    };
+  }
+});
+System.out.println(result);
+```
+
+```
+// Output:
+// if E then E else E with condition==1
+// 10
+```
+
+> 💡 **Insight**: The output confirms that `pIfElse` was chosen over `pIf` —
+>    the `else` was shifted rather than left dangling.
+>    This matches standard language semantics in C or Java.
 
 ---
 
