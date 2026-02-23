@@ -131,7 +131,7 @@ System.out.println(ast);
 ```
 
 If you want to know more about how to design you grammar,
-there is a step-by-step [GUIDE.md].
+there is a step-by-step [GUIDE.md](GUIDE.md).
 
 ## Using with Maven
 
