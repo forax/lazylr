@@ -200,7 +200,7 @@ System.out.println(result);
 
 ## Step 4: Addition and Associativity
 
-> **Goal:** Evaluate `1 + 2 + 3 → 6`.
+> **Goal:** Evaluate `1 + 2 + 3` to `6`.
 
 The rule `E → E + E` is inherently **ambiguous** — does `1 + 2 + 3` mean `(1 + 2) + 3`
 or `1 + (2 + 3)`?
@@ -268,7 +268,7 @@ System.out.println(result);
 
 ## Step 5: Multiplication and Priority
 
-> **Goal:** Evaluate `2 + 3 * 4` → 14 (not 20).
+> **Goal:** Evaluate `2 + 3 * 4` to `14` (not `20`).
 
 Different operators need different **priority levels**. Multiplication should bind more tightly than addition.
 
@@ -339,7 +339,7 @@ System.out.println(result);
 
 ## Step 6: Exponentiation
 
-> **Goal:** Evaluate `2 ^ 3 ^ 2` → 512.
+> **Goal:** Evaluate `2 ^ 3 ^ 2` to `512`.
 
 Mathematically, exponentiation is **right-associative**: `2 ^ 3 ^ 2` = `2 ^ (3 ^ 2)` = `2 ^ 9` = 512,
 *not* `(2 ^ 3) ^ 2` = 64.
@@ -401,18 +401,12 @@ System.out.println(result);
 
 > 💡 **Insight:** The output reveals right-associativity in action: `3 ^ 2`
 >    is reduced *first* (to 9), then `2 ^ 9` is computed (giving 512).
->    Compare this to Step 4's addition trace — left-associative operators reduce
->    the *leftmost* pair first, while right-associative operators defer and reduce
->    the *rightmost* pair first.
->    With **RIGHT** associativity, when the parser sees `E ^ E` on its stack
->    and a `^` lookahead, it **shifts** instead of reducing — deferring
->    the left reduction and effectively grouping from the right.
 
 ---
 
 ## Step 7: The Dangling Else
 
-> **Goal:** Evaluate `if 1 then 10 else 20 → 10`.
+> **Goal:** Evaluate `if 1 then 10 else 20` to `10`.
 
 The classic "dangling else" problem: given `if A then if B then X else Y`, which `if` does the `else` belong to?
 
