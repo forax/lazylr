@@ -68,8 +68,6 @@ var precedence = Map.of(
     plus, new Precedence(10, Precedence.Associativity.LEFT),
     mul,  new Precedence(20, Precedence.Associativity.LEFT)
 );
-
-Parser parser = Parser.createParser(grammar, precedence);
 ```
 
 ### Check if your grammar is correct
@@ -124,15 +122,13 @@ class NodeEvaluator implements Evaluator<Node> {
 Tokenize the input, parse, and create the AST:
 
 ```java
-Lexer lexer = Lexer.createLexer(...);
-Parser parser = Parser.createParser(...);
-
 String input = "2 + 3 * 4";
 
 // Tokenize using token names
 Iterator<Terminal> tokens = lexer.tokenize(input);
 
 // Parse and create the AST
+Parser parser = Parser.createParser(grammar, precedence);
 Node ast = parser.parse(tokens, new NodeEvaluator());
 
 // Profit!

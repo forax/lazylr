@@ -30,15 +30,16 @@ public final class ReadmeExampleTest {
         new Production(expr, List.of(expr, mul, expr))
     ));
 
-
     // Handle Precedence and create the Parser
     var precedence = Map.of(
         plus, new Precedence(10, Precedence.Associativity.LEFT),
         mul,  new Precedence(20, Precedence.Associativity.LEFT)
     );
 
-    Parser parser = Parser.createParser(grammar, precedence);
-
+    // Verifie the grammar for conflicts (optional)
+    LALRVerifier.verify(grammar, precedence, error -> {
+      System.err.println("Conflict detected: " + error);
+    });
 
     //Transforming to an AST using an Evaluator
     /*sealed*/ interface Node {}
@@ -73,6 +74,7 @@ public final class ReadmeExampleTest {
     Iterator<Terminal> tokens = lexer.tokenize(input);
 
     // Parse and create the AST
+    Parser parser = Parser.createParser(grammar, precedence);
     Node ast = parser.parse(tokens, new NodeEvaluator());
 
     // Profit!
