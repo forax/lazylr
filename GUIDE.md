@@ -70,7 +70,7 @@ var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
 
   public Integer evaluate(Production p, List<Integer> args) {
     // args corresponds to the value of the symbols in the Production list (0-indexed).
-    System.out.println("seen production " + p.name());
+    System.out.println("seen production " + p.name() + " with " + args);
     return args.get(0);
   }
 });
@@ -80,7 +80,7 @@ System.out.println(result);
 ```
 // Output:
 // seen terminal num
-// seen production E : num
+// seen production E : num with [42]
 // 42
 ```
 
@@ -88,6 +88,8 @@ System.out.println(result);
 >    This is bottom-up parsing in action — the parser fully resolves leaves before reducing them into
 >    larger structures. The evaluator mirrors this: `evaluate(Terminal t)` runs first, and its return value
 >    is then passed as an element of `args` into `evaluate(Production p, ...)`.
+
+The full code is available in [GuideTest.java](src/test/java/com/github/forax/lazylr/GuideTest.java).
 
 ---
 

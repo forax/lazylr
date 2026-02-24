@@ -36,7 +36,8 @@ public final class GuideTest {
       }
 
       public Integer evaluate(Production p, List<Integer> args) {
-        System.out.println("seen production " + p.name());
+        // args corresponds to the value of the symbols in the Production list (0-indexed).
+        System.out.println("seen production " + p.name() + " with " + args);
         return args.get(0);
       }
     });
