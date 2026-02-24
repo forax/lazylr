@@ -90,7 +90,7 @@ public final class Parser {
         .orElseGet(() -> new Precedence(0, Precedence.Associativity.LEFT));
   }
 
-  private static Map<PrecedenceEntity, Precedence> complete(Grammar grammar, Map<? extends PrecedenceEntity, ? extends Precedence> precedenceMap) {
+  static Map<PrecedenceEntity, Precedence> complete(Grammar grammar, Map<? extends PrecedenceEntity, ? extends Precedence> precedenceMap) {
     var newPrecedenceMap = new HashMap<PrecedenceEntity, Precedence>(precedenceMap);
     for (var production : grammar.productions()) {
       newPrecedenceMap.computeIfAbsent(production, _ -> computePrecedence(production, newPrecedenceMap));

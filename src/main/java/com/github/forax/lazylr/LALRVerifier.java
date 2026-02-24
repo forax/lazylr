@@ -39,13 +39,17 @@ public final class LALRVerifier {
   /// @param errorReporter report conflicts error messages
   public static void verify(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap,
                             Consumer<String> errorReporter) {
-    var augmentedStart = buildAugmentedGrammar(grammar);
+    Objects.requireNonNull(grammar);
+    Objects.requireNonNull(precedenceMap);
+    Objects.requireNonNull(errorReporter);
+    var fullPrecedenceMap = Parser.complete(grammar, precedenceMap);
+    var augmentedStart = buildAugmentedProduction(grammar);
     var firstSets = computeFirstSets(grammar);
     var followSets = computeFollowSets(grammar, firstSets);
     var automaton = buildLR0Automaton(grammar, augmentedStart);
     var states = automaton.states();
     var gotoTable = automaton.gotoTable();
-    buildActionTable(states, gotoTable, precedenceMap, augmentedStart, followSets, errorReporter);
+    buildActionTable(states, gotoTable, fullPrecedenceMap, augmentedStart, followSets, errorReporter);
   }
 
   // -----------------------------------------------------------------------
@@ -96,7 +100,7 @@ public final class LALRVerifier {
   // Step 1: Augmented grammar
   // -----------------------------------------------------------------------
 
-  private static Production buildAugmentedGrammar(Grammar grammar) {
+  private static Production buildAugmentedProduction(Grammar grammar) {
     var augmentedStartSymbol = new NonTerminal("__start__");
     return new Production(augmentedStartSymbol,
         List.of(grammar.startSymbol()));
@@ -281,7 +285,7 @@ public final class LALRVerifier {
   private record Accept() implements Action {}
 
   private static void buildActionTable(List<Set<Item>> states, List<Map<Symbol, Integer>> gotoTable,
-                                       Map<? extends PrecedenceEntity, Precedence> precedenceMap,
+                                       Map<PrecedenceEntity, Precedence> precedenceMap,
                                        Production augmentedStart, Map<NonTerminal, Set<Terminal>> followSets,
                                        Consumer<String> errorReporter) {
     // action[state][terminal] = Action
@@ -321,7 +325,7 @@ public final class LALRVerifier {
   }
 
   /// Merge a new action into the action table, resolving conflicts via precedence.
-  private static void mergeAction(Map<Terminal, Action> actions, Map<? extends PrecedenceEntity, Precedence> precedenceMap,
+  private static void mergeAction(Map<Terminal, Action> actions, Map<PrecedenceEntity, Precedence> precedenceMap,
                                   Terminal lookahead, Action newAction, Production reduceProd, int stateIndex,
                                   Consumer<String> errorReporter) {
     var existing = actions.get(lookahead);
