@@ -378,7 +378,7 @@ public final class LALRVerifier {
 
     // ---- Reduce/Reduce conflict ----
     errorReporter.accept(
-        "Reduce/reduce conflict in state " + stateIndex +
+        "Unresolved Reduce/reduce conflict in state " + stateIndex +
             " on terminal '" + lookahead.name() + "'" +
             " between [" + existing + "] and [" + newAction + "]");
   }
