@@ -112,7 +112,7 @@ final class LRAlgorithm {
     return result;
   }
 
-  /// Computes the FIRST sets for all symbols in the grammar.
+  /// Computes the FIRST sets for all symbols (not only non-terminals) in the grammar.
   ///
   /// This is a static analysis phase that runs before the parser state machine
   /// is constructed. It accounts for:

@@ -33,10 +33,11 @@ public final class LALRVerifier {
   /// Verifies that the grammar is LALR(1) (possibly with precedence-based
   /// conflict resolution).
   ///
-  /// @param grammar       the grammar to verify
+  /// @param grammar       the grammar to verify.
   /// @param precedenceMap maps terminals and productions to their precedence;
-  ///                      used to resolve shift/reduce conflicts
-  /// @param errorReporter report conflicts error messages
+  ///                      used to resolve shift/reduce conflicts.
+  /// @param errorReporter report conflicts error messages.
+  /// @throws NullPointerException if `grammar`, `precedenceMap` or `errorReporter` is null.
   public static void verify(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap,
                             Consumer<String> errorReporter) {
     Objects.requireNonNull(grammar);
