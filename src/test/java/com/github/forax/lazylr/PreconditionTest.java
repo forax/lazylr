@@ -123,6 +123,34 @@ public final class PreconditionTest {
   }
 
   @Nested
+  public class RulePreconditions {
+
+    @Test
+    public void createLexerRulesNull() {
+      assertThrows(NullPointerException.class, () ->
+          new Rule(null));
+      assertThrows(NullPointerException.class, () ->
+          new Rule("id", null));
+    }
+
+    @Test
+    public void createLexerRulesBadPattern() {
+      assertThrows(IllegalArgumentException.class, () ->
+          new Rule("("));
+      assertThrows(IllegalArgumentException.class, () ->
+          new Rule("id", ")"));
+    }
+
+    @Test
+    public void createLexerRulesBadPatternWithGroup() {
+      assertThrows(IllegalArgumentException.class, () ->
+          new Rule("(foo)"));
+      assertThrows(IllegalArgumentException.class, () ->
+          new Rule("id", "(foo)"));
+    }
+  }
+
+  @Nested
   public class LexerPreconditions {
 
     @Test

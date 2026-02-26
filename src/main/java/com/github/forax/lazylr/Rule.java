@@ -1,6 +1,8 @@
 package com.github.forax.lazylr;
 
 import java.util.Objects;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 /// Defines a lexical rule for the [Lexer].
 ///
@@ -25,12 +27,26 @@ import java.util.Objects;
 /// new Rule("[ ]+");          // Ignorable: matches spaces but produces no terminal
 /// ```
 public final class Rule {
+  private static void checkPattern(String regex) {
+    Pattern pattern;
+    try {
+      pattern = Pattern.compile(regex);
+    } catch(PatternSyntaxException e) {
+      throw new IllegalArgumentException("invalid pattern", e);
+    }
+    var matcher = pattern.matcher("");
+    if (matcher.groupCount() != 0) {
+      throw new IllegalArgumentException("pattern should not use group " + regex);
+    }
+  }
+
    private final String name;
    private final String regex;
 
    private Rule(String name, String regex, boolean unused) {
      this.name = name;
      this.regex = regex;
+     super();
    }
 
   /// Creates a new Rule.
@@ -39,9 +55,11 @@ public final class Rule {
   ///              treated as ignorable and its matches will be skipped by the lexer.
   /// @param regex The regular expression pattern to match.
   /// @throws NullPointerException if name or regex is null.
+  /// @throws IllegalArgumentException if the pattern is malformed or contains a group
   public Rule(String name, String regex) {
     Objects.requireNonNull(name);
     Objects.requireNonNull(regex);
+    checkPattern(regex);
     this(name, regex, false);
   }
 
@@ -51,8 +69,10 @@ public final class Rule {
   /// produce a [Terminal] in the terminal stream.
   ///
   /// @param regex The regular expression pattern to match and skip.
+  /// @throws IllegalArgumentException if the pattern is malformed or contains a group
   public Rule(String regex) {
     Objects.requireNonNull(regex);
+    checkPattern(regex);
     this(null, regex, false);
   }
 
