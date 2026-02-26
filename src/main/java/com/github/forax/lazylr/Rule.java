@@ -32,11 +32,11 @@ public final class Rule {
     try {
       pattern = Pattern.compile(regex);
     } catch(PatternSyntaxException e) {
-      throw new IllegalArgumentException("invalid pattern", e);
+      throw new IllegalArgumentException("invalid pattern " + regex, e);
     }
     var matcher = pattern.matcher("");
     if (matcher.groupCount() != 0) {
-      throw new IllegalArgumentException("pattern should not use group " + regex);
+      throw new IllegalArgumentException("pattern " + regex + " should not use group " + regex);
     }
   }
 
