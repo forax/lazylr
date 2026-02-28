@@ -169,11 +169,12 @@ public final class MetaGrammar {
       new Token("}",          "\\}"),
       new Token(":",          ":"),
       new Token(",",          ","),
-      new Token("regex",      "/[^/]*/"),
-      new Token("quoted",     "'[^']*'"),
+      new Token("regex",      "/[^/]+/"),
+      new Token("quoted",     "'[^']+'"),
       new Token("ident",      "[A-Za-z_][A-Za-z0-9_]*"),
       new Token("eol",        "[\\r]?\\n"),
-      new Token("[ \\t]+")  // whitespace ignored
+      new Token("\\/\\/[^\\n]*"),  // comment ignored
+      new Token("[ \\t]+")         // whitespace ignored
   );
 
   private static final Grammar GRAMMAR = createGrammar();

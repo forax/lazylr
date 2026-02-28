@@ -78,6 +78,23 @@ public final class MetaGrammarTest {
   }
 
   @Test
+  public void anExpressionGrammarWithComments() {
+    var mg = MetaGrammar.create("""
+        grammar {      // a comment here
+          Expr: Term   // another comment
+          Term: num    // another another comment
+        }              // a last comment
+        """);
+
+    var grammar = mg.grammar();
+    assertEquals("Expr", grammar.startSymbol().name());
+    assertEquals(List.of(
+        "Expr : Term",
+        "Term : num"
+    ), productionNames(grammar));
+  }
+
+  @Test
   public void simpleExpressionGrammarWithTokens() {
     var mg = MetaGrammar.create("""
         tokens {
