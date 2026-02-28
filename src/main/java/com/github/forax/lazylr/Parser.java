@@ -185,7 +185,7 @@ public final class Parser {
 
       var action = engine.getAction(currentState, currentToken);
       if (action == null) {
-        throw new ParsingException("Syntax error at: " + currentToken.name() + " " + currentToken.value());
+        throw new ParsingException("Syntax error: terminal `" + currentToken.name() + "` value `" + currentToken.value() + "`");
       }
 
       switch (action) {
