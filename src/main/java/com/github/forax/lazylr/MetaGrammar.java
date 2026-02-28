@@ -161,7 +161,7 @@ public final class MetaGrammar {
     ));
   }
 
-  private static final Lexer META_LEXER = Lexer.createLexer(List.of(
+  private static final List<Rule> RULES = List.of(
       new Rule("tokens",     "tokens"),
       new Rule("precedence", "precedence"),
       new Rule("grammar",    "grammar"),
@@ -174,9 +174,9 @@ public final class MetaGrammar {
       new Rule("ident",      "[A-Za-z_][A-Za-z0-9_]*"),
       new Rule("eol",        "[\\r]?\\n"),
       new Rule("[ \\t]+")  // whitespace ignored
-  ));
+  );
 
-  private static final Parser META_PARSER = Parser.createParser(createGrammar(), Map.of());
+  private static final Grammar GRAMMAR = createGrammar();
 
   private record RawRule(String name, String regex) {}
   private record RawSymbol(String name, boolean quoted) {}
@@ -202,7 +202,9 @@ public final class MetaGrammar {
     var precedences = new ArrayList<RawPrecedence>();
     var rawProductions = new ArrayList<RawProduction>();
 
-    META_PARSER.parse(META_LEXER.tokenize(input), new Evaluator<>() {
+    var lexer = Lexer.createLexer(RULES);
+    var parser = Parser.createParser(GRAMMAR, Map.of());
+    parser.parse(lexer.tokenize(input), new Evaluator<>() {
 
       @Override
       public Object evaluate(Terminal t) {
