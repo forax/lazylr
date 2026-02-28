@@ -162,7 +162,7 @@ public final class ParserCTest {
     ));
 
     // Precedence Map (using Terminals and specific Productions)
-    var precedence = Map.<PrecedenceEntity, Precedence>ofEntries(
+    var precedence = Map.ofEntries(
         Map.entry(elseTerm,    new Precedence(10, Precedence.Associativity.RIGHT)),
         Map.entry(assign,      new Precedence(20, Precedence.Associativity.RIGHT)),
         Map.entry(eq,          new Precedence(30, Precedence.Associativity.LEFT)),
