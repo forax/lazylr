@@ -23,12 +23,10 @@ import java.util.stream.Stream;
 ///   tokenName: /regex/
 ///   /ignored-regex/
 /// }
-///
 /// precedence {
 ///   left:  '->', tokenName
 ///   right: '%'
 /// }
-///
 /// grammar {
 ///   StartRule: StartRule '->' Item
 ///   StartRule: StartRule tokenName Item
