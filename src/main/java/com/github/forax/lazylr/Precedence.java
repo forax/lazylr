@@ -16,8 +16,8 @@ import java.util.Objects;
 ///    * `RIGHT`: `a ^ b ^ c` is parsed as `a ^ (b ^ c)`.
 ///
 /// @param level A non-negative integer representing priority. Higher is stronger.
-/// @param assoc The direction in which operators of the same level group.
-public record Precedence(int level, Associativity assoc) {
+/// @param associativity The direction in which operators of the same level group.
+public record Precedence(int level, Associativity associativity) {
 
   /// Specifies the grouping direction for operators with the same precedence level.
   public enum Associativity {
@@ -30,11 +30,11 @@ public record Precedence(int level, Associativity assoc) {
   /// Creates a precedence.
   ///
   /// @throws IllegalArgumentException if `level` is negative.
-  /// @throws NullPointerException if `assoc` is null.
+  /// @throws NullPointerException if `associativity` is null.
   public Precedence {
     if (level < 0) {
       throw new IllegalArgumentException("Precedence level must be non-negative");
     }
-    Objects.requireNonNull(assoc);
+    Objects.requireNonNull(associativity);
   }
 }

@@ -358,7 +358,7 @@ public final class LALRVerifier {
           actions.put(lookahead, reduceAction);
         } else {
           // Same level: use associativity
-          if (termPrec.assoc() == Precedence.Associativity.LEFT) {
+          if (termPrec.associativity() == Precedence.Associativity.LEFT) {
             // Reduce wins (left associative)
             Action reduceAction = (existing instanceof Reduce) ? existing : newAction;
             actions.put(lookahead, reduceAction);

@@ -259,7 +259,7 @@ final class LRTransitionEngine {
       if (rulePrec.level() < tokenPrec.level()) return false; // Shift (Token is stronger)
 
       // Levels are equal? Use associativity
-      return rulePrec.assoc() == Precedence.Associativity.LEFT; // Left-assoc means Reduce
+      return rulePrec.associativity() == Precedence.Associativity.LEFT; // Left-associativity means Reduce
     }
 
     // Default: Shift wins (standard yacc/bison behavior)
