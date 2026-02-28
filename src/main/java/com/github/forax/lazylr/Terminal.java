@@ -27,7 +27,7 @@ public final class Terminal implements Symbol, PrecedenceEntity {
   /// Represents a lexical error encountered during tokenization.
   ///
   /// This terminal is returned by the [Lexer] when the input character sequence
-  /// at the current position does not match any provided [Rule].
+  /// at the current position does not match any provided [Token].
   public static final Terminal ERROR = new Terminal("error");
 
   private final String name;

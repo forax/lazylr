@@ -54,8 +54,8 @@ Once we know that the grammar is correct, it can be evaluated!
 
 ```java
 var lexer = Lexer.createLexer(List.of(
-    new Rule("num", "[0-9]+"),
-    new Rule("[ ]+")     // whitespaces are ignored
+    new Token("num", "[0-9]+"),
+    new Token("[ ]+")     // whitespaces are ignored
 ));
 
 var parser = Parser.createParser(grammar, Map.of());
@@ -170,7 +170,7 @@ LALRVerifier.verify(mg.grammar(), Map.of(), System.err::println);
 >    Right-recursive rules can sometimes cause stack overflows on deeply nested inputs.
 
 ```java
-var lexer = Lexer.createLexer(mg.rules());
+var lexer = Lexer.createLexer(mg.tokens());
 var parser = Parser.createParser(mg.grammar(), Map.of());
 
 var input = "sum(42, 17)";
@@ -273,7 +273,7 @@ LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
 >    so there is no need to also list the production in the precedence map.
 
 ```java
-var lexer = Lexer.createLexer(mg.rules());
+var lexer = Lexer.createLexer(mg.tokens());
 var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
 var input = "1 + 2 + 3";
@@ -348,7 +348,7 @@ LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), msg -> System.err.println(
 >    rather than reducing, effectively giving `*` tighter binding.
 
 ```java
-var lexer = Lexer.createLexer(mg.rules());
+var lexer = Lexer.createLexer(mg.tokens());
 var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
 var input = "2 + 3 * 4";
@@ -423,7 +423,7 @@ LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), msg -> System.err.println(
 >    and effectively grouping from the right.
 
 ```java
-var lexer = Lexer.createLexer(mg.rules());
+var lexer = Lexer.createLexer(mg.tokens());
 var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
 var input = "2 ^ 3 ^ 2";
@@ -508,7 +508,7 @@ LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), msg -> System.err.println(
 >    always binds to the **nearest** (innermost) `if`.
 
 ```java
-var lexer = Lexer.createLexer(mg.rules());
+var lexer = Lexer.createLexer(mg.tokens());
 var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
 var evaluator = new Evaluator<Integer>() {

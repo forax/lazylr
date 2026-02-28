@@ -11,98 +11,98 @@ public final class LexerTest {
 
   @Test
   public void simpleTokenization() {
-    var rules = List.of(
-        new Rule("ID", "[a-z]+"),
-        new Rule("NUMBER", "[0-9]+")
+    var tokens = List.of(
+        new Token("ID", "[a-z]+"),
+        new Token("NUMBER", "[0-9]+")
     );
-    var lexer = Lexer.createLexer(rules);
-    var tokens = lexer.tokenize("abc123def");
+    var lexer = Lexer.createLexer(tokens);
+    var terminals = lexer.tokenize("abc123def");
 
-    var t1 = tokens.next();
+    var t1 = terminals.next();
     assertEquals("ID", t1.name());
     assertEquals("abc", t1.value());
 
-    var t2 = tokens.next();
+    var t2 = terminals.next();
     assertEquals("NUMBER", t2.name());
     assertEquals("123", t2.value());
 
-    var t3 = tokens.next();
+    var t3 = terminals.next();
     assertEquals("ID", t3.name());
     assertEquals("def", t3.value());
 
-    assertFalse(tokens.hasNext());
+    assertFalse(terminals.hasNext());
   }
 
   @Test
   public void rulePriority() {
-    // Both rules match "if", but "KEYWORD" is first
-    var rules = List.of(
-        new Rule("KEYWORD", "if"),
-        new Rule("ID", "[a-z]+")
+    // Both tokens match "if", but "KEYWORD" is first
+    var tokens = List.of(
+        new Token("KEYWORD", "if"),
+        new Token("ID", "[a-z]+")
     );
-    var lexer = Lexer.createLexer(rules);
-    var tokens = lexer.tokenize("if");
+    var lexer = Lexer.createLexer(tokens);
+    var terminals = lexer.tokenize("if");
 
-    var t = tokens.next();
+    var t = terminals.next();
     assertEquals("KEYWORD", t.name());
     assertEquals("if", t.value());
   }
 
   @Test
   public void ignorableRules() {
-    var rules = List.of(
-        new Rule("\\s+"),  // Ignorable whitespace
-        new Rule("ID", "[a-z]+")
+    var tokens = List.of(
+        new Token("\\s+"),  // Ignorable whitespace
+        new Token("ID", "[a-z]+")
     );
-    var lexer = Lexer.createLexer(rules);
-    var tokens = lexer.tokenize("  hello   world  ");
+    var lexer = Lexer.createLexer(tokens);
+    var terminals = lexer.tokenize("  hello   world  ");
 
-    var t1 = tokens.next();
+    var t1 = terminals.next();
     assertEquals("ID", t1.name());
     assertEquals("hello", t1.value());
 
-    var t2 = tokens.next();
+    var t2 = terminals.next();
     assertEquals("ID", t2.name());
     assertEquals("world", t2.value());
 
-    assertFalse(tokens.hasNext());
+    assertFalse(terminals.hasNext());
   }
 
   @Test
   public void errorHandling() {
-    var rules = List.of(
-        new Rule("ID", "[a-z]+")
+    var tokens = List.of(
+        new Token("ID", "[a-z]+")
     );
-    var lexer = Lexer.createLexer(rules);
-    var tokens = lexer.tokenize("abc#def");
+    var lexer = Lexer.createLexer(tokens);
+    var terminals = lexer.tokenize("abc#def");
 
-    tokens.next(); // Skip "abc"
+    terminals.next(); // Skip "abc"
 
-    var error = tokens.next();
+    var error = terminals.next();
     assertEquals(Terminal.ERROR.name(), error.name());
     assertTrue(error.value().contains("#"));
 
-    assertFalse(tokens.hasNext());
+    assertFalse(terminals.hasNext());
   }
 
   @Test
   public void emptyInput() {
-    var lexer = Lexer.createLexer(List.of(new Rule("ID", "[a-z]+")));
-    var tokens = lexer.tokenize("");
+    var lexer = Lexer.createLexer(List.of(new Token("ID", "[a-z]+")));
+    var terminals = lexer.tokenize("");
     
-    assertFalse(tokens.hasNext());
-    assertThrows(NoSuchElementException.class, tokens::next);
+    assertFalse(terminals.hasNext());
+    assertThrows(NoSuchElementException.class, terminals::next);
   }
 
   @Test
   public void onlyError() {
-    var lexer = Lexer.createLexer(List.of(new Rule("ID", "[a-z]+")));
-    var tokens = lexer.tokenize("!!");
+    var lexer = Lexer.createLexer(List.of(new Token("ID", "[a-z]+")));
+    var terminals = lexer.tokenize("!!");
 
-    var error = tokens.next();
+    var error = terminals.next();
     assertEquals(Terminal.ERROR.name(), error.name());
     assertTrue(error.value().contains("!"));
     
-    assertFalse(tokens.hasNext());
+    assertFalse(terminals.hasNext());
   }
 }

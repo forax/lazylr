@@ -53,12 +53,12 @@ import java.util.stream.Stream;
 ///   productions, converted to an escaped regex, and registered as a terminal.
 ///   No explicit declaration in the `tokens` section is required.
 public final class MetaGrammar {
-  private final List<Rule> rules;
+  private final List<Token> tokens;
   private final Grammar grammar;
   private final LinkedHashMap<PrecedenceEntity, Precedence> precedenceMap;
 
-  private MetaGrammar(List<Rule> rules, Grammar grammar, LinkedHashMap<PrecedenceEntity, Precedence> precedenceMap) {
-    this.rules = List.copyOf(rules);
+  private MetaGrammar(List<Token> tokens, Grammar grammar, LinkedHashMap<PrecedenceEntity, Precedence> precedenceMap) {
+    this.tokens = List.copyOf(tokens);
     this.grammar = grammar;
     this.precedenceMap = precedenceMap;
     super();
@@ -66,10 +66,10 @@ public final class MetaGrammar {
 
   /// The lexer rules derived from the `tokens` section, in priority order.
   ///
-  /// @return a list of [Rule] objects, ordered so that quoted (implicit)
+  /// @return a list of [Token] objects, ordered so that quoted (implicit)
   ///         terminals appear first, followed by named terminals, then anonymous ones.
-  public List<Rule> rules() {
-    return rules;
+  public List<Token> tokens() {
+    return tokens;
   }
 
   /// The grammar derived from the `grammar` section, rooted at the first declared
@@ -161,19 +161,19 @@ public final class MetaGrammar {
     ));
   }
 
-  private static final List<Rule> RULES = List.of(
-      new Rule("tokens",     "tokens"),
-      new Rule("precedence", "precedence"),
-      new Rule("grammar",    "grammar"),
-      new Rule("{",          "\\{"),
-      new Rule("}",          "\\}"),
-      new Rule(":",          ":"),
-      new Rule(",",          ","),
-      new Rule("regex",      "/[^/]*/"),
-      new Rule("quoted",     "'[^']*'"),
-      new Rule("ident",      "[A-Za-z_][A-Za-z0-9_]*"),
-      new Rule("eol",        "[\\r]?\\n"),
-      new Rule("[ \\t]+")  // whitespace ignored
+  private static final List<Token> TOKENS = List.of(
+      new Token("tokens",     "tokens"),
+      new Token("precedence", "precedence"),
+      new Token("grammar",    "grammar"),
+      new Token("{",          "\\{"),
+      new Token("}",          "\\}"),
+      new Token(":",          ":"),
+      new Token(",",          ","),
+      new Token("regex",      "/[^/]*/"),
+      new Token("quoted",     "'[^']*'"),
+      new Token("ident",      "[A-Za-z_][A-Za-z0-9_]*"),
+      new Token("eol",        "[\\r]?\\n"),
+      new Token("[ \\t]+")  // whitespace ignored
   );
 
   private static final Grammar GRAMMAR = createGrammar();
@@ -202,7 +202,7 @@ public final class MetaGrammar {
     var precedences = new ArrayList<RawPrecedence>();
     var rawProductions = new ArrayList<RawProduction>();
 
-    var lexer = Lexer.createLexer(RULES);
+    var lexer = Lexer.createLexer(TOKENS);
     var parser = Parser.createParser(GRAMMAR, Map.of());
     parser.parse(lexer.tokenize(input), new Evaluator<>() {
 
@@ -334,13 +334,13 @@ public final class MetaGrammar {
     // Rules ordering: implicit quoted first, then named, then unnamed
     var rules = Stream.of(
         quotedTerminalMap.keySet().stream()
-            .map(name -> new Rule(name, quoteRegex(name))),
+            .map(name -> new Token(name, quoteRegex(name))),
         rawRules.stream()
             .filter(r -> r.name != null)
-            .map(r -> new Rule(r.name, r.regex)),
+            .map(r -> new Token(r.name, r.regex)),
         rawRules.stream()
             .filter(r -> r.name == null)
-            .map(r -> new Rule(r.regex))
+            .map(r -> new Token(r.regex))
         )
         .flatMap(r -> r)
         .toList();

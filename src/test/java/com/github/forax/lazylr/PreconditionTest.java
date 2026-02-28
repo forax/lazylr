@@ -122,30 +122,30 @@ public final class PreconditionTest {
   }
 
   @Nested
-  public class RulePreconditions {
+  public class TokenPreconditions {
 
     @Test
     public void createLexerRulesNull() {
       assertThrows(NullPointerException.class, () ->
-          new Rule(null));
+          new Token(null));
       assertThrows(NullPointerException.class, () ->
-          new Rule("id", null));
+          new Token("id", null));
     }
 
     @Test
     public void createLexerRulesBadPattern() {
       assertThrows(IllegalArgumentException.class, () ->
-          new Rule("("));
+          new Token("("));
       assertThrows(IllegalArgumentException.class, () ->
-          new Rule("id", ")"));
+          new Token("id", ")"));
     }
 
     @Test
     public void createLexerRulesBadPatternWithGroup() {
       assertThrows(IllegalArgumentException.class, () ->
-          new Rule("(foo)"));
+          new Token("(foo)"));
       assertThrows(IllegalArgumentException.class, () ->
-          new Rule("id", "(foo)"));
+          new Token("id", "(foo)"));
     }
   }
 
@@ -160,16 +160,16 @@ public final class PreconditionTest {
 
     @Test
     public void tokenizeInputNull() {
-      var lexer = Lexer.createLexer(List.of(new Rule("ID", "[a-z]+")));
+      var lexer = Lexer.createLexer(List.of(new Token("ID", "[a-z]+")));
       assertThrows(NullPointerException.class, () ->
           lexer.tokenize(null));
     }
 
     @Test
     public void iteratorNextOutOfBounds() {
-      var lexer = Lexer.createLexer(List.of(new Rule("ID", "[a-z]+")));
-      var tokens = lexer.tokenize("");  // Empty input results in no matches
-      assertThrows(NoSuchElementException.class, tokens::next);
+      var lexer = Lexer.createLexer(List.of(new Token("ID", "[a-z]+")));
+      var terminals = lexer.tokenize("");  // Empty input results in no matches
+      assertThrows(NoSuchElementException.class, terminals::next);
     }
   }
 

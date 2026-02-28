@@ -111,13 +111,13 @@ class NodeEvaluator implements Evaluator<Node> {
 Tokenize the input, parse, and create the AST:
 
 ```java
-Lexer lexer = Lexer.createLexer(mg.rules());
+Lexer lexer = Lexer.createLexer(mg.tokens());
 Parser parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
 String input = "2 + 3 * 4";
 
-Iterator<Terminal> tokens = lexer.tokenize(input);
-Node ast = parser.parse(tokens, new NodeEvaluator());
+Iterator<Terminal> terminals = lexer.tokenize(input);
+Node ast = parser.parse(terminals, new NodeEvaluator());
 
 // Profit!
 System.out.println(ast);

@@ -22,8 +22,8 @@ public final class GuideTest {
     LALRVerifier.verify(grammar, Map.of(), msg -> fail("Unexpected conflict: " + msg));
 
     var lexer = Lexer.createLexer(List.of(
-        new Rule("num", "[0-9]+"),
-        new Rule("[ ]+")     // whitespaces are ignored
+        new Token("num", "[0-9]+"),
+        new Token("[ ]+")     // whitespaces are ignored
     ));
     var parser = Parser.createParser(grammar, Map.of());
 
@@ -90,7 +90,7 @@ public final class GuideTest {
 
     LALRVerifier.verify(mg.grammar(), Map.of(), msg -> fail("Unexpected conflict: " + msg));
 
-    var lexer  = Lexer.createLexer(mg.rules());
+    var lexer  = Lexer.createLexer(mg.tokens());
     var parser = Parser.createParser(mg.grammar(), Map.of());
 
     var input  = "sum(42, 17)";
@@ -137,7 +137,7 @@ public final class GuideTest {
 
     LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), msg -> fail("Unexpected conflict: " + msg));
 
-    var lexer  = Lexer.createLexer(mg.rules());
+    var lexer  = Lexer.createLexer(mg.tokens());
     var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
     var input  = "1 + 2 + 3";
@@ -183,7 +183,7 @@ public final class GuideTest {
 
     LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), msg -> fail("Unexpected conflict: " + msg));
 
-    var lexer  = Lexer.createLexer(mg.rules());
+    var lexer  = Lexer.createLexer(mg.tokens());
     var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
     var input  = "2 + 3 * 4";
@@ -232,7 +232,7 @@ public final class GuideTest {
 
     LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), msg -> fail("Unexpected conflict: " + msg));
 
-    var lexer  = Lexer.createLexer(mg.rules());
+    var lexer  = Lexer.createLexer(mg.tokens());
     var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
     var input  = "2 ^ 3 ^ 2";
@@ -289,7 +289,7 @@ public final class GuideTest {
 
     LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), msg -> fail("Unexpected conflict: " + msg));
 
-    var lexer  = Lexer.createLexer(mg.rules());
+    var lexer  = Lexer.createLexer(mg.tokens());
     var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
     var evaluator = new Evaluator<Integer>() {

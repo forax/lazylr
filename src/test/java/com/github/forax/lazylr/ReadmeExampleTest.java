@@ -55,17 +55,17 @@ public final class ReadmeExampleTest {
       }
     }
 
-    Lexer lexer = Lexer.createLexer(mg.rules());
+    Lexer lexer = Lexer.createLexer(mg.tokens());
     Parser parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
     // Usage Example
     String input = "2 + 3 * 4";
 
     // Tokenize using token names
-    Iterator<Terminal> tokens = lexer.tokenize(input);
+    Iterator<Terminal> terminals = lexer.tokenize(input);
 
     // Parse and create the AST
-    Node ast = parser.parse(tokens, new NodeEvaluator());
+    Node ast = parser.parse(terminals, new NodeEvaluator());
 
     // Profit!
     System.out.println(ast);

@@ -15,43 +15,43 @@ public final class ParserCTest {
   public static Lexer createCLexer() {
     return Lexer.createLexer(List.of(
         // Keywords
-        new Rule("if", "if"),
-        new Rule("else", "else"),
-        new Rule("while", "while"),
-        new Rule("return", "return"),
-        new Rule("type", "int|void"),
+        new Token("if", "if"),
+        new Token("else", "else"),
+        new Token("while", "while"),
+        new Token("return", "return"),
+        new Token("type", "int|void"),
 
         // Multi-character Operators
-        new Rule("==", "=="),
-        new Rule("!=", "!="),
-        new Rule("<=", "<="),
-        new Rule(">=", ">="),
-        new Rule("->", "->"),
+        new Token("==", "=="),
+        new Token("!=", "!="),
+        new Token("<=", "<="),
+        new Token(">=", ">="),
+        new Token("->", "->"),
 
         // Single-character Operators & Punctuation
-        new Rule("=", "="),
-        new Rule("<", "<"),
-        new Rule(">", ">"),
-        new Rule("+", "\\+"),
-        new Rule("-", "-"),
-        new Rule("*", "\\*"),
-        new Rule("/", "/"),
-        new Rule("%", "%"),
-        new Rule("&", "&"),
-        new Rule(".", "\\."),
-        new Rule(",", ","),
-        new Rule(";", ";"),
-        new Rule("(", "\\("),
-        new Rule(")", "\\)"),
-        new Rule("{", "\\{"),
-        new Rule("}", "\\}"),
+        new Token("=", "="),
+        new Token("<", "<"),
+        new Token(">", ">"),
+        new Token("+", "\\+"),
+        new Token("-", "-"),
+        new Token("*", "\\*"),
+        new Token("/", "/"),
+        new Token("%", "%"),
+        new Token("&", "&"),
+        new Token(".", "\\."),
+        new Token(",", ","),
+        new Token(";", ";"),
+        new Token("(", "\\("),
+        new Token(")", "\\)"),
+        new Token("{", "\\{"),
+        new Token("}", "\\}"),
 
         // Identifiers and Literals
-        new Rule("id", "[a-zA-Z_][a-zA-Z0-9_]*"),
-        new Rule("num", "[0-9]+"),
+        new Token("id", "[a-zA-Z_][a-zA-Z0-9_]*"),
+        new Token("num", "[0-9]+"),
 
         // Whitespaces
-        new Rule("[ |\\t|\\r|\\n]+")
+        new Token("[ |\\t|\\r|\\n]+")
     ));
   }
 
@@ -404,8 +404,8 @@ public final class ParserCTest {
             }
         }
         """;
-      var tokens = lexer.tokenize(code);
-      var result = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var result = parser.parse(terminals, new NodeEvaluator());
 
       assertEquals("""
         TranslationUnit[items=[\
@@ -437,8 +437,8 @@ public final class ParserCTest {
                 else return 0;
         }
         """;
-      var tokens = lexer.tokenize(code);
-      var result = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var result = parser.parse(terminals, new NodeEvaluator());
 
       assertEquals("""
         TranslationUnit[items=[\
@@ -468,8 +468,8 @@ public final class ParserCTest {
             else return 2;
         }
         """;
-      var tokens = lexer.tokenize(code);
-      var result = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var result = parser.parse(terminals, new NodeEvaluator());
 
       assertEquals("""
         TranslationUnit[items=[\
@@ -503,8 +503,8 @@ public final class ParserCTest {
             }
         }
         """;
-      var tokens = lexer.tokenize(code);
-      var result = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var result = parser.parse(terminals, new NodeEvaluator());
 
       assertEquals("""
         TranslationUnit[items=[\
@@ -533,8 +533,8 @@ public final class ParserCTest {
       var code = """
         void f() {}
         """;
-      var tokens = lexer.tokenize(code);
-      var result = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var result = parser.parse(terminals, new NodeEvaluator());
 
       assertEquals("""
         TranslationUnit[items=[\
@@ -559,8 +559,8 @@ public final class ParserCTest {
           int x = -n * 5 + v / 2;
       }
       """;
-      var tokens = lexer.tokenize(code);
-      var result = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var result = parser.parse(terminals, new NodeEvaluator());
 
       assertEquals("""
         TranslationUnit[items=[\
@@ -586,8 +586,8 @@ public final class ParserCTest {
           if (x + 1 <= y == z > 0) return;
       }
       """;
-      var tokens = lexer.tokenize(code);
-      var result = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var result = parser.parse(terminals, new NodeEvaluator());
 
       assertEquals("""
         TranslationUnit[items=[\
@@ -615,8 +615,8 @@ public final class ParserCTest {
       var code = """
         void main() { int res = add(get_x(), multiply(y, 2)); }
         """;
-      var tokens = lexer.tokenize(code);
-      var result = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var result = parser.parse(terminals, new NodeEvaluator());
 
       assertEquals("""
         TranslationUnit[items=[\
@@ -645,8 +645,8 @@ public final class ParserCTest {
           return n * factorial(n - 1);
       }
       """;
-      var tokens = lexer.tokenize(code);
-      var result = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var result = parser.parse(terminals, new NodeEvaluator());
 
       assertEquals("""
         TranslationUnit[items=[\
@@ -677,8 +677,8 @@ public final class ParserCTest {
       var code = """
         int add(int a, int b) { return a + b; }
         """;
-      var tokens = lexer.tokenize(code);
-      var result = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var result = parser.parse(terminals, new NodeEvaluator());
 
       assertEquals("""
         TranslationUnit[items=[\
@@ -703,8 +703,8 @@ public final class ParserCTest {
             int c = 3;
         }
         """;
-      var tokens = lexer.tokenize(code);
-      var result = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var result = parser.parse(terminals, new NodeEvaluator());
 
       assertEquals("""
         TranslationUnit[items=[\
@@ -730,8 +730,8 @@ public final class ParserCTest {
       var code = """
         void f() { a = b = c = 0; }
         """;
-      var tokens = lexer.tokenize(code);
-      var result = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var result = parser.parse(terminals, new NodeEvaluator());
 
       // assignment is RIGHT associative so a = (b = (c = 0))
       assertEquals("""
@@ -756,8 +756,8 @@ public final class ParserCTest {
       var code = """
         void f() { int x = (a + b) * (c + d); }
         """;
-      var tokens = lexer.tokenize(code);
-      var result = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var result = parser.parse(terminals, new NodeEvaluator());
 
       assertEquals("""
         TranslationUnit[items=[\
@@ -789,8 +789,8 @@ public final class ParserCTest {
             a >= b;
         }
         """;
-      var tokens = lexer.tokenize(code);
-      var result = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var result = parser.parse(terminals, new NodeEvaluator());
 
       assertEquals("""
         TranslationUnit[items=[\
@@ -822,8 +822,8 @@ public final class ParserCTest {
             a % b;
         }
         """;
-      var tokens = lexer.tokenize(code);
-      var result = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var result = parser.parse(terminals, new NodeEvaluator());
 
       assertEquals("""
         TranslationUnit[items=[\
@@ -852,8 +852,8 @@ public final class ParserCTest {
         int square(int n) { return n * n; }
         int cube(int n) { return n * square(n); }
         """;
-      var tokens = lexer.tokenize(code);
-      var result = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var result = parser.parse(terminals, new NodeEvaluator());
 
       assertEquals("""
         TranslationUnit[items=[\
@@ -883,9 +883,9 @@ public final class ParserCTest {
       var code = """
         void f() { int x = 5 }
         """;
-      var tokens = lexer.tokenize(code);
+      var terminals = lexer.tokenize(code);
       assertThrows(Exception.class, () ->
-          parser.parse(tokens, new NodeEvaluator()));
+          parser.parse(terminals, new NodeEvaluator()));
     }
 
     @Test
@@ -895,9 +895,9 @@ public final class ParserCTest {
       var code = """
         void f() { if (x == 1 { return 0; } }
         """; // Error: Missing ')'
-      var tokens = lexer.tokenize(code);
+      var terminals = lexer.tokenize(code);
       assertThrows(Exception.class, () ->
-          parser.parse(tokens, new NodeEvaluator()));
+          parser.parse(terminals, new NodeEvaluator()));
     }
 
     @Test
@@ -907,9 +907,9 @@ public final class ParserCTest {
       var code = """
         void f() { int x = 5;
         """;
-      var tokens = lexer.tokenize(code);
+      var terminals = lexer.tokenize(code);
       assertThrows(Exception.class, () ->
-          parser.parse(tokens, new NodeEvaluator()));
+          parser.parse(terminals, new NodeEvaluator()));
     }
 
     @Test
@@ -919,9 +919,9 @@ public final class ParserCTest {
       var code = """
         void f() { return 1 }
         """;
-      var tokens = lexer.tokenize(code);
+      var terminals = lexer.tokenize(code);
       assertThrows(Exception.class, () ->
-          parser.parse(tokens, new NodeEvaluator()));
+          parser.parse(terminals, new NodeEvaluator()));
     }
 
     @Test
@@ -931,9 +931,9 @@ public final class ParserCTest {
       var code = """
         void f() { a + b }
         """;
-      var tokens = lexer.tokenize(code);
+      var terminals = lexer.tokenize(code);
       assertThrows(Exception.class, () ->
-          parser.parse(tokens, new NodeEvaluator()));
+          parser.parse(terminals, new NodeEvaluator()));
     }
 
     @Test
@@ -943,9 +943,9 @@ public final class ParserCTest {
       var code = """
         void f() { int x = (); }
         """;
-      var tokens = lexer.tokenize(code);
+      var terminals = lexer.tokenize(code);
       assertThrows(Exception.class, () ->
-          parser.parse(tokens, new NodeEvaluator()));
+          parser.parse(terminals, new NodeEvaluator()));
     }
   }
 
@@ -956,8 +956,8 @@ public final class ParserCTest {
       var lexer = createCLexer();
       var parser = createCParser();
       var code = "void loop() { int i = 0; while (i < 10) { i = i + 1; } }";
-      var tokens = lexer.tokenize(code);
-      var node = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var node = parser.parse(terminals, new NodeEvaluator());
 
       assertEquals(code, toText(node));
     }
@@ -967,8 +967,8 @@ public final class ParserCTest {
       var lexer = createCLexer();
       var parser = createCParser();
       var code = "void check() { if (a == 1) if (b == 1) return 1; else return 0; }";
-      var tokens = lexer.tokenize(code);
-      var node = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var node = parser.parse(terminals, new NodeEvaluator());
 
       assertEquals(code, toText(node));
     }
@@ -978,8 +978,8 @@ public final class ParserCTest {
       var lexer = createCLexer();
       var parser = createCParser();
       var code = "void f() { a = b = c = 0; }";
-      var tokens = lexer.tokenize(code);
-      var node = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var node = parser.parse(terminals, new NodeEvaluator());
 
       assertEquals(code, toText(node));
     }
@@ -989,8 +989,8 @@ public final class ParserCTest {
       var lexer = createCLexer();
       var parser = createCParser();
       var code = "void math(int ptr) { int x = -n * 5 + *ptr / 2; }";
-      var tokens = lexer.tokenize(code);
-      var node = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var node = parser.parse(terminals, new NodeEvaluator());
 
       assertEquals(code, toText(node));
     }
@@ -1000,8 +1000,8 @@ public final class ParserCTest {
       var lexer = createCLexer();
       var parser = createCParser();
       var code = "int factorial(int n) { if (n <= 1) { return 1; } return n * factorial(n - 1); }";
-      var tokens = lexer.tokenize(code);
-      var node = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var node = parser.parse(terminals, new NodeEvaluator());
 
       assertEquals(code, toText(node));
     }
@@ -1014,8 +1014,8 @@ public final class ParserCTest {
         int square(int n) { return n * n; }
         int cube(int n) { return n * square(n); }\
         """;
-      var tokens = lexer.tokenize(code);
-      var node = parser.parse(tokens, new NodeEvaluator());
+      var terminals = lexer.tokenize(code);
+      var node = parser.parse(terminals, new NodeEvaluator());
 
       assertEquals(code, toText(node));
     }

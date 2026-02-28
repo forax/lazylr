@@ -26,10 +26,10 @@ public class EvaluatorTest {
     );
 
     var lexer = Lexer.createLexer(List.of(
-        new Rule("+", "\\+"),
-        new Rule("*", "\\*"),
-        new Rule("num", "[0-9]+"),
-        new Rule(" +")
+        new Token("+", "\\+"),
+        new Token("*", "\\*"),
+        new Token("num", "[0-9]+"),
+        new Token(" +")
     ));
     var parser = Parser.createParser(grammar, precedence);
 
@@ -89,10 +89,10 @@ public class EvaluatorTest {
     );
 
     var lexer = Lexer.createLexer(List.of(
-        new Rule("+", "\\+"),
-        new Rule("*", "\\*"),
-        new Rule("num", "[0-9]+"),
-        new Rule(" +")
+        new Token("+", "\\+"),
+        new Token("*", "\\*"),
+        new Token("num", "[0-9]+"),
+        new Token(" +")
     ));
     var parser = Parser.createParser(grammar, precedence);
 

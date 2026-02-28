@@ -26,7 +26,7 @@ import java.util.regex.PatternSyntaxException;
 /// new Rule("num", "[0-9]+"); // Produces a "num" terminal
 /// new Rule("[ ]+");          // Ignorable: matches spaces but produces no terminal
 /// ```
-public final class Rule {
+public final class Token {
   private static void checkPattern(String regex) {
     Pattern pattern;
     try {
@@ -43,7 +43,7 @@ public final class Rule {
    private final String name;
    private final String regex;
 
-   private Rule(String name, String regex, boolean unused) {
+   private Token(String name, String regex, boolean unused) {
      this.name = name;
      this.regex = regex;
      super();
@@ -56,7 +56,7 @@ public final class Rule {
   /// @param regex The regular expression pattern to match.
   /// @throws NullPointerException if name or regex is null.
   /// @throws IllegalArgumentException if the pattern is malformed or contains a group
-  public Rule(String name, String regex) {
+  public Token(String name, String regex) {
     Objects.requireNonNull(name);
     Objects.requireNonNull(regex);
     checkPattern(regex);
@@ -70,7 +70,7 @@ public final class Rule {
   ///
   /// @param regex The regular expression pattern to match and skip.
   /// @throws IllegalArgumentException if the pattern is malformed or contains a group
-  public Rule(String regex) {
+  public Token(String regex) {
     Objects.requireNonNull(regex);
     checkPattern(regex);
     this(null, regex, false);
@@ -107,7 +107,7 @@ public final class Rule {
   /// Compares this rule with another object for equality.
   @Override
   public boolean equals(Object o) {
-    return o instanceof Rule rule && regex.equals(rule.regex) && Objects.equals(name, rule.name);
+    return o instanceof Token token && regex.equals(token.regex) && Objects.equals(name, token.name);
   }
 
   /// @return A string representation of the rule.

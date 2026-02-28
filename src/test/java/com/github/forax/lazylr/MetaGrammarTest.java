@@ -16,9 +16,9 @@ public final class MetaGrammarTest {
         .toList();
   }
 
-  private static List<String> ruleNames(List<Rule> rules) {
-    return rules.stream()
-        .map(Rule::name)
+  private static List<String> ruleNames(List<Token> tokens) {
+    return tokens.stream()
+        .map(Token::name)
         .filter(Objects::nonNull)
         .toList();
   }
@@ -37,7 +37,7 @@ public final class MetaGrammarTest {
         List.of("Empty : ε"),
         productionNames(grammar));
 
-    var rules = mg.rules();
+    var rules = mg.tokens();
     assertEquals(List.of(), ruleNames(rules));
 
     var precedenceMap = mg.precedenceMap();
@@ -91,10 +91,10 @@ public final class MetaGrammarTest {
         }
         """);
 
-    var rules = mg.rules();
+    var rules = mg.tokens();
     assertEquals(List.of(
-            new Rule("num", "[0-9]+"),
-            new Rule("plus", "\\+")),
+            new Token("num", "[0-9]+"),
+            new Token("plus", "\\+")),
         rules);
   }
 
@@ -120,13 +120,13 @@ public final class MetaGrammarTest {
         "Expr : ident"
     ), productionNames(grammar));
 
-    var rules = mg.rules();
+    var rules = mg.tokens();
     assertEquals(List.of(
-            new Rule("if", "if"),
-            new Rule("then", "then"),
-            new Rule("else", "else"),
-            new Rule(";", ";"),
-            new Rule("ident", "[a-z]+")),
+            new Token("if", "if"),
+            new Token("then", "then"),
+            new Token("else", "else"),
+            new Token(";", ";"),
+            new Token("ident", "[a-z]+")),
         rules);
   }
 
@@ -143,11 +143,11 @@ public final class MetaGrammarTest {
         }
         """);
 
-    var rules = mg.rules();
+    var rules = mg.tokens();
     assertEquals(List.of(
-            new Rule("+", "\\+"),
-            new Rule("*", "\\*"),
-            new Rule("num", "[0-9]+")),
+            new Token("+", "\\+"),
+            new Token("*", "\\*"),
+            new Token("num", "[0-9]+")),
         rules);
   }
 
@@ -181,7 +181,7 @@ public final class MetaGrammarTest {
         "Expr : num"
     ), productionNames(grammar));
 
-    var rules = mg.rules();
+    var rules = mg.tokens();
     assertEquals(List.of("num", "plus", "star", "pow"), ruleNames(rules));
 
     var precedenceMap = mg.precedenceMap();
@@ -207,7 +207,7 @@ public final class MetaGrammarTest {
     var grammar = mg.grammar();
     assertEquals(List.of("Program : ident"), productionNames(grammar));
 
-    var rules = mg.rules();
+    var rules = mg.tokens();
     assertEquals(List.of("ident"), ruleNames(rules));
   }
 
@@ -229,7 +229,7 @@ public final class MetaGrammarTest {
         "grammar : tokens"
     ), productionNames(grammar));
 
-    var rules = mg.rules();
+    var rules = mg.tokens();
     assertEquals(List.of("ident"), ruleNames(rules));
   }
 
@@ -254,7 +254,7 @@ public final class MetaGrammarTest {
         "Expr : id"
     ), productionNames(grammar));
 
-    var rules = mg.rules();
+    var rules = mg.tokens();
     assertEquals(List.of("num", "id"), ruleNames(rules));
   }
 
@@ -305,7 +305,7 @@ public final class MetaGrammarTest {
         "E : num"
     ), productionNames(grammar));
 
-    var rules = mg.rules();
+    var rules = mg.tokens();
     assertEquals(List.of("+", "-", "*", "/", "num"), ruleNames(rules));
 
     var precedenceMap = mg.precedenceMap();
@@ -366,7 +366,7 @@ public final class MetaGrammarTest {
         "Member : string : Value"
     ), productionNames(grammar));
 
-    var rules = mg.rules();
+    var rules = mg.tokens();
     assertEquals(List.of("true", "false", "null", "[", "]", ",", "{", "}", ":", "string", "number"),
         ruleNames(rules));
   }
