@@ -55,9 +55,9 @@ public final class GuideTest {
     var B = new NonTerminal("B");
     var NUM = new Terminal("num");
 
-    var pA = new Production(E, List.of(A));
-    var pB = new Production(E,  List.of(B));
-    var pNumViaA= new Production(A, List.of(NUM));
+    var pA       = new Production(E, List.of(A));
+    var pB       = new Production(E, List.of(B));
+    var pNumViaA = new Production(A, List.of(NUM));
     var pNumViaB = new Production(B, List.of(NUM));
 
     var grammar = new Grammar(E, List.of(pA, pB, pNumViaA, pNumViaB));
@@ -73,37 +73,32 @@ public final class GuideTest {
   // -------------------------------------------------------------------------
   @Test
   public void step3_functionCall() {
-    var E    = new NonTerminal("E");
-    var ARGS = new NonTerminal("ARGS");
-    var NUM  = new Terminal("num");
-    var SUM  = new Terminal("sum");
+    var mg = MetaGrammar.create("""
+        tokens {
+          sum: /sum/
+          num: /[0-9]+/
+          /[ ]+/
+        }
+        grammar {
+          E:    num
+          E:    sum '(' ARGS ')'
+          ARGS: E
+          ARGS: ARGS ',' E
+          ARGS:
+        }
+        """);
 
-    var pNum        = new Production(E,    List.of(NUM));
-    var pArgsSingle = new Production(ARGS, List.of(E));
-    var pArgsMulti  = new Production(ARGS, List.of(ARGS, new Terminal(","), E));
-    var pArgsEmpty  = new Production(ARGS, List.of()); // ε
-    var pCall       = new Production(E,    List.of(SUM, new Terminal("("), ARGS, new Terminal(")")));
+    LALRVerifier.verify(mg.grammar(), Map.of(), msg -> fail("Unexpected conflict: " + msg));
 
-    var grammar = new Grammar(E, List.of(pNum, pArgsSingle, pArgsMulti, pArgsEmpty, pCall));
+    var lexer  = Lexer.createLexer(mg.rules());
+    var parser = Parser.createParser(mg.grammar(), Map.of());
 
-    LALRVerifier.verify(grammar, Map.of(), msg -> fail("Unexpected conflict: " + msg));
-
-    var lexer = Lexer.createLexer(List.of(
-        new Rule("sum", "sum"),
-        new Rule(",",   ","),
-        new Rule("(",   "\\("),
-        new Rule(")",   "\\)"),
-        new Rule("num", "[0-9]+"),
-        new Rule("[ ]+")     // whitespaces are ignored
-    ));
-    var parser = Parser.createParser(grammar, Map.of());
-
-    var input = "sum(42, 17)";
+    var input  = "sum(42, 17)";
     var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
       public Integer evaluate(Terminal t) {
-        return switch(t.name()) {
+        return switch (t.name()) {
           case "num" -> Integer.parseInt(t.value());
-          default -> 0;
+          default    -> 0;
         };
       }
       public Integer evaluate(Production p, List<Integer> args) {
@@ -126,44 +121,37 @@ public final class GuideTest {
   // -------------------------------------------------------------------------
   @Test
   public void step4_additionLeftAssociative() {
-    var E    = new NonTerminal("E");
-    var NUM  = new Terminal("num");
-    var PLUS = new Terminal("+");
+    var mg = MetaGrammar.create("""
+        tokens {
+          num: /[0-9]+/
+          /[ ]+/
+        }
+        precedence {
+          left: '+'
+        }
+        grammar {
+          E: num
+          E: E '+' E
+        }
+        """);
 
-    var pNum  = new Production(E, List.of(NUM));
-    var pPlus = new Production(E, List.of(E, PLUS, E));
+    LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), msg -> fail("Unexpected conflict: " + msg));
 
-    var grammar = new Grammar(E, List.of(pNum, pPlus));
+    var lexer  = Lexer.createLexer(mg.rules());
+    var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
-    LALRVerifier.verify(grammar, Map.of(), System.out::println);
-
-    var precAdd       = new Precedence(10, Precedence.Associativity.LEFT);
-    var precedenceMap = Map.of(PLUS, precAdd, pPlus, precAdd);
-
-    LALRVerifier.verify(grammar, precedenceMap, msg -> fail("Unexpected conflict: " + msg));
-
-    var lexer = Lexer.createLexer(List.of(
-        new Rule("+",   "\\+"),
-        new Rule("num", "[0-9]+"),
-        new Rule("[ ]+")
-    ));
-    var parser = Parser.createParser(grammar, precedenceMap);
-
-    var input = "1 + 2 + 3";
+    var input  = "1 + 2 + 3";
     var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
       public Integer evaluate(Terminal t) {
-        return switch(t.name()) {
+        return switch (t.name()) {
           case "num" -> Integer.parseInt(t.value());
-          default -> 0;
+          default    -> 0;
         };
       }
       public Integer evaluate(Production p, List<Integer> args) {
         return switch (p.name()) {
           case "E : num"   -> args.get(0);
-          case "E : E + E" -> {
-            System.out.println("Reducing " + p + " with args " + args);
-            yield args.get(0) + args.get(2);
-          }
+          case "E : E + E" -> args.get(0) + args.get(2);
           default -> throw new IllegalStateException("unknown production: " + p.name());
         };
       }
@@ -177,38 +165,33 @@ public final class GuideTest {
   // -------------------------------------------------------------------------
   @Test
   public void step5_multiplicationPrecedence() {
-    var E    = new NonTerminal("E");
-    var NUM  = new Terminal("num");
-    var PLUS = new Terminal("+");
-    var MUL  = new Terminal("*");
+    var mg = MetaGrammar.create("""
+        tokens {
+          num: /[0-9]+/
+          /[ ]+/
+        }
+        precedence {
+          left: '+'
+          left: '*'
+        }
+        grammar {
+          E: num
+          E: E '+' E
+          E: E '*' E
+        }
+        """);
 
-    var pNum  = new Production(E, List.of(NUM));
-    var pPlus = new Production(E, List.of(E, PLUS, E));
-    var pMul  = new Production(E, List.of(E, MUL,  E));
-    var grammar = new Grammar(E, List.of(pNum, pPlus, pMul));
+    LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), msg -> fail("Unexpected conflict: " + msg));
 
-    LALRVerifier.verify(grammar, Map.of(), System.out::println);
+    var lexer  = Lexer.createLexer(mg.rules());
+    var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
-    var precAdd = new Precedence(10, Precedence.Associativity.LEFT);
-    var precMul = new Precedence(20, Precedence.Associativity.LEFT);
-    var precedenceMap = Map.of(PLUS, precAdd, MUL,  precMul);
-
-    LALRVerifier.verify(grammar, precedenceMap, msg -> fail("Unexpected conflict: " + msg));
-
-    var lexer = Lexer.createLexer(List.of(
-        new Rule("+",   "\\+"),
-        new Rule("*",   "\\*"),
-        new Rule("num", "[0-9]+"),
-        new Rule("[ ]+")
-    ));
-    var parser = Parser.createParser(grammar, precedenceMap);
-
-    var input = "2 + 3 * 4";
+    var input  = "2 + 3 * 4";
     var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
       public Integer evaluate(Terminal t) {
-        return switch(t.name()) {
+        return switch (t.name()) {
           case "num" -> Integer.parseInt(t.value());
-          default -> 0;
+          default    -> 0;
         };
       }
       public Integer evaluate(Production p, List<Integer> args) {
@@ -229,40 +212,35 @@ public final class GuideTest {
   // -------------------------------------------------------------------------
   @Test
   public void step6_exponentiationRightAssociative() {
-    var E    = new NonTerminal("E");
-    var NUM  = new Terminal("num");
-    var PLUS = new Terminal("+");
-    var MUL  = new Terminal("*");
-    var POW  = new Terminal("^");
+    var mg = MetaGrammar.create("""
+        tokens {
+          num: /[0-9]+/
+          /[ ]+/
+        }
+        precedence {
+          left:  '+'
+          left:  '*'
+          right: '^'
+        }
+        grammar {
+          E: num
+          E: E '+' E
+          E: E '*' E
+          E: E '^' E
+        }
+        """);
 
-    var pNum  = new Production(E, List.of(NUM));
-    var pPlus = new Production(E, List.of(E, PLUS, E));
-    var pMul  = new Production(E, List.of(E, MUL,  E));
-    var pPow  = new Production(E, List.of(E, POW,  E));
-    var grammar = new Grammar(E, List.of(pNum, pPlus, pMul, pPow));
+    LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), msg -> fail("Unexpected conflict: " + msg));
 
-    var precAdd = new Precedence(10, Precedence.Associativity.LEFT);
-    var precMul = new Precedence(20, Precedence.Associativity.LEFT);
-    var precPow = new Precedence(30, Precedence.Associativity.RIGHT);
-    var precedenceMap = Map.of(PLUS, precAdd, MUL,  precMul, POW,  precPow);
+    var lexer  = Lexer.createLexer(mg.rules());
+    var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
-    LALRVerifier.verify(grammar, precedenceMap, msg -> fail("Unexpected conflict: " + msg));
-
-    var lexer = Lexer.createLexer(List.of(
-        new Rule("+",   "\\+"),
-        new Rule("*",   "\\*"),
-        new Rule("^",   "\\^"),
-        new Rule("num", "[0-9]+"),
-        new Rule("[ ]+")
-    ));
-    var parser = Parser.createParser(grammar, precedenceMap);
-
-    var input = "2 ^ 3 ^ 2";
+    var input  = "2 ^ 3 ^ 2";
     var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
       public Integer evaluate(Terminal t) {
-        return switch(t.name()) {
+        return switch (t.name()) {
           case "num" -> Integer.parseInt(t.value());
-          default -> 0;
+          default    -> 0;
         };
       }
       public Integer evaluate(Production p, List<Integer> args) {
@@ -270,10 +248,7 @@ public final class GuideTest {
           case "E : num"   -> args.get(0);
           case "E : E + E" -> args.get(0) + args.get(2);
           case "E : E * E" -> args.get(0) * args.get(2);
-          case "E : E ^ E" -> {
-            System.out.println("Reducing " + p + " with args " + args);
-            yield (int) Math.pow(args.get(0), args.get(2));
-          }
+          case "E : E ^ E" -> (int) Math.pow(args.get(0), args.get(2));
           default -> throw new IllegalStateException("unknown production: " + p.name());
         };
       }
@@ -287,52 +262,41 @@ public final class GuideTest {
   // -------------------------------------------------------------------------
   @Test
   public void step7_danglingElse() {
-    var E    = new NonTerminal("E");
-    var NUM  = new Terminal("num");
-    var PLUS = new Terminal("+");
-    var MUL  = new Terminal("*");
-    var POW  = new Terminal("^");
-    var IF   = new Terminal("if");
-    var THEN = new Terminal("then");
-    var ELSE = new Terminal("else");
+    var mg = MetaGrammar.create("""
+        tokens {
+          if:   /if/
+          then: /then/
+          else: /else/
+          num:  /[0-9]+/
+          /[ ]+/
+        }
+        precedence {
+          right: if
+          left:  '+'
+          left:  '*'
+          right: '^'
+          right: else
+        }
+        grammar {
+          E: num
+          E: E '+' E
+          E: E '*' E
+          E: E '^' E
+          E: if E then E
+          E: if E then E else E
+        }
+        """);
 
-    var pNum    = new Production(E, List.of(NUM));
-    var pPlus   = new Production(E, List.of(E, PLUS, E));
-    var pMul    = new Production(E, List.of(E, MUL,  E));
-    var pPow    = new Production(E, List.of(E, POW,  E));
-    var pIf     = new Production(E, List.of(IF, E, THEN, E));
-    var pIfElse = new Production(E, List.of(IF, E, THEN, E, ELSE, E));
-    var grammar = new Grammar(E, List.of(pNum, pPlus, pMul, pPow, pIf, pIfElse));
+    LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), msg -> fail("Unexpected conflict: " + msg));
 
-    var precAdd  = new Precedence(10, Precedence.Associativity.LEFT);
-    var precMul  = new Precedence(20, Precedence.Associativity.LEFT);
-    var precPow  = new Precedence(30, Precedence.Associativity.RIGHT);
-    var precIf   = new Precedence(0,  Precedence.Associativity.RIGHT);
-    var precElse = new Precedence(40, Precedence.Associativity.RIGHT);
-    var precedenceMap = Map.of(
-        PLUS, precAdd, MUL,  precMul, POW,  precPow,
-        IF,   precIf, ELSE, precElse
-    );
-
-    LALRVerifier.verify(grammar, precedenceMap, msg -> fail("Unexpected conflict: " + msg));
-
-    var lexer = Lexer.createLexer(List.of(
-        new Rule("if",   "if"),
-        new Rule("then", "then"),
-        new Rule("else", "else"),
-        new Rule("+",    "\\+"),
-        new Rule("*",    "\\*"),
-        new Rule("^",    "\\^"),
-        new Rule("num",  "[0-9]+"),
-        new Rule("[ ]+")
-    ));
-    var parser = Parser.createParser(grammar, precedenceMap);
+    var lexer  = Lexer.createLexer(mg.rules());
+    var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
     var evaluator = new Evaluator<Integer>() {
       public Integer evaluate(Terminal t) {
-        return switch(t.name()) {
+        return switch (t.name()) {
           case "num" -> Integer.parseInt(t.value());
-          default -> 0;
+          default    -> 0;
         };
       }
       public Integer evaluate(Production p, List<Integer> args) {
@@ -347,7 +311,6 @@ public final class GuideTest {
         };
       }
     };
-
 
     assertEquals(10, parser.parse(lexer.tokenize("if 1 then 10 else 20"), evaluator));
     assertEquals(20, parser.parse(lexer.tokenize("if 0 then 10 else 20"), evaluator));
