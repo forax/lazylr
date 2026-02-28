@@ -2,6 +2,7 @@ package com.github.forax.lazylr;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -66,6 +67,30 @@ public final class LexerTest {
     assertEquals("world", t2.value());
 
     assertFalse(terminals.hasNext());
+  }
+
+  @Test
+  public void commentTokens() {
+    var tokens = List.of(
+        new Token("id", "[0-9]+"),
+        new Token("eol", "[\\r]?\\n"),
+        new Token("\\s+"),          // Ignorable space
+        new Token("\\/\\/[^\\n]*")   // Ignorable comment
+    );
+    var lexer = Lexer.createLexer(tokens);
+
+    var terminals = new ArrayList<Terminal>();
+    lexer.tokenize("""
+        12
+        43  // comment
+        54
+        """).forEachRemaining(terminals::add);
+
+    assertEquals(List.of(
+        new Terminal("id"), new Terminal("eol"),
+        new Terminal("id"), new Terminal("eol"),
+        new Terminal("id"), new Terminal("eol")
+    ), terminals);
   }
 
   @Test
