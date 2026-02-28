@@ -95,6 +95,30 @@ public final class MetaGrammarTest {
   }
 
   @Test
+  public void aGrammarWithEmptyLines() {
+    var mg = MetaGrammar.create("""
+        tokens {
+        
+        }
+        
+        precedence {
+        
+        }
+        
+        grammar {
+          Expr: Term
+    
+        }
+        """);
+
+    var grammar = mg.grammar();
+    assertEquals("Expr", grammar.startSymbol().name());
+    assertEquals(List.of(
+        "Expr : Term"
+    ), productionNames(grammar));
+  }
+
+  @Test
   public void simpleExpressionGrammarWithTokens() {
     var mg = MetaGrammar.create("""
         tokens {

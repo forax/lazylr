@@ -127,17 +127,20 @@ public final class MetaGrammar {
         new Production(section,      List.of(tokens,     lbrace, eol, tokenRules,   rbrace, eol)),
         new Production(section,      List.of(precedence, lbrace, eol, precLines,    rbrace, eol)),
         new Production(section,      List.of(grammar,    lbrace, eol, grammarRules, rbrace, eol)),
+        new Production(section,      List.of(eol)),
 
         new Production(tokenRules,   List.of(tokenRules, tokenRule)),
         new Production(tokenRules,   List.of()),
 
         new Production(tokenRule,    List.of(ident, colon, regex, eol)),
         new Production(tokenRule,    List.of(regex, eol)),
+        new Production(tokenRule,    List.of(eol)),
 
         new Production(precLines,    List.of(precLines, precLine)),
         new Production(precLines,    List.of()),
 
         new Production(precLine,     List.of(ident, colon, literals, eol)),
+        new Production(precLine,     List.of(eol)),
 
         new Production(literals,     List.of(literals, comma, symbol)),
         new Production(literals,     List.of(symbol)),
@@ -147,6 +150,7 @@ public final class MetaGrammar {
 
         new Production(grammarRule,  List.of(name, colon, symbols, eol)),
         new Production(grammarRule,  List.of(name, colon, eol)),
+        new Production(grammarRule,  List.of(eol)),
 
         new Production(symbols,      List.of(symbols, symbol)),
         new Production(symbols,      List.of(symbol)),
@@ -292,13 +296,17 @@ public final class MetaGrammar {
           // -- Void productions
           case "TokenRules : ε",
                "TokenRules : TokenRules TokenRule",
+               "TokenRule : eol",
                "PrecLines : ε",
                "PrecLines : PrecLines PrecLine",
+               "PrecLine : eol",
                "GrammarRules : ε",
                "GrammarRules : GrammarRules GrammarRule",
+               "GrammarRule : eol",
                "Section : tokens { eol TokenRules } eol",
                "Section : precedence { eol PrecLines } eol",
                "Section : grammar { eol GrammarRules } eol",
+               "Section : eol",
                "Sections : ε",
                "Sections : Sections Section",
                "Spec : Sections" ->
