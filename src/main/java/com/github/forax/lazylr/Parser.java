@@ -185,7 +185,8 @@ public final class Parser {
 
       var action = engine.getAction(currentState, currentToken);
       if (action == null) {
-        throw new ParsingException("Syntax error: terminal `" + currentToken.name() + "` value `" + currentToken.value() + "`");
+        throw new ParsingException("Syntax error: terminal `" + currentToken.name() +
+            "` value `" + currentToken.value() + "`at state " + currentState);
       }
 
       switch (action) {
@@ -210,7 +211,7 @@ public final class Parser {
   }
 
   /// Shrinks the stack and then performs a 'GOTO' transition.
-  /// Returns true if the reduction leads to an accept state, false otherwise.
+  /// Returns true if the reduction leads to an Accept state, false otherwise.
   private boolean executeReduction(ArrayDeque<State> stack, Production production, ParserListener listener) {
     listener.onReduce(production);
 
@@ -233,8 +234,8 @@ public final class Parser {
         return true;  // Accept
       }
 
-      throw new ParsingException("GOTO Error: No transition from " +
-          topState + " on symbol " + production.head().name());
+      throw new ParsingException("Syntax Error: No transition on symbol " + production.head().name()
+          + " at state " + topState);
     }
 
     // 4. Push that destination state onto the stack
