@@ -22,70 +22,61 @@ with the agility of a modern library.
 
 ## Getting Started
 
-### Define your Lexer
-Create a `Lexer` by defining a list of `Rule` objects consisting of a token name and a Regex pattern.
-
-```java
-Lexer lexer = Lexer.createLexer(List.of(
-    new Rule("num", "[0-9]+"),
-    new Rule("+", "\\+"),
-    new Rule("*", "\\*"),
-    new Rule("[ ]+")
-));
-```
-
-Rules are matched in the order they are defined, rules with no name are ignored by the parser.
-
 ### Define your Grammar
 
-Construct your grammar using Terminal, NonTerminal, and Production objects.
+`MetaGrammar` lets you describe tokens, precedence, and productions in a compact textual format.
 
 ```java
-var expr = new NonTerminal("expr");
-var num = new Terminal("num");
-var plus = new Terminal("+");
-var mul = new Terminal("*");
+var mg = MetaGrammar.create("""
+    tokens {
+      num: /[0-9]+/
+      /[ ]+/
+    }
 
-Grammar grammar = new Grammar(expr, List.of(
-    new Production(expr, List.of(num)),
-    new Production(expr, List.of(expr, plus, expr)),
-    new Production(expr, List.of(expr, mul, expr))
-));
+    precedence {
+      left: '+'
+      left: '*'
+    }
+
+    grammar {
+      expr : num
+      expr : expr '+' expr
+      expr : expr '*' expr
+    }
+    """);
 ```
 
-### Handle Precedence and create the Parser
+The DSL has three sections:
 
-You may have noticed that the grammar above is ambiguous, the parser need to know
-- for 2 + 3 * 4, should it be (2 + 3) * 4 or 2 + (3 * 4) ? 
-- for 2 + 3 + 4, should it be (2 + 3) + 4 or 2 + (3 + 4) ? 
+- **`tokens`** — named terminals (`name: /regex/`) matched by the lexer in declaration order;
+  anonymous patterns (`/regex/`) are matched and silently discarded (e.g. whitespace).
+- **`precedence`** — operator associativity and priority; later lines have **higher** precedence than earlier ones.
+- **`grammar`** — BNF-style production rules; quoted literals like `'+'` are automatically registered as tokens and terminals.
 
-To avoid "expression ladders" in your grammar, you can define precedence
-(which terminal is more important) and associativity (LEFT or RIGHT)
-on terminals and/or productions.
+You may have noticed that the grammar above is ambiguous — the parser needs to know:
+- for `2 + 3 * 4`, should it be `(2 + 3) * 4` or `2 + (3 * 4)`?
+- for `2 + 3 + 4`, should it be `(2 + 3) + 4` or `2 + (3 + 4)`?
 
-```java
-var precedence = Map.of(
-    plus, new Precedence(10, Precedence.Associativity.LEFT),
-    mul,  new Precedence(20, Precedence.Associativity.LEFT)
-);
-```
+The `precedence` section resolves this: later lines have higher precedence (`'*'` binds more tightly than `'+'`),
+and `left` associativity means `1 + 2 + 3` groups as `(1 + 2) + 3`.
 
 ### Check if your grammar is correct
 
 The class `LALRVerifier` can be used to check if a grammar is LALR(1) or not.
 
 ```java
-LALRVerifier.verify(grammar, precedence, error -> {
+LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), error -> {
     System.err.println("Conflict detected: " + error);
 });
 ```
 
 ### Transforming to an AST using an Evaluator
 
-Lazy LR uses an Evaluator<T> to transform the parse tree into your desired result, usually an AST,
-but you can also evaluate the productions directly.
+Lazy LR uses an `Evaluator<T>` to transform the parse tree into your desired result, usually an AST,
+but you can also evaluate productions directly.
 
 Using Java Records makes for a concise AST:
+
 ```java
 sealed interface Node {}
 record NumLit(int value) implements Node {}
@@ -93,7 +84,7 @@ record BinaryOp(String op, Node left, Node right) implements Node {}
 ```
 
 Implement the evaluate methods to map terminals and productions to your AST nodes.
-Because Terminal carries the matched value, you can extract the raw text here:
+Because `Terminal` carries the matched value, you can extract the raw text here:
 
 ```java
 class NodeEvaluator implements Evaluator<Node> {
@@ -122,13 +113,12 @@ class NodeEvaluator implements Evaluator<Node> {
 Tokenize the input, parse, and create the AST:
 
 ```java
+Lexer lexer = Lexer.createLexer(mg.rules());
+Parser parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
+
 String input = "2 + 3 * 4";
 
-// Tokenize using token names
 Iterator<Terminal> tokens = lexer.tokenize(input);
-
-// Parse and create the AST
-Parser parser = Parser.createParser(grammar, precedence);
 Node ast = parser.parse(tokens, new NodeEvaluator());
 
 // Profit!
@@ -136,14 +126,14 @@ System.out.println(ast);
   // BinaryOp[op=+, left=NumLit[value=2], right=BinaryOp[op=*, left=NumLit[value=3], right=NumLit[value=4]]]
 ```
 
-If you want to know more about how to design you grammar,
+If you want to know more about how to design your grammar,
 there is a step-by-step [GUIDE.md](GUIDE.md).
 
 ## Using with Maven
 
-The binary distribution is available on jitPack.io repository.
+The binary distribution is available on the jitPack.io repository.
 
-So first, you need to add jitpack.io as a repository in the POM file,
+First, add jitpack.io as a repository in the POM file:
 
 ```xml
 ...
@@ -154,7 +144,9 @@ So first, you need to add jitpack.io as a repository in the POM file,
       </repository>
   </repositories>
 ```
-and then add Lazy LR as a dependency
+
+Then add Lazy LR as a dependency:
+
 ```xml
   <dependencies>
       ...
