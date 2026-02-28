@@ -9,35 +9,25 @@ import java.util.Map;
 public final class ReadmeExampleTest {
   @Test
   public void example() {
-    // Define your Lexer
-    Lexer lexer = Lexer.createLexer(List.of(
-        new Rule("num", "[0-9]+"),
-        new Rule("+", "\\+"),
-        new Rule("*", "\\*"),
-        new Rule("[ ]+")
-    ));
-
-
-    // Define your Grammar
-    var expr = new NonTerminal("expr");
-    var num = new Terminal("num");
-    var plus = new Terminal("+");
-    var mul = new Terminal("*");
-
-    Grammar grammar = new Grammar(expr, List.of(
-        new Production(expr, List.of(num)),
-        new Production(expr, List.of(expr, plus, expr)),
-        new Production(expr, List.of(expr, mul, expr))
-    ));
-
-    // Handle Precedence and create the Parser
-    var precedence = Map.of(
-        plus, new Precedence(10, Precedence.Associativity.LEFT),
-        mul,  new Precedence(20, Precedence.Associativity.LEFT)
-    );
+    // Define your grammar
+    var mg = MetaGrammar.create("""
+      tokens {
+        num: /[0-9]+/
+        /[ ]+/
+      }
+      precedence {
+        left: '+'
+        left: '*'
+      }
+      grammar {
+        expr : num
+        expr : expr '+' expr
+        expr : expr '*' expr
+      }
+    """);
 
     // Verifie the grammar for conflicts (optional)
-    LALRVerifier.verify(grammar, precedence, error -> {
+    LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), error -> {
       System.err.println("Conflict detected: " + error);
     });
 
@@ -66,6 +56,8 @@ public final class ReadmeExampleTest {
       }
     }
 
+    Lexer lexer = Lexer.createLexer(mg.rules());
+    Parser parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
     // Usage Example
     String input = "2 + 3 * 4";
@@ -74,7 +66,6 @@ public final class ReadmeExampleTest {
     Iterator<Terminal> tokens = lexer.tokenize(input);
 
     // Parse and create the AST
-    Parser parser = Parser.createParser(grammar, precedence);
     Node ast = parser.parse(tokens, new NodeEvaluator());
 
     // Profit!

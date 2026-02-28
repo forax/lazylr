@@ -32,12 +32,10 @@ var mg = MetaGrammar.create("""
       num: /[0-9]+/
       /[ ]+/
     }
-
     precedence {
       left: '+'
       left: '*'
     }
-
     grammar {
       expr : num
       expr : expr '+' expr
