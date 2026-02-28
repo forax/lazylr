@@ -37,8 +37,8 @@ public final class MetaGrammarTest {
         List.of("Empty : ε"),
         productionNames(grammar));
 
-    var rules = mg.tokens();
-    assertEquals(List.of(), ruleNames(rules));
+    var tokens = mg.tokens();
+    assertEquals(List.of(), ruleNames(tokens));
 
     var precedenceMap = mg.precedenceMap();
     assertTrue(precedenceMap.isEmpty());
@@ -132,11 +132,11 @@ public final class MetaGrammarTest {
         }
         """);
 
-    var rules = mg.tokens();
+    var tokens = mg.tokens();
     assertEquals(List.of(
             new Token("num", "[0-9]+"),
             new Token("plus", "\\+")),
-        rules);
+        tokens);
   }
 
   @Test
@@ -161,14 +161,14 @@ public final class MetaGrammarTest {
         "Expr : ident"
     ), productionNames(grammar));
 
-    var rules = mg.tokens();
+    var tokens = mg.tokens();
     assertEquals(List.of(
             new Token("if", "if"),
             new Token("then", "then"),
             new Token("else", "else"),
             new Token(";", ";"),
             new Token("ident", "[a-z]+")),
-        rules);
+        tokens);
   }
 
   @Test
@@ -184,12 +184,12 @@ public final class MetaGrammarTest {
         }
         """);
 
-    var rules = mg.tokens();
+    var tokens = mg.tokens();
     assertEquals(List.of(
             new Token("+", "\\+"),
             new Token("*", "\\*"),
             new Token("num", "[0-9]+")),
-        rules);
+        tokens);
   }
 
   @Test
@@ -222,8 +222,8 @@ public final class MetaGrammarTest {
         "Expr : num"
     ), productionNames(grammar));
 
-    var rules = mg.tokens();
-    assertEquals(List.of("num", "plus", "star", "pow"), ruleNames(rules));
+    var tokens = mg.tokens();
+    assertEquals(List.of("num", "plus", "star", "pow"), ruleNames(tokens));
 
     var precedenceMap = mg.precedenceMap();
     assertEquals(Map.of(
@@ -248,8 +248,8 @@ public final class MetaGrammarTest {
     var grammar = mg.grammar();
     assertEquals(List.of("Program : ident"), productionNames(grammar));
 
-    var rules = mg.tokens();
-    assertEquals(List.of("ident"), ruleNames(rules));
+    var tokens = mg.tokens();
+    assertEquals(List.of("ident"), ruleNames(tokens));
   }
 
   @Test
@@ -259,9 +259,6 @@ public final class MetaGrammarTest {
           tokens: ident
           grammar: tokens
         }
-        tokens {
-          ident: /[a-z]+/
-        }
         """);
 
     var grammar = mg.grammar();
@@ -269,9 +266,6 @@ public final class MetaGrammarTest {
         "tokens : ident",
         "grammar : tokens"
     ), productionNames(grammar));
-
-    var rules = mg.tokens();
-    assertEquals(List.of("ident"), ruleNames(rules));
   }
 
   @Test
@@ -295,8 +289,8 @@ public final class MetaGrammarTest {
         "Expr : id"
     ), productionNames(grammar));
 
-    var rules = mg.tokens();
-    assertEquals(List.of("num", "id"), ruleNames(rules));
+    var tokens = mg.tokens();
+    assertEquals(List.of("num", "id"), ruleNames(tokens));
   }
 
   @Test
@@ -346,8 +340,8 @@ public final class MetaGrammarTest {
         "E : num"
     ), productionNames(grammar));
 
-    var rules = mg.tokens();
-    assertEquals(List.of("+", "-", "*", "/", "num"), ruleNames(rules));
+    var tokens = mg.tokens();
+    assertEquals(List.of("+", "-", "*", "/", "num"), ruleNames(tokens));
 
     var precedenceMap = mg.precedenceMap();
     assertEquals(Map.of(
@@ -407,9 +401,9 @@ public final class MetaGrammarTest {
         "Member : string : Value"
     ), productionNames(grammar));
 
-    var rules = mg.tokens();
+    var tokens = mg.tokens();
     assertEquals(List.of("true", "false", "null", "[", "]", ",", "{", "}", ":", "string", "number"),
-        ruleNames(rules));
+        ruleNames(tokens));
   }
 
 
@@ -420,16 +414,32 @@ public final class MetaGrammarTest {
 
   @Test
   public void emptyGrammarSectionThrowsParsingException() {
-    assertThrows(ParsingException.class, () -> MetaGrammar.create("""
+    var mg = MetaGrammar.create("""
         grammar {
         }
-        """));
+        """);
+
+    var tokens = mg.tokens();
+    assertTrue(tokens.isEmpty());
+
+    var precedenceMap = mg.precedenceMap();
+    assertTrue(precedenceMap.isEmpty());
+
+    assertThrows(IllegalStateException.class, mg::grammar);
   }
 
   @Test
-  public void noGrammarSectionThrowsParsingException() {
-    assertThrows(ParsingException.class, () -> MetaGrammar.create("""
-        """));
+  public void noGrammarSectionThrowsIllegalStateException() {
+    var mg = MetaGrammar.create("""
+        """);
+
+    var tokens = mg.tokens();
+    assertTrue(tokens.isEmpty());
+
+    var precedenceMap = mg.precedenceMap();
+    assertTrue(precedenceMap.isEmpty());
+
+    assertThrows(IllegalStateException.class, mg::grammar);
   }
 
   @Test
@@ -437,12 +447,6 @@ public final class MetaGrammarTest {
     assertThrows(ParsingException.class, () -> MetaGrammar.create("""
         precedence {
           none: num
-        }
-        grammar {
-          E: num
-        }
-        tokens {
-          num: /[0-9]+/
         }
         """));
   }

@@ -46,11 +46,11 @@ import java.util.stream.Stream;
 ///   Earlier lines have lower precedence than later ones. Only `left` and `right`
 ///   associativity are supported.
 ///
-/// - **grammar** — defines BNF-style production rules. The `grammar` section must contain
-///   at least one production. The first rule's non-terminal becomes the start symbol.
+/// - **grammar** — defines BNF-style production rules.
+///   The first rule's non-terminal becomes the start symbol.
 ///   Empty right-hand sides (epsilon rules) are written as a bare `Name:` line.
-///   Any symbol written in single quotes (e.g. `'+'`) is automatically extracted from the
-///   productions, converted to an escaped regex, and registered as a terminal.
+///   Any symbol written in single quotes (e.g. `'+'`) is automatically extracted
+///   from the productions, converted to an escaped regex, and registered as a terminal.
 ///   No explicit declaration in the `tokens` section is required.
 public final class MetaGrammar {
   private final List<Token> tokens;
@@ -76,7 +76,11 @@ public final class MetaGrammar {
   /// non-terminal.
   ///
   /// @return the [Grammar] built from all production in the specification.
+  /// @throws IllegalStateException if the grammar section is empty
   public Grammar grammar() {
+    if (grammar == null) {
+      throw new IllegalStateException("the grammar section is empty");
+    }
     return grammar;
   }
 
@@ -324,11 +328,6 @@ public final class MetaGrammar {
   private static MetaGrammar build(ArrayList<RawRule> rawRules,
                                    ArrayList<RawPrecedence> precedences,
                                    ArrayList<RawProduction> rawProductions) {
-
-    if (rawProductions.isEmpty()) {
-      throw new ParsingException("empty production list");
-    }
-
     // Extract implicit quoted symbols
     var quotedTerminalMap = rawProductions.stream()
         .flatMap(p -> p.symbols.stream())
@@ -363,7 +362,7 @@ public final class MetaGrammar {
             (_, _) -> { throw new AssertionError(); },
             LinkedHashMap::new));
 
-    // Productions and Grammar
+    // Productions
     var terminalMap = new HashMap<String, Terminal>();
     var productions = new ArrayList<Production>();
     for (var rawProduction : rawProductions) {
@@ -383,9 +382,6 @@ public final class MetaGrammar {
       productions.add(new Production(head, body));
     }
 
-    var startSymbol = nonTerminalMap.values().iterator().next();
-    var grammar = new Grammar(startSymbol, productions);
-
     // Precedence
     var precedenceMap = new LinkedHashMap<PrecedenceEntity, Precedence>();
     for(var i = 0; i < precedences.size(); i++) {
@@ -401,6 +397,15 @@ public final class MetaGrammar {
         var terminal = symbol.quoted ? quotedTerminalMap.get(name) : terminalMap.get(name);
         precedenceMap.put(terminal, new Precedence(i, associativity));
       }
+    }
+
+    // Grammar
+    Grammar grammar;
+    if (!productions.isEmpty()) {
+      var startSymbol = nonTerminalMap.values().iterator().next();
+      grammar = new Grammar(startSymbol, productions);
+    } else {
+      grammar = null;
     }
 
     //LALRVerifier.verify(grammar, precedenceMap, error -> {
