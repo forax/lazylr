@@ -28,11 +28,11 @@ import java.util.stream.Stream;
 ///   right: '%'
 /// }
 /// grammar {
-///   StartRule: StartRule '->' Item
-///   StartRule: StartRule tokenName Item
-///   StartRule: Item '%' Item
-///   Item: tokenName
-///   Item:
+///   StartRule : StartRule '->' Item         // StartRole is the start symbol
+///   StartRule : StartRule tokenName Item
+///   StartRule : Item '%' Item
+///   Item : tokenName
+///   Item :
 /// }
 /// ```
 ///
