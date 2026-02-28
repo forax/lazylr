@@ -34,7 +34,7 @@ public final class LexerTest {
   }
 
   @Test
-  public void rulePriority() {
+  public void tokenPriority() {
     // Both tokens match "if", but "KEYWORD" is first
     var tokens = List.of(
         new Token("KEYWORD", "if"),
@@ -49,7 +49,7 @@ public final class LexerTest {
   }
 
   @Test
-  public void ignorableRules() {
+  public void ignorableTokens() {
     var tokens = List.of(
         new Token("\\s+"),  // Ignorable whitespace
         new Token("ID", "[a-z]+")
