@@ -97,4 +97,25 @@ public final class Rule {
   public boolean isIgnorable() {
     return name == null;
   }
+
+  /// @return A hash code derived from the rule's name and the rule's regex.
+  @Override
+  public int hashCode() {
+    return 31 * (31 + (name == null ? 0 : name.hashCode())) + regex.hashCode();
+  }
+
+  /// Compares this rule with another object for equality.
+  @Override
+  public boolean equals(Object o) {
+    return o instanceof Rule rule && regex.equals(rule.regex) && Objects.equals(name, rule.name);
+  }
+
+  /// @return A string representation of the rule.
+  @Override
+  public String toString() {
+    if (name == null) {
+      return "Rule(" + regex + ")";
+    }
+    return "Rule(" + name + ", " + regex + ")";
+  }
 }
