@@ -26,7 +26,7 @@ public interface Evaluator<T> {
   /// lexeme from the input) and convert it into a literal or leaf node.
   ///
   /// @param terminal The terminal token matched by the lexer.
-  /// @return A value representing the terminal.
+  /// @return A value representing the terminal or `null` if the terminal has no value.
   T evaluate(Terminal terminal);
 
   /// Reduces a [Production] into a single value using its previously evaluated
@@ -40,6 +40,7 @@ public interface Evaluator<T> {
   ///
   /// @param production The derivation rule being reduced.
   /// @param arguments The evaluated results of each [Symbol] in the production's body.
-  /// @return The result of the reduction (the new value for the production non-terminal
+  /// @return The result of the reduction (the new value for the production non-terminal)
+  ///         or `null` if the production has no value.
   T evaluate(Production production, List<T> arguments);
 }
