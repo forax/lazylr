@@ -125,7 +125,7 @@ public final class PreconditionTest {
   public class TokenPreconditions {
 
     @Test
-    public void createLexerRulesNull() {
+    public void createLexerTokensNull() {
       assertThrows(NullPointerException.class, () ->
           new Token(null));
       assertThrows(NullPointerException.class, () ->
@@ -133,7 +133,7 @@ public final class PreconditionTest {
     }
 
     @Test
-    public void createLexerRulesBadPattern() {
+    public void createLexerTokensBadPattern() {
       assertThrows(IllegalArgumentException.class, () ->
           new Token("("));
       assertThrows(IllegalArgumentException.class, () ->
@@ -141,7 +141,7 @@ public final class PreconditionTest {
     }
 
     @Test
-    public void createLexerRulesBadPatternWithGroup() {
+    public void createLexerTokensBadPatternWithGroup() {
       assertThrows(IllegalArgumentException.class, () ->
           new Token("(foo)"));
       assertThrows(IllegalArgumentException.class, () ->
@@ -153,7 +153,7 @@ public final class PreconditionTest {
   public class LexerPreconditions {
 
     @Test
-    public void createLexerRulesNull() {
+    public void createLexerTokensNull() {
       assertThrows(NullPointerException.class, () ->
           Lexer.createLexer(null));
     }

@@ -17,7 +17,7 @@ public final class MetaGrammarTest {
         .toList();
   }
 
-  private static List<String> ruleNames(List<Token> tokens) {
+  private static List<String> tokenNames(List<Token> tokens) {
     return tokens.stream()
         .map(Token::name)
         .filter(Objects::nonNull)
@@ -39,7 +39,7 @@ public final class MetaGrammarTest {
         productionNames(grammar));
 
     var tokens = mg.tokens();
-    assertEquals(List.of(), ruleNames(tokens));
+    assertEquals(List.of(), tokenNames(tokens));
 
     var precedenceMap = mg.precedenceMap();
     assertTrue(precedenceMap.isEmpty());
@@ -224,7 +224,7 @@ public final class MetaGrammarTest {
     ), productionNames(grammar));
 
     var tokens = mg.tokens();
-    assertEquals(List.of("num", "plus", "star", "pow"), ruleNames(tokens));
+    assertEquals(List.of("num", "plus", "star", "pow"), tokenNames(tokens));
 
     var precedenceMap = mg.precedenceMap();
     assertEquals(Map.of(
@@ -235,7 +235,7 @@ public final class MetaGrammarTest {
   }
 
   @Test
-  public void unnamedSkipRuleIsAccepted() {
+  public void unnamedSkipTokenIsAccepted() {
     var mg = MetaGrammar.create("""
         tokens {
           ident: /[a-zA-Z]+/
@@ -250,7 +250,7 @@ public final class MetaGrammarTest {
     assertEquals(List.of("Program : ident"), productionNames(grammar));
 
     var tokens = mg.tokens();
-    assertEquals(List.of("ident"), ruleNames(tokens));
+    assertEquals(List.of("ident"), tokenNames(tokens));
   }
 
   @Test
@@ -291,7 +291,7 @@ public final class MetaGrammarTest {
     ), productionNames(grammar));
 
     var tokens = mg.tokens();
-    assertEquals(List.of("num", "id"), ruleNames(tokens));
+    assertEquals(List.of("num", "id"), tokenNames(tokens));
   }
 
   @Test
@@ -342,7 +342,7 @@ public final class MetaGrammarTest {
     ), productionNames(grammar));
 
     var tokens = mg.tokens();
-    assertEquals(List.of("+", "-", "*", "/", "num"), ruleNames(tokens));
+    assertEquals(List.of("+", "-", "*", "/", "num"), tokenNames(tokens));
 
     var precedenceMap = mg.precedenceMap();
     assertEquals(Map.of(
@@ -404,7 +404,7 @@ public final class MetaGrammarTest {
 
     var tokens = mg.tokens();
     assertEquals(List.of("true", "false", "null", "[", "]", ",", "{", "}", ":", "string", "number"),
-        ruleNames(tokens));
+        tokenNames(tokens));
   }
 
 

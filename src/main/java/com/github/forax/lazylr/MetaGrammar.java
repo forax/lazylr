@@ -188,7 +188,7 @@ public final class MetaGrammar {
 
   private static final Grammar GRAMMAR = createGrammar();
 
-  private record RawRule(String name, String regex) {}
+  private record RawToken(String name, String regex) {}
   private record RawSymbol(String name, boolean quoted) {}
   private record RawProduction(String head, List<RawSymbol> symbols) {}
   private record RawPrecedence(String associativity, List<RawSymbol> symbols) {}
@@ -208,8 +208,8 @@ public final class MetaGrammar {
   public static MetaGrammar create(String input) {
     Objects.requireNonNull(input);
 
-    var rules = new ArrayList<RawRule>();
-    var precedences = new ArrayList<RawPrecedence>();
+    var rawTokens = new ArrayList<RawToken>();
+    var rawPrecedences = new ArrayList<RawPrecedence>();
     var rawProductions = new ArrayList<RawProduction>();
 
     var lexer = Lexer.createLexer(TOKENS);
@@ -267,11 +267,11 @@ public final class MetaGrammar {
 
           // -- TokenRule
           case "TokenRule : regex eol" -> {
-            rules.add(new RawRule(null, stripFirstAndLastCharacters((String) args.getFirst())));
+            rawTokens.add(new RawToken(null, stripFirstAndLastCharacters((String) args.getFirst())));
             yield null;
           }
           case "TokenRule : ident : regex eol" -> {
-            rules.add(new RawRule((String) args.get(0), stripFirstAndLastCharacters((String) args.get(2))));
+            rawTokens.add(new RawToken((String) args.get(0), stripFirstAndLastCharacters((String) args.get(2))));
             yield null;
           }
 
@@ -280,7 +280,7 @@ public final class MetaGrammar {
             var associativity = (String) args.get(0);
             @SuppressWarnings("unchecked")
             var symbols = (ArrayList<RawSymbol>) args.get(2);
-            precedences.add(new RawPrecedence(associativity, symbols));
+            rawPrecedences.add(new RawPrecedence(associativity, symbols));
             yield null;
           }
 
@@ -322,11 +322,11 @@ public final class MetaGrammar {
       }
     });
 
-    return build(rules, precedences, rawProductions);
+    return build(rawTokens, rawPrecedences, rawProductions);
   }
 
   // Post-processing, the evaluator should never fail, the build method should check the coherence
-  private static MetaGrammar build(ArrayList<RawRule> rawRules,
+  private static MetaGrammar build(ArrayList<RawToken> rawTokens,
                                    ArrayList<RawPrecedence> precedences,
                                    ArrayList<RawProduction> rawProductions) {
     // Extract implicit quoted symbols
@@ -344,10 +344,10 @@ public final class MetaGrammar {
     var rules = Stream.of(
         quotedTerminalMap.keySet().stream()
             .map(name -> new Token(name, Pattern.quote(name))),
-        rawRules.stream()
+        rawTokens.stream()
             .filter(r -> r.name != null)
             .map(r -> new Token(r.name, r.regex)),
-        rawRules.stream()
+        rawTokens.stream()
             .filter(r -> r.name == null)
             .map(r -> new Token(r.regex))
         )
