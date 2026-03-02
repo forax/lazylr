@@ -227,9 +227,9 @@ public final class MetaGrammarTest {
 
     var precedenceMap = mg.precedenceMap();
     assertEquals(Map.of(
-        new Terminal("plus"), new Precedence(0, Precedence.Associativity.LEFT),
-        new Terminal("star"), new Precedence(1, Precedence.Associativity.LEFT),
-        new Terminal("pow"), new Precedence(2, Precedence.Associativity.RIGHT)
+        new Terminal("plus"), new Precedence(1, Precedence.Associativity.LEFT),
+        new Terminal("star"), new Precedence(2, Precedence.Associativity.LEFT),
+        new Terminal("pow"), new Precedence(3, Precedence.Associativity.RIGHT)
     ), precedenceMap);
   }
 
@@ -345,10 +345,10 @@ public final class MetaGrammarTest {
 
     var precedenceMap = mg.precedenceMap();
     assertEquals(Map.of(
-        new Terminal("+"), new Precedence(0, Precedence.Associativity.LEFT),
-        new Terminal("-"), new Precedence(0, Precedence.Associativity.LEFT),
-        new Terminal("*"), new Precedence(1, Precedence.Associativity.LEFT),
-        new Terminal("/"), new Precedence(1, Precedence.Associativity.LEFT)
+        new Terminal("+"), new Precedence(1, Precedence.Associativity.LEFT),
+        new Terminal("-"), new Precedence(1, Precedence.Associativity.LEFT),
+        new Terminal("*"), new Precedence(2, Precedence.Associativity.LEFT),
+        new Terminal("/"), new Precedence(2, Precedence.Associativity.LEFT)
     ), precedenceMap);
   }
 

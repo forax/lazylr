@@ -21,11 +21,11 @@ import java.util.stream.Stream;
 /// ```
 /// tokens {
 ///   tokenName: /regex/
-///   /ignored-regex/
+///   /ignored-regex/                         // will not generate a terminal
 /// }
 /// precedence {
-///   left:  '->', tokenName
-///   right: '%'
+///   left:  '->', tokenName                  // level 1
+///   right: '%'                              // level 2
 /// }
 /// grammar {
 ///   StartRule : StartRule '->' Item         // StartRole is the start symbol
@@ -33,7 +33,7 @@ import java.util.stream.Stream;
 ///   StartRule : Item '%' Item
 ///   Item : tokenName
 ///   Item :
-/// }
+/// }                                         // empty right-hand side is epsilon
 /// ```
 ///
 /// - **tokens** — defines named and anonymous terminal symbols as regular expressions.
@@ -392,10 +392,11 @@ public final class MetaGrammar {
         default -> throw new ParsingException(
             "Expected 'left' or 'right' associativity, got: '" + precedence.associativity + "'");
       };
+      var level = i + 1;
       for(var symbol : precedence.symbols) {
         var name = symbol.name;
         var terminal = symbol.quoted ? quotedTerminalMap.get(name) : terminalMap.get(name);
-        precedenceMap.put(terminal, new Precedence(i, associativity));
+        precedenceMap.put(terminal, new Precedence(level, associativity));
       }
     }
 
