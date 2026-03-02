@@ -130,4 +130,140 @@ public final class LexerTest {
     
     assertFalse(terminals.hasNext());
   }
+
+  @Test
+  public void unicodeIdentifiers() {
+    // Test Unicode letter support using \p{L} (any Unicode letter)
+    var tokens = List.of(
+        new Token("ID", "\\p{L}+"),
+        new Token("NUMBER", "\\p{N}+"),
+        new Token("\\s+")  // Ignorable whitespace
+    );
+    var lexer = Lexer.createLexer(tokens);
+    var terminals = lexer.tokenize("hello café 日本語 αβγ 123");
+
+    var token1 = terminals.next();
+    assertEquals("ID", token1.name());
+    assertEquals("hello", token1.value());
+
+    var token2 = terminals.next();
+    assertEquals("ID", token2.name());
+    assertEquals("café", token2.value());
+
+    var token3 = terminals.next();
+    assertEquals("ID", token3.name());
+    assertEquals("日本語", token3.value());
+
+    var token4 = terminals.next();
+    assertEquals("ID", token4.name());
+    assertEquals("αβγ", token4.value());
+
+    var token5 = terminals.next();
+    assertEquals("NUMBER", token5.name());
+    assertEquals("123", token5.value());
+
+    assertFalse(terminals.hasNext());
+  }
+
+  @Test
+  public void unicodeEmojis() {
+    // Test emoji support
+    var tokens = List.of(
+        new Token("EMOJI", "[\\p{So}\\p{Sk}]+"),  // Symbols, other + Symbols, modifier
+        new Token("WORD", "\\p{L}+"),
+        new Token("\\s+")
+    );
+    var lexer = Lexer.createLexer(tokens);
+    var terminals = lexer.tokenize("hello 😀🎉 world 🚀");
+
+    var token1 = terminals.next();
+    assertEquals("WORD", token1.name());
+    assertEquals("hello", token1.value());
+
+    var token2 = terminals.next();
+    assertEquals("EMOJI", token2.name());
+    assertEquals("😀🎉", token2.value());
+
+    var token3 = terminals.next();
+    assertEquals("WORD", token3.name());
+    assertEquals("world", token3.value());
+
+    var token4 = terminals.next();
+    assertEquals("EMOJI", token4.name());
+    assertEquals("🚀", token4.value());
+
+    assertFalse(terminals.hasNext());
+  }
+
+  @Test
+  public void unicodeCyrillicAndArabic() {
+    // Test Cyrillic and Arabic scripts
+    var tokens = List.of(
+        new Token("ID", "\\p{L}+"),
+        new Token("\\s+")
+    );
+    var lexer = Lexer.createLexer(tokens);
+    var terminals = lexer.tokenize("Привет مرحبا");
+
+    var token1 = terminals.next();
+    assertEquals("ID", token1.name());
+    assertEquals("Привет", token1.value());
+
+    var token2 = terminals.next();
+    assertEquals("ID", token2.name());
+    assertEquals("مرحبا", token2.value());
+
+    assertFalse(terminals.hasNext());
+  }
+
+  @Test
+  public void unicodeChineseNumbers() {
+    // Test Chinese/Japanese/Korean numeric characters
+    var tokens = List.of(
+        new Token("CJK_NUMBER", "[一二三四五六七八九十百千万]+"),
+        new Token("ARABIC_NUMBER", "\\p{Nd}+"),  // Decimal digit numbers
+        new Token("\\s+")
+    );
+    var lexer = Lexer.createLexer(tokens);
+    var terminals = lexer.tokenize("一二三 123 四五六");
+
+    var token1 = terminals.next();
+    assertEquals("CJK_NUMBER", token1.name());
+    assertEquals("一二三", token1.value());
+
+    var token2 = terminals.next();
+    assertEquals("ARABIC_NUMBER", token2.name());
+    assertEquals("123", token2.value());
+
+    var token3 = terminals.next();
+    assertEquals("CJK_NUMBER", token3.name());
+    assertEquals("四五六", token3.value());
+
+    assertFalse(terminals.hasNext());
+  }
+
+  @Test
+  public void unicodeMixedScripts() {
+    // Test that Unicode scripts can be mixed in identifiers
+    var tokens = List.of(
+        new Token("ID", "[\\p{L}\\p{N}_]+"),  // Letters, numbers, underscore
+        new Token("\\s+")
+    );
+    var lexer = Lexer.createLexer(tokens);
+    var terminals = lexer.tokenize("variable_name переменная_123 変数名_456");
+
+    var token1 = terminals.next();
+    assertEquals("ID", token1.name());
+    assertEquals("variable_name", token1.value());
+
+    var token2 = terminals.next();
+    assertEquals("ID", token2.name());
+    assertEquals("переменная_123", token2.value());
+
+    var token3 = terminals.next();
+    assertEquals("ID", token3.name());
+    assertEquals("変数名_456", token3.value());
+
+    assertFalse(terminals.hasNext());
+  }
 }
