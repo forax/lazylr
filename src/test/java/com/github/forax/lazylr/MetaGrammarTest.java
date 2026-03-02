@@ -5,6 +5,7 @@ import org.junit.jupiter.api.Test;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.regex.Pattern;
 
 import static org.junit.jupiter.api.Assertions.*;
 
@@ -163,10 +164,10 @@ public final class MetaGrammarTest {
 
     var tokens = mg.tokens();
     assertEquals(List.of(
-            new Token("if", "if"),
-            new Token("then", "then"),
-            new Token("else", "else"),
-            new Token(";", ";"),
+            new Token("if", Pattern.quote("if")),
+            new Token("then", Pattern.quote("then")),
+            new Token("else", Pattern.quote("else")),
+            new Token(";", Pattern.quote(";")),
             new Token("ident", "[a-z]+")),
         tokens);
   }
@@ -186,8 +187,8 @@ public final class MetaGrammarTest {
 
     var tokens = mg.tokens();
     assertEquals(List.of(
-            new Token("+", "\\+"),
-            new Token("*", "\\*"),
+            new Token("+", Pattern.quote("+")),
+            new Token("*", Pattern.quote("*")),
             new Token("num", "[0-9]+")),
         tokens);
   }

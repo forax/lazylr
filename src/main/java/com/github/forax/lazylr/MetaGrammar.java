@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -342,7 +343,7 @@ public final class MetaGrammar {
     // Rules ordering: implicit quoted first, then named, then unnamed
     var rules = Stream.of(
         quotedTerminalMap.keySet().stream()
-            .map(name -> new Token(name, quoteRegex(name))),
+            .map(name -> new Token(name, Pattern.quote(name))),
         rawRules.stream()
             .filter(r -> r.name != null)
             .map(r -> new Token(r.name, r.regex)),
@@ -424,15 +425,4 @@ public final class MetaGrammar {
   private static final Set<Character> SPECIAL_CHARACTERS =
       Set.of('\\', '^', '$', '.', '|', '?', '*', '+', '(', ')', '[', ']', '{', '}');
 
-  private static String quoteRegex(String literal) {
-    var builder = new StringBuilder();
-    for (var i = 0; i < literal.length(); i++) {
-      var c = literal.charAt(i);
-      if (SPECIAL_CHARACTERS.contains(c)) {
-        builder.append('\\');
-      }
-      builder.append(c);
-    }
-    return builder.toString();
-  }
 }
