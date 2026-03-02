@@ -22,7 +22,7 @@ public final class Production implements PrecedenceEntity {
   private final NonTerminal head;
   private final List<Symbol> body;
   private final int hashCode;
-  private String name;   // lazy initialized
+  private String name;   // lazily initialized
 
   /// Creates an immutable production rule.
   ///
@@ -82,6 +82,7 @@ public final class Production implements PrecedenceEntity {
     if (name != null) {
       return name;
     }
+    // benign race condition, the result is stable, thus thread safe
     if (body.isEmpty()) {
       return name = head.name() + " : ε";
     }
