@@ -54,9 +54,8 @@ public final class Parser {
     // Complete the precedence map by computing the precedence of the production if necessary
     var fullPrecedenceMap = complete(grammar, precedenceMap);
 
-    // Compute FIRST and FOLLOW sets
+    // Compute FIRST sets
     var firstSets = LRAlgorithm.computeFirstSets(grammar);
-    //var followSets = LRAlgorithm.computeFollowSets(grammar, firstSets);
 
     // Prepare the Initial State (S' -> . S $)
     // We create an "Augmented" production to represent the entry point
