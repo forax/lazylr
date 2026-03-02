@@ -18,6 +18,8 @@ import java.util.stream.Collectors;
 /// The [name()] of a production is used as a unique identifier for
 /// [evaluation][Evaluator#evaluate(Production, List)]. It follows the format:
 /// `head : symbol1 symbol2 ...` (or `head : ε` for empty productions).
+///
+/// This class is immutable, thus thread-safe.
 public final class Production implements PrecedenceEntity {
   private final NonTerminal head;
   private final List<Symbol> body;

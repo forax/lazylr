@@ -26,6 +26,8 @@ import java.util.regex.PatternSyntaxException;
 /// new Rule("num", "[0-9]+"); // Produces a "num" terminal
 /// new Rule("[ ]+");          // Ignorable: matches spaces but produces no terminal
 /// ```
+///
+/// This class is immutable, thus thread-safe.
 public final class Token {
   private static void checkPattern(String regex) {
     Pattern pattern;

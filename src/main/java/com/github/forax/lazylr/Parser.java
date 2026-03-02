@@ -26,6 +26,7 @@ import java.util.stream.Stream;
 /// 2. **Event-driven**: Using [#parse(Iterator, ParserListener)] to observe transitions
 ///    as they occur.
 ///
+/// This class is not thread-safe and should not be shared between multiple threads.
 public final class Parser {
   private final LRTransitionEngine engine;
   private final State initialState;

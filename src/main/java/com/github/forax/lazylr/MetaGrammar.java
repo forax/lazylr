@@ -53,6 +53,8 @@ import java.util.stream.Stream;
 ///   Any symbol written in single quotes (e.g. `'+'`) is automatically extracted
 ///   from the productions, converted to an escaped regex, and registered as a terminal.
 ///   No explicit declaration in the `tokens` section is required.
+///
+/// This class is immutable, thus thread-safe.
 public final class MetaGrammar {
   private final List<Token> tokens;
   private final Grammar grammar;

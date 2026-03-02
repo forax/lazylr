@@ -24,6 +24,8 @@ import java.util.function.Consumer;
 ///   System.err.println(error);
 /// });
 /// ```
+///
+/// This class is thread-safe and can be safely shared between multiple threads.
 public final class LALRVerifier {
 
   private LALRVerifier() {

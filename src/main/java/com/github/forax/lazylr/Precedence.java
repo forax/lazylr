@@ -17,6 +17,8 @@ import java.util.Objects;
 ///
 /// @param level A non-negative integer representing priority. Higher is stronger.
 /// @param associativity The direction in which operators of the same level group.
+///
+/// This class is immutable, thus thread-safe.
 public record Precedence(int level, Associativity associativity) {
 
   /// Specifies the grouping direction for operators with the same precedence level.

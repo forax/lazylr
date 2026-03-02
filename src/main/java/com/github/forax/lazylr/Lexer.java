@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 /// If multiple [Token]s can match the same substring, the token that appears **first**
 /// in the list passed to [createLexer(List)] takes precedence.
 ///
+/// This class is thread-safe and can be safely shared between multiple threads.
 public final class Lexer {
   private final Pattern pattern;
   private final List<Token> tokens;

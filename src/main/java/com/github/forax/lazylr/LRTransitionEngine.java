@@ -74,7 +74,7 @@ final class LRTransitionEngine {
     @Override
     public boolean equals(Object o) {
       return o instanceof Item item &&
-          production == item.production &&    // production are unique
+          production == item.production &&    // productions are unique
           dotPosition == item.dotPosition &&
           lookahead.equals(item.lookahead);
     }

@@ -12,6 +12,8 @@ import java.util.stream.Collectors;
 /// It serves as the structural blueprint that the [Parser] uses to derive or reduce
 /// valid sequences of [Terminal]s.
 ///
+/// This class is immutable, thus thread-safe.
+///
 /// @see Parser#createParser(Grammar, java.util.Map)
 public final class Grammar {
   private final NonTerminal startSymbol;

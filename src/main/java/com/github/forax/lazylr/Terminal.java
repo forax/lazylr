@@ -14,6 +14,8 @@ import java.util.Objects;
 ///
 /// In this library, two terminals are considered equals if their [name]s
 /// match, even if their [value]s differ.
+///
+/// This class is immutable, thus thread-safe.
 public final class Terminal implements Symbol, PrecedenceEntity {
 
   /// Represents the empty string symbol (epsilon) used in grammar rules.

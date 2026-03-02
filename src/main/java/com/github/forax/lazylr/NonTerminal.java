@@ -14,6 +14,8 @@ import java.util.Objects;
 /// var expr = new NonTerminal("expr");
 /// var prod = new Production(expr, List.of(expr, plus, expr));
 /// ```
+///
+/// This class is immutable, thus thread-safe.
 public final class NonTerminal implements Symbol {
   private final String name;
 
