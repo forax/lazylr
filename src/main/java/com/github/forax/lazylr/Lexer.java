@@ -28,7 +28,7 @@ public final class Lexer {
   ///
   /// @param tokens The list of tokens to be used for tokenization.
   /// @return A configured Lexer instance.
-  /// @throws java.util.regex.PatternSyntaxException if any rule contains an invalid regex.
+  /// @throws NullPointerException if `tokens` is null.
   public static Lexer createLexer(List<Token> tokens) {
     tokens = List.copyOf(tokens);
     var regex = tokens.stream()
