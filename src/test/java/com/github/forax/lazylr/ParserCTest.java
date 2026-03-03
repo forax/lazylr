@@ -1045,7 +1045,6 @@ public final class ParserCTest {
       var terminals = lexer.tokenize(code);
       var e = assertThrows(ParsingException.class, () ->
           parser.parse(terminals, new NodeEvaluator()));
-      System.out.println(e);
     }
   }
 }
