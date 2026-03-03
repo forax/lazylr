@@ -14,6 +14,7 @@ import java.util.NoSuchElementException;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 /// The primary engine for performing LR(1) parsing.
@@ -99,6 +100,39 @@ public final class Parser {
   }
 
   private static Iterator<Terminal> wrapAndAppendEOF(Iterator<? extends Terminal> iterator) {
+    // if it's a Tokenized (Iterator + better error reporting) wrap to a Tokenizer
+    if (iterator instanceof Tokenizer tokenizer) {
+      return new Tokenizer() {
+        private boolean eofSeen;
+
+        @Override
+        public boolean hasNext() {
+          return iterator.hasNext() || !eofSeen;
+        }
+
+        @Override
+        public Terminal next() {
+          if (iterator.hasNext()) {
+            return iterator.next();
+          }
+          if (eofSeen) {
+            throw new NoSuchElementException();
+          }
+          eofSeen = true;
+          return Terminal.EOF;
+        }
+
+        @Override
+        public int index() {
+          return tokenizer.index();
+        }
+
+        @Override
+        public CharSequence input() {
+          return tokenizer.input();
+        }
+      };
+    }
     return new Iterator<>() {
       private boolean eofSeen;
 
@@ -185,8 +219,7 @@ public final class Parser {
 
       var action = engine.getAction(currentState, currentToken);
       if (action == null) {
-        throw new ParsingException("Syntax error: terminal `" + currentToken.name() +
-            "` value `" + currentToken.value() + "`at state " + currentState);
+        throw new ParsingException(errorMessage(currentToken, currentState, input));
       }
 
       switch (action) {
@@ -195,12 +228,24 @@ public final class Parser {
           currentToken = tokens.next();
         }
         case LRTransitionEngine.Action.Reduce(var production) -> {
-          if (executeReduction(stack, production, listener)) {
+          if (executeReduction(stack, production, input, listener)) {
             return;
           }
         }
       }
     }
+  }
+
+  /// Generate an error message for parsing exceptions
+  private static String errorMessage(Symbol symbol, State state, Iterator<Terminal> input) {
+    var expectedLookaheads = state.items().stream()
+        .map(item -> item.lookahead().name())
+        .sorted()
+        .collect(Collectors.joining(", "));
+    if (input instanceof Tokenizer tokenizer) {
+      return Tokenizer.ErrorHandler.parsingErrorMessage(symbol, expectedLookaheads, tokenizer.index(), tokenizer.input());
+    }
+    return Tokenizer.ErrorHandler.parsingErrorMessage(symbol, expectedLookaheads);
   }
 
   /// Pushes the token's destination state onto the stack and
@@ -212,7 +257,7 @@ public final class Parser {
 
   /// Shrinks the stack and then performs a 'GOTO' transition.
   /// Returns true if the reduction leads to an Accept state, false otherwise.
-  private boolean executeReduction(ArrayDeque<State> stack, Production production, ParserListener listener) {
+  private boolean executeReduction(ArrayDeque<State> stack, Production production, Iterator<Terminal> input, ParserListener listener) {
     listener.onReduce(production);
 
     // 1. Pop N states from the stack, where N is the number of
@@ -234,8 +279,7 @@ public final class Parser {
         return true;  // Accept
       }
 
-      throw new ParsingException("Syntax Error: No transition on symbol " + production.head().name()
-          + " at state " + topState);
+      throw new ParsingException(errorMessage(production.head(), topState, input));
     }
 
     // 4. Push that destination state onto the stack
