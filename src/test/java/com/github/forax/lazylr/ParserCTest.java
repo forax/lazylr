@@ -1043,7 +1043,7 @@ public final class ParserCTest {
           if (n == 0
         """;
       var terminals = lexer.tokenize(code);
-      var e = assertThrows(ParsingException.class, () ->
+      assertThrows(ParsingException.class, () ->
           parser.parse(terminals, new NodeEvaluator()));
     }
   }
