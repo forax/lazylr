@@ -1019,5 +1019,33 @@ public final class ParserCTest {
 
       assertEquals(code, toText(node));
     }
+
+    @Test
+    public void testError() {
+      var lexer = createCLexer();
+      var parser = createCParser();
+      var code = """
+        int function(int n) {
+          if (n == 0 { }
+        }\
+        """;
+      var terminals = lexer.tokenize(code);
+      assertThrows(ParsingException.class, () ->
+          parser.parse(terminals, new NodeEvaluator()));
+    }
+
+    @Test
+    public void testAbruptEndError() {
+      var lexer = createCLexer();
+      var parser = createCParser();
+      var code = """
+        int function(int n) {
+          if (n == 0
+        """;
+      var terminals = lexer.tokenize(code);
+      var e = assertThrows(ParsingException.class, () ->
+          parser.parse(terminals, new NodeEvaluator()));
+      System.out.println(e);
+    }
   }
 }

@@ -219,7 +219,7 @@ public final class Parser {
 
       var action = engine.getAction(currentState, currentToken);
       if (action == null) {
-        throw new ParsingException(errorMessage(currentToken, currentState, input));
+        throw new ParsingException(errorMessage(currentToken, input));
       }
 
       switch (action) {
@@ -237,15 +237,11 @@ public final class Parser {
   }
 
   /// Generate an error message for parsing exceptions
-  private static String errorMessage(Symbol symbol, State state, Iterator<Terminal> input) {
-    var expectedLookaheads = state.items().stream()
-        .map(item -> item.lookahead().name())
-        .sorted()
-        .collect(Collectors.joining(", "));
+  private static String errorMessage(Symbol symbol, Iterator<Terminal> input) {
     if (input instanceof Tokenizer tokenizer) {
-      return Tokenizer.ErrorHandler.parsingErrorMessage(symbol, expectedLookaheads, tokenizer.index(), tokenizer.input());
+      return Tokenizer.ErrorHandler.parsingErrorMessage(symbol, tokenizer.index(), tokenizer.input());
     }
-    return Tokenizer.ErrorHandler.parsingErrorMessage(symbol, expectedLookaheads);
+    return Tokenizer.ErrorHandler.parsingErrorMessage(symbol);
   }
 
   /// Pushes the token's destination state onto the stack and
@@ -279,7 +275,7 @@ public final class Parser {
         return true;  // Accept
       }
 
-      throw new ParsingException(errorMessage(production.head(), topState, input));
+      throw new ParsingException(errorMessage(production.head(), input));
     }
 
     // 4. Push that destination state onto the stack
