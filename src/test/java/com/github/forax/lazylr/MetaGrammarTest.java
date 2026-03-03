@@ -254,18 +254,20 @@ public final class MetaGrammarTest {
   }
 
   @Test
-  public void keywordsUsedAsNonTerminalNames() {
+  public void keywordsUsedAsSymbolNames() {
     var mg = MetaGrammar.create("""
         grammar {
           tokens: ident
           grammar: tokens
+          left : right
         }
         """);
 
     var grammar = mg.grammar();
     assertEquals(List.of(
         "tokens : ident",
-        "grammar : tokens"
+        "grammar : tokens",
+        "left : right"
     ), productionNames(grammar));
   }
 

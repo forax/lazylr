@@ -7,7 +7,6 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.Set;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -105,6 +104,8 @@ public final class MetaGrammar {
     var tokens     = new Terminal("tokens");
     var precedence = new Terminal("precedence");
     var grammar    = new Terminal("grammar");
+    var left       = new Terminal("left");
+    var right      = new Terminal("right");
     var lbrace     = new Terminal("{");
     var rbrace     = new Terminal("}");
     var colon      = new Terminal(":");
@@ -146,7 +147,8 @@ public final class MetaGrammar {
         new Production(precLines,    List.of(precLines, precLine)),
         new Production(precLines,    List.of()),
 
-        new Production(precLine,     List.of(ident, colon, literals, eol)),
+        new Production(precLine,     List.of(left, colon, literals, eol)),
+        new Production(precLine,     List.of(right, colon, literals, eol)),
         new Production(precLine,     List.of(eol)),
 
         new Production(literals,     List.of(literals, comma, symbol)),
@@ -168,7 +170,9 @@ public final class MetaGrammar {
         new Production(name,         List.of(ident)),
         new Production(name,         List.of(tokens)),
         new Production(name,         List.of(precedence)),
-        new Production(name,         List.of(grammar))
+        new Production(name,         List.of(grammar)),
+        new Production(name,         List.of(left)),
+        new Production(name,         List.of(right))
     ));
   }
 
@@ -176,6 +180,8 @@ public final class MetaGrammar {
       new Token("tokens",     "tokens"),
       new Token("precedence", "precedence"),
       new Token("grammar",    "grammar"),
+      new Token("left",       "left"),
+      new Token("right",      "right"),
       new Token("{",          "\\{"),
       new Token("}",          "\\}"),
       new Token(":",          ":"),
@@ -193,7 +199,7 @@ public final class MetaGrammar {
   private record RawToken(String name, String regex) {}
   private record RawSymbol(String name, boolean quoted) {}
   private record RawProduction(String head, List<RawSymbol> symbols) {}
-  private record RawPrecedence(String associativity, List<RawSymbol> symbols) {}
+  private record RawPrecedence(Precedence.Associativity associativity, List<RawSymbol> symbols) {}
 
   /// Parses a grammar specification.
   ///
@@ -231,7 +237,9 @@ public final class MetaGrammar {
           case "Name : ident",
                "Name : tokens",
                "Name : precedence",
-               "Name : grammar" ->
+               "Name : grammar",
+               "Name : left",
+               "Name : right" ->
               args.getFirst();
 
           // -- Symbol
@@ -278,8 +286,10 @@ public final class MetaGrammar {
           }
 
           // -- PrecLine
-          case "PrecLine : ident : Literals eol" -> {
-            var associativity = (String) args.get(0);
+          case "PrecLine : left : Literals eol",
+               "PrecLine : right : Literals eol"  -> {
+            var associativity = "left".equals(args.get(0)) ?
+                Precedence.Associativity.LEFT : Precedence.Associativity.RIGHT;
             @SuppressWarnings("unchecked")
             var symbols = (ArrayList<RawSymbol>) args.get(2);
             rawPrecedences.add(new RawPrecedence(associativity, symbols));
@@ -389,12 +399,7 @@ public final class MetaGrammar {
     var precedenceMap = new LinkedHashMap<PrecedenceEntity, Precedence>();
     for(var i = 0; i < precedences.size(); i++) {
       var precedence = precedences.get(i);
-      var associativity = switch (precedence.associativity) {
-        case "left"  -> Precedence.Associativity.LEFT;
-        case "right" -> Precedence.Associativity.RIGHT;
-        default -> throw new ParsingException(
-            "Expected 'left' or 'right' associativity, got: '" + precedence.associativity + "'");
-      };
+      var associativity = precedence.associativity;
       var level = i + 1;
       for(var symbol : precedence.symbols) {
         var name = symbol.name;
@@ -412,9 +417,9 @@ public final class MetaGrammar {
       grammar = null;
     }
 
-    //LALRVerifier.verify(grammar, precedenceMap, error -> {
-    //  throw new AssertionError(error);
-    //});
+    // LALRVerifier.verify(grammar, precedenceMap, error -> {
+    //   throw new AssertionError(error);
+    // });
 
     return new MetaGrammar(rules, grammar, precedenceMap);
   }
