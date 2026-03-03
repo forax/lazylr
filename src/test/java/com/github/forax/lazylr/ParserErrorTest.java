@@ -44,7 +44,6 @@ public final class ParserErrorTest {
     });
 
     var message = exception.getMessage();
-    System.out.println(message);
     assertTrue(message.contains("Parsing error"));
     assertTrue(message.contains("line 1"));
     assertTrue(message.contains("column 6"));
@@ -87,7 +86,6 @@ public final class ParserErrorTest {
     });
 
     var message = exception.getMessage();
-    System.out.println(message);
     assertTrue(message.contains("Parsing error"));
     assertTrue(message.contains("line 1"));
     assertTrue(message.contains("column 6"));
@@ -133,7 +131,6 @@ public final class ParserErrorTest {
     });
 
     var message = exception.getMessage();
-    System.out.println(message);
     assertTrue(message.contains("Parsing error"));
     assertTrue(message.contains("line 2"));
     assertTrue(message.contains("column 4"));
