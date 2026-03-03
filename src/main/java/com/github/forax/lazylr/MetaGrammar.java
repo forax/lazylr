@@ -423,8 +423,4 @@ public final class MetaGrammar {
   private static String stripFirstAndLastCharacters(String raw) {
     return raw.substring(1, raw.length() - 1);
   }
-
-  private static final Set<Character> SPECIAL_CHARACTERS =
-      Set.of('\\', '^', '$', '.', '|', '?', '*', '+', '(', ')', '[', ']', '{', '}');
-
 }
