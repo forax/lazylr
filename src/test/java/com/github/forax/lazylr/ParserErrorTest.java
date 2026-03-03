@@ -10,6 +10,39 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class ParserErrorTest {
   @Test
+  public void parsingErrorBasic() {
+    var E    = new NonTerminal("E");
+    var plus = new Terminal("+");
+    var id   = new Terminal("id");
+
+    var grammar = new Grammar(E, List.of(
+        new Production(E, List.of(E, plus, E)),
+        new Production(E, List.of(id))
+    ));
+    var precedence = Map.of(
+        plus, new Precedence(10, Precedence.Associativity.LEFT)
+    );
+
+    var parser = Parser.createParser(grammar, precedence);
+
+
+    // Try to parse invalid input: "id id"
+    var input = "id id";
+    var terminals = List.of(new Terminal("id"), new Terminal("id")).iterator();
+
+    var exception = assertThrows(ParsingException.class, () -> {
+      parser.parse(terminals, new ParserListener() {
+        @Override public void onShift(Terminal token) {}
+        @Override public void onReduce(Production production) {}
+      });
+    });
+
+    var message = exception.getMessage();
+    assertTrue(message.contains("Parsing error"));
+    assertTrue(message.contains("'id'"));
+  }
+
+  @Test
   public void parsingErrorUnknownTerminalWithPosition() {
     var E    = new NonTerminal("E");
     var plus = new Terminal("+");

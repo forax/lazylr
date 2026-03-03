@@ -136,7 +136,7 @@ interface Tokenizer extends Iterator<Terminal> {
     /// @param symbol The unexpected symbol encountered.
     /// @return A formatted error message.
     public static String parsingErrorMessage(Symbol symbol) {
-      return "Parsing error: unexpected symbol '" + symbol.name();
+      return "Parsing error: unexpected symbol '" + symbol.name() + "'";
     }
   }
 }
