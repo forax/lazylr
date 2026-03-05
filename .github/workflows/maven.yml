@@ -23,7 +23,7 @@ jobs:
       - name: Upload Java Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lazylr-java
+          name: lazylr.jar
           path: target/lazylr-*.jar
           overwrite: true
 
@@ -33,3 +33,23 @@ jobs:
           name: lazylr
           path: target/lazylr
           overwrite: true
+
+  release:
+    needs: build
+    runs-on: ubuntu-latest
+    if: startsWith(github.ref, 'refs/tags/')
+
+    steps:
+      - name: Download all artifacts
+        uses: actions/download-artifact@v4
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            lazylr.jar
+            lazylr
+          draft: false
+          prerelease: false
+          token: ${{ secrets.GITHUB_TOKEN }}
+          generate_release_notes: true
