@@ -1,5 +1,6 @@
 package com.github.forax.lazylr;
 
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -30,7 +31,7 @@ public final class Grammar {
     Objects.requireNonNull(startSymbol);
     productions = List.copyOf(productions);
     var productionMap = productions.stream()
-        .collect(Collectors.groupingBy(Production::head, Collectors.toUnmodifiableList()));
+        .collect(Collectors.groupingBy(Production::head, LinkedHashMap::new, Collectors.toUnmodifiableList()));
     if (!productionMap.containsKey(startSymbol)) {
       throw new IllegalArgumentException("start symbol is not a non-terminal symbol");
     }
@@ -55,6 +56,8 @@ public final class Grammar {
     return production;
   }
 
+  /// Returns all the [NonTerminal]s defined in this grammar.
+  /// @return All the non-terminals defined in this grammar.
   Set<NonTerminal> nonTerminals() {
     return productionMap.keySet();
   }
