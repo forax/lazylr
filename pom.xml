@@ -99,6 +99,7 @@
                             <buildArgs>
                                 <buildArg>--verbose</buildArg>
                                 <buildArg>--no-fallback</buildArg>
+                                <buildArg>--gc=G1</buildArg>
                             </buildArgs>
                         </configuration>
                     </plugin>
