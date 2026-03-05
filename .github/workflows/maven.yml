@@ -24,12 +24,12 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: jenius-java
-          path: jenius-*.jar
+          path: target/jenius-*.jar
           overwrite: true
 
       - name: Upload Binary Artifact
         uses: actions/upload-artifact@v4
         with:
           name: jenius-linux
-          path: jenius-linux
+          path: target/jenius-linux
           overwrite: true
