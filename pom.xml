@@ -60,7 +60,7 @@
                 <configuration>
                     <archive>
                         <manifest>
-                            <mainClass>fully.qualified.MainClass</mainClass>
+                            <mainClass>com.github.forax.lazylr.Main</mainClass>
                         </manifest>
                     </archive>
                 </configuration>
