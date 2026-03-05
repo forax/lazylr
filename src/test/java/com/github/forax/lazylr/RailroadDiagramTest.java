@@ -106,7 +106,7 @@ public final class RailroadDiagramTest {
       assertEquals("""
           S:
           ○─┌─[id]──┐─►
-            └─[num]─┘ \s
+            └─[num]─┘
           """, result);
     }
 
@@ -125,8 +125,8 @@ public final class RailroadDiagramTest {
       assertEquals("""
           S:
           ○─┌─[id]──┐─►
-            ├─[num]─┤ \s
-            └─[(]───┘ \s
+            ├─[num]─┤
+            └─[(]───┘
           """, result);
     }
 
@@ -146,8 +146,8 @@ public final class RailroadDiagramTest {
       assertEquals("""
           S:
           ○─┌─[id]─────┐─►
-            ├─[num]────┤ \s
-            └─[(]──[)]─┘ \s
+            ├─[num]────┤
+            └─[(]──[)]─┘
           """, result);
     }
 
@@ -163,7 +163,7 @@ public final class RailroadDiagramTest {
       assertEquals("""
           S:
           ○─┌─[id]─┐─►
-            └─[ε]──┘ \s
+            └─[ε]──┘
           """, result);
     }
   }
@@ -201,7 +201,7 @@ public final class RailroadDiagramTest {
       assertEquals("""
           E:
           ○─┌─[id]──┐─►
-            └─[num]─┘ \s
+            └─[num]─┘
           """, result);
     }
 
@@ -222,7 +222,7 @@ public final class RailroadDiagramTest {
           ○─<T>─►
           T:
           ○─┌─[id]──┐─►
-            └─[num]─┘ \s
+            └─[num]─┘
           """, result);
     }
 
@@ -241,7 +241,7 @@ public final class RailroadDiagramTest {
       assertEquals("""
           E:
           ○─┌─[id]──┐─►
-            └─[num]─┘ \s
+            └─[num]─┘
           """, result);
     }
 
@@ -262,7 +262,7 @@ public final class RailroadDiagramTest {
           ○─<T>─►
           T:
           ○─┌─[id]──┐─►
-            └─[num]─┘ \s
+            └─[num]─┘
           """, result);
     }
   }
@@ -368,7 +368,7 @@ public final class RailroadDiagramTest {
       assertEquals("""
           S:
           ○─┌─[id]───────┐─►
-            └─[id]──[id]─┘ \s
+            └─[id]──[id]─┘
           """, result);
     }
 
@@ -385,7 +385,7 @@ public final class RailroadDiagramTest {
       assertEquals("""
           E:
           ○─┌─<E>──[+]──<E>─┐─►
-            └─[id]──────────┘ \s
+            └─[id]──────────┘
           """, result);
     }
   }
@@ -413,11 +413,11 @@ public final class RailroadDiagramTest {
       assertEquals("""
           E:
           ○─┌─<T>───────────┐─►
-            ├─<E>──[+]──<E>─┤ \s
-            └─<E>──[*]──<E>─┘ \s
+            ├─<E>──[+]──<E>─┤
+            └─<E>──[*]──<E>─┘
           T:
           ○─┌─[id]──┐─►
-            └─[num]─┘ \s
+            └─[num]─┘
           """, result);
     }
 
@@ -440,9 +440,9 @@ public final class RailroadDiagramTest {
       assertEquals("""
           E:
           ○─┌─┌─[id]──┐─────┐─►
-            │ └─[num]─┘     │ \s
-            ├─<E>──[+]──<E>─┤ \s
-            └─<E>──[*]──<E>─┘ \s
+            │ └─[num]─┘     │
+            ├─<E>──[+]──<E>─┤
+            └─<E>──[*]──<E>─┘
           """, result);
     }
 
@@ -458,7 +458,7 @@ public final class RailroadDiagramTest {
       assertEquals("""
           S:
           ○─┌─[id]──<S>─┐─►
-            └─[ε]───────┘ \s
+            └─[ε]───────┘
           """, result);
     }
 
@@ -479,10 +479,10 @@ public final class RailroadDiagramTest {
       assertEquals("""
           E:
           ○─┌─<E>──[+]──<T>─┐─►
-            └─<T>───────────┘ \s
+            └─<T>───────────┘
           T:
           ○─┌─[id]──┐─►
-            └─[num]─┘ \s
+            └─[num]─┘
           """, result);
     }
 
@@ -501,9 +501,367 @@ public final class RailroadDiagramTest {
       assertEquals("""
           E:
           ○─┌─<E>──[+]──<E>─┐─►
-            ├─<E>──[*]──<E>─┤ \s
-            └─[id]──────────┘ \s
+            ├─<E>──[*]──<E>─┤
+            └─[id]──────────┘
           """, result);
     }
+  }
+
+  @Nested
+  public class JSONTests {
+    @Test
+    public void jsonGrammar() {
+      var mg = MetaGrammar.create("""
+          tokens {
+            string: /"(?:\\\\.|[^"\\\\])*"/
+            number: /-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/
+            true:   /true/
+            false:  /false/
+            null:   /null/
+          
+            /[ \\t\\n\\r]+/
+          }
+          
+          grammar {
+            JSON: VALUE
+          
+            VALUE: string
+            VALUE: number
+            VALUE: OBJECT
+            VALUE: ARRAY
+            VALUE: true
+            VALUE: false
+            VALUE: null
+          
+            OBJECT: '{' '}'
+            OBJECT: '{' MEMBERS '}'
+          
+            MEMBERS: PAIR
+            MEMBERS: MEMBERS ',' PAIR
+          
+            PAIR: string ':' VALUE
+          
+            ARRAY: '[' ']'
+            ARRAY: '[' ELEMENTS ']'
+          
+            ELEMENTS: VALUE
+            ELEMENTS: ELEMENTS ',' VALUE
+          }
+          """);
+
+      //LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), error -> fail(error));
+      var result = RailroadDiagram.generate(mg.grammar(), false);
+      assertEquals("""
+          JSON:
+          ○─<VALUE>─►
+          VALUE:
+          ○─┌─[string]─┐─►
+            ├─[number]─┤
+            ├─<OBJECT>─┤
+            ├─<ARRAY>──┤
+            ├─[true]───┤
+            ├─[false]──┤
+            └─[null]───┘
+          OBJECT:
+          ○─┌─[{]──[}]────────────┐─►
+            └─[{]──<MEMBERS>──[}]─┘
+          MEMBERS:
+          ○─┌─<PAIR>─────────────────┐─►
+            └─<MEMBERS>──[,]──<PAIR>─┘
+          PAIR:
+          ○─[string]──[:]──<VALUE>─►
+          ARRAY:
+          ○─┌─[[]──[]]─────────────┐─►
+            └─[[]──<ELEMENTS>──[]]─┘
+          ELEMENTS:
+          ○─┌─<VALUE>──────────────────┐─►
+            └─<ELEMENTS>──[,]──<VALUE>─┘
+          """, result);
+    }
+  }
+
+
+  @Nested
+  public class JavaScript {
+    @Test
+    public void javaScriptGrammar() {
+      var mg = MetaGrammar.create("""
+          tokens {
+            identifier: /[a-zA-Z_$][a-zA-Z0-9_$]*/
+            number:     /[0-9]+(?:\\.[0-9]+)?/
+            string:     /"(?:\\\\.|[^"\\\\])*"/
+          
+            true:  /true/
+            false: /false/
+            null:  /null/
+          
+            var: /var/
+            function: /function/
+            return: /return/
+            if: /if/
+            else: /else/
+            while: /while/
+            for: /for/
+            break: /break/
+            continue: /continue/
+          
+            /[ \\t\\n\\r]+/
+          }
+          
+          precedence {
+            right: if
+            right: else
+          
+            right: '='
+            left:  '||'
+            left:  '&&'
+            left:  '==', '!='
+            left:  '<', '>', '<=', '>='
+            left:  '+', '-'
+            left:  '*', '/', '%'
+            right: '!'
+          }
+          
+          grammar {
+          
+          PROGRAM:
+          PROGRAM: PROGRAM STATEMENT
+          
+          STATEMENT: ';'
+          STATEMENT: EXPRESSION ';'
+          STATEMENT: VARIABLE_DECL ';'
+          STATEMENT: RETURN_STMT ';'
+          STATEMENT: BREAK_STMT ';'
+          STATEMENT: CONTINUE_STMT ';'
+          STATEMENT: IF_STMT
+          STATEMENT: WHILE_STMT
+          STATEMENT: FOR_STMT
+          STATEMENT: FUNCTION_DECL
+          STATEMENT: BLOCK
+          
+          BLOCK: '{' STATEMENTS '}'
+          
+          STATEMENTS: STATEMENT
+          STATEMENTS: STATEMENTS STATEMENT
+          
+          VARIABLE_DECL: var VAR_LIST
+          
+          VAR_LIST: VAR_ITEM
+          VAR_LIST: VAR_LIST ',' VAR_ITEM
+          
+          VAR_ITEM: identifier
+          VAR_ITEM: identifier '=' EXPRESSION
+          
+          FUNCTION_DECL: function identifier '(' PARAMETERS ')' BLOCK
+          
+          PARAMETERS:
+          PARAMETERS: identifier
+          PARAMETERS: PARAMETERS ',' identifier
+          
+          RETURN_STMT: return
+          RETURN_STMT: return EXPRESSION
+          
+          BREAK_STMT: break
+          CONTINUE_STMT: continue
+          
+          IF_STMT: if '(' EXPRESSION ')' STATEMENT
+          IF_STMT: if '(' EXPRESSION ')' STATEMENT else STATEMENT
+          
+          WHILE_STMT: while '(' EXPRESSION ')' STATEMENT
+          
+          FOR_STMT: for '(' FOR_INIT ';' FOR_COND ';' FOR_UPDATE ')' STATEMENT
+          
+          FOR_INIT:
+          FOR_INIT: VARIABLE_DECL
+          FOR_INIT: EXPRESSION
+          
+          FOR_COND:
+          FOR_COND: EXPRESSION
+          
+          FOR_UPDATE:
+          FOR_UPDATE: EXPRESSION
+          
+          EXPRESSION: PRIMARY
+          EXPRESSION: LEFT '=' EXPRESSION
+          
+          EXPRESSION: '!' EXPRESSION
+          EXPRESSION: '-' EXPRESSION
+          
+          EXPRESSION: EXPRESSION '||' EXPRESSION
+          EXPRESSION: EXPRESSION '&&' EXPRESSION
+          
+          EXPRESSION: EXPRESSION '==' EXPRESSION
+          EXPRESSION: EXPRESSION '!=' EXPRESSION
+          
+          EXPRESSION: EXPRESSION '<' EXPRESSION
+          EXPRESSION: EXPRESSION '>' EXPRESSION
+          EXPRESSION: EXPRESSION '<=' EXPRESSION
+          EXPRESSION: EXPRESSION '>=' EXPRESSION
+          
+          EXPRESSION: EXPRESSION '+' EXPRESSION
+          EXPRESSION: EXPRESSION '-' EXPRESSION
+          
+          EXPRESSION: EXPRESSION '*' EXPRESSION
+          EXPRESSION: EXPRESSION '/' EXPRESSION
+          EXPRESSION: EXPRESSION '%' EXPRESSION
+          
+          EXPRESSION: CALL
+          
+          LEFT: identifier
+          LEFT: LEFT '.' identifier
+          LEFT: LEFT '[' EXPRESSION ']'
+          
+          CALL: LEFT '(' ARGUMENTS ')'
+          
+          ARGUMENTS:
+          ARGUMENTS: EXPRESSION
+          ARGUMENTS: ARGUMENTS ',' EXPRESSION
+          
+          PRIMARY: identifier
+          PRIMARY: number
+          PRIMARY: string
+          PRIMARY: true
+          PRIMARY: false
+          PRIMARY: null
+          PRIMARY: '(' EXPRESSION ')'
+          PRIMARY: ARRAY
+          PRIMARY: OBJECT
+          
+          ARRAY: '[' ']'
+          ARRAY: '[' ELEMENTS ']'
+          
+          ELEMENTS: EXPRESSION
+          ELEMENTS: ELEMENTS ',' EXPRESSION
+          
+          OBJECT: '{' '}'
+          OBJECT: '{' MEMBERS '}'
+          
+          MEMBERS: MEMBER
+          MEMBERS: MEMBERS ',' MEMBER
+          
+          MEMBER: identifier ':' EXPRESSION
+          MEMBER: string ':' EXPRESSION
+          
+          }
+          """);
+
+      //LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), error -> fail(error));
+      var result = RailroadDiagram.generate(mg.grammar(), false);
+      assertEquals("""
+        PROGRAM:
+        ○─┌─[ε]────────────────────┐─►
+          └─<PROGRAM>──<STATEMENT>─┘
+        STATEMENT:
+        ○─┌─[;]──────────────────┐─►
+          ├─<EXPRESSION>──[;]────┤
+          ├─<VARIABLE_DECL>──[;]─┤
+          ├─<RETURN_STMT>──[;]───┤
+          ├─<BREAK_STMT>──[;]────┤
+          ├─<CONTINUE_STMT>──[;]─┤
+          ├─<IF_STMT>────────────┤
+          ├─<WHILE_STMT>─────────┤
+          ├─<FOR_STMT>───────────┤
+          ├─<FUNCTION_DECL>──────┤
+          └─<BLOCK>──────────────┘
+        BLOCK:
+        ○─[{]──<STATEMENTS>──[}]─►
+        STATEMENTS:
+        ○─┌─<STATEMENT>───────────────┐─►
+          └─<STATEMENTS>──<STATEMENT>─┘
+        VARIABLE_DECL:
+        ○─[var]──<VAR_LIST>─►
+        VAR_LIST:
+        ○─┌─<VAR_ITEM>──────────────────┐─►
+          └─<VAR_LIST>──[,]──<VAR_ITEM>─┘
+        VAR_ITEM:
+        ○─┌─[identifier]────────────────────┐─►
+          └─[identifier]──[=]──<EXPRESSION>─┘
+        FUNCTION_DECL:
+        ○─[function]──[identifier]──[(]──<PARAMETERS>──[)]──<BLOCK>─►
+        PARAMETERS:
+        ○─┌─[ε]─────────────────────────────┐─►
+          ├─[identifier]────────────────────┤
+          └─<PARAMETERS>──[,]──[identifier]─┘
+        RETURN_STMT:
+        ○─┌─[return]───────────────┐─►
+          └─[return]──<EXPRESSION>─┘
+        BREAK_STMT:
+        ○─[break]─►
+        CONTINUE_STMT:
+        ○─[continue]─►
+        IF_STMT:
+        ○─┌─[if]──[(]──<EXPRESSION>──[)]──<STATEMENT>──────────────────────┐─►
+          └─[if]──[(]──<EXPRESSION>──[)]──<STATEMENT>──[else]──<STATEMENT>─┘
+        WHILE_STMT:
+        ○─[while]──[(]──<EXPRESSION>──[)]──<STATEMENT>─►
+        FOR_STMT:
+        ○─[for]──[(]──<FOR_INIT>──[;]──<FOR_COND>──[;]──<FOR_UPDATE>──[)]──<STATEMENT>─►
+        FOR_INIT:
+        ○─┌─[ε]─────────────┐─►
+          ├─<VARIABLE_DECL>─┤
+          └─<EXPRESSION>────┘
+        FOR_COND:
+        ○─┌─[ε]──────────┐─►
+          └─<EXPRESSION>─┘
+        FOR_UPDATE:
+        ○─┌─[ε]──────────┐─►
+          └─<EXPRESSION>─┘
+        EXPRESSION:
+        ○─┌─<PRIMARY>────────────────────────┐─►
+          ├─<LEFT>──[=]──<EXPRESSION>────────┤
+          ├─[!]──<EXPRESSION>────────────────┤
+          ├─[-]──<EXPRESSION>────────────────┤
+          ├─<EXPRESSION>──[||]──<EXPRESSION>─┤
+          ├─<EXPRESSION>──[&&]──<EXPRESSION>─┤
+          ├─<EXPRESSION>──[==]──<EXPRESSION>─┤
+          ├─<EXPRESSION>──[!=]──<EXPRESSION>─┤
+          ├─<EXPRESSION>──[<]──<EXPRESSION>──┤
+          ├─<EXPRESSION>──[>]──<EXPRESSION>──┤
+          ├─<EXPRESSION>──[<=]──<EXPRESSION>─┤
+          ├─<EXPRESSION>──[>=]──<EXPRESSION>─┤
+          ├─<EXPRESSION>──[+]──<EXPRESSION>──┤
+          ├─<EXPRESSION>──[-]──<EXPRESSION>──┤
+          ├─<EXPRESSION>──[*]──<EXPRESSION>──┤
+          ├─<EXPRESSION>──[/]──<EXPRESSION>──┤
+          ├─<EXPRESSION>──[%]──<EXPRESSION>──┤
+          └─<CALL>───────────────────────────┘
+        LEFT:
+        ○─┌─[identifier]───────────────────┐─►
+          ├─<LEFT>──[.]──[identifier]──────┤
+          └─<LEFT>──[[]──<EXPRESSION>──[]]─┘
+        CALL:
+        ○─<LEFT>──[(]──<ARGUMENTS>──[)]─►
+        ARGUMENTS:
+        ○─┌─[ε]────────────────────────────┐─►
+          ├─<EXPRESSION>───────────────────┤
+          └─<ARGUMENTS>──[,]──<EXPRESSION>─┘
+        PRIMARY:
+        ○─┌─[identifier]───────────┐─►
+          ├─[number]───────────────┤
+          ├─[string]───────────────┤
+          ├─[true]─────────────────┤
+          ├─[false]────────────────┤
+          ├─[null]─────────────────┤
+          ├─[(]──<EXPRESSION>──[)]─┤
+          ├─<ARRAY>────────────────┤
+          └─<OBJECT>───────────────┘
+        ARRAY:
+        ○─┌─[[]──[]]─────────────┐─►
+          └─[[]──<ELEMENTS>──[]]─┘
+        ELEMENTS:
+        ○─┌─<EXPRESSION>──────────────────┐─►
+          └─<ELEMENTS>──[,]──<EXPRESSION>─┘
+        OBJECT:
+        ○─┌─[{]──[}]────────────┐─►
+          └─[{]──<MEMBERS>──[}]─┘
+        MEMBERS:
+        ○─┌─<MEMBER>─────────────────┐─►
+          └─<MEMBERS>──[,]──<MEMBER>─┘
+        MEMBER:
+        ○─┌─[identifier]──[:]──<EXPRESSION>─┐─►
+          └─[string]──[:]──<EXPRESSION>─────┘
+        """, result);
+    }
+
   }
 }

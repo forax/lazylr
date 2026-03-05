@@ -113,6 +113,7 @@ final class RailroadDiagram {
   private static Fragment topLevel(Fragment fragment) {
     var newLines = new ArrayList<String>();
     addAllLines(fragment, fragment.width(), START, END, true, newLines);
+    newLines.replaceAll(String::stripTrailing);
     return new Fragment(newLines);
   }
 
