@@ -23,13 +23,13 @@ jobs:
       - name: Upload Java Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: jenius-java
-          path: target/jenius-*.jar
+          name: lazylr-java
+          path: target/lazylr-*.jar
           overwrite: true
 
       - name: Upload Binary Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: jenius
-          path: target/jenius
+          name: lazylr
+          path: target/lazylr
           overwrite: true
