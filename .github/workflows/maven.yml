@@ -7,13 +7,16 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
-    name: Java 25
+    name: GraalVM 25
     steps:
       - uses: actions/checkout@v6
-      - uses: actions/setup-java@v5
+      - uses: graalvm/setup-graalvm@v1
         with:
-          distribution: 'zulu'
+          version: 'latest'
           java-version: '25'
+          cache: maven
+
       - name: build
         run: |
-          mvn -B package
+          mvn -B package -Pnative
+
