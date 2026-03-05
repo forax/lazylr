@@ -4,6 +4,7 @@
     <groupId>com.github.forax.lazylr</groupId>
     <artifactId>lazylr</artifactId>
     <packaging>jar</packaging>
+
     <version>3.0</version>
 
     <properties>
