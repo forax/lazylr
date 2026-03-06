@@ -166,6 +166,103 @@ public final class RailroadDiagramTest {
             └─[ε]──┘
           """, result);
     }
+
+    @Test
+    public void sharedExtraRowsBothSidesMultiLine() {
+      var S = new NonTerminal("S");
+      var A = new NonTerminal("A");
+      var B = new NonTerminal("B");
+      var id = new Terminal("id");
+      var num = new Terminal("num");
+      var x = new Terminal("x");
+      var y = new Terminal("y");
+      var grammar = new Grammar(S, List.of(
+          new Production(S, List.of(A, B)),
+          new Production(A, List.of(id)),
+          new Production(A, List.of(num)),
+          new Production(B, List.of(x)),
+          new Production(B, List.of(y))
+      ));
+      var result = RailroadDiagram.generate(grammar, true);
+      assertEquals("""
+        S:
+        ○─┌─[id]──┐──┌─[x]─┐─►
+          └─[num]─┘  └─[y]─┘
+        """, result);
+    }
+
+    @Test
+    public void leftSideHasMoreLinesThanRight() {
+      var S = new NonTerminal("S");
+      var A = new NonTerminal("A");
+      var id = new Terminal("id");
+      var num = new Terminal("num");
+      var lp = new Terminal("(");
+      var x = new Terminal("x");
+      var grammar = new Grammar(S, List.of(
+          new Production(S, List.of(A, x)),
+          new Production(A, List.of(id)),
+          new Production(A, List.of(num)),
+          new Production(A, List.of(lp))
+      ));
+      var result = RailroadDiagram.generate(grammar, true);
+      assertEquals("""
+        S:
+        ○─┌─[id]──┐──[x]─►
+          ├─[num]─┤
+          └─[(]───┘
+        """, result);
+    }
+
+    @Test
+    public void rightSideHasMoreLinesThanLeft() {
+      var S = new NonTerminal("S");
+      var A = new NonTerminal("A");
+      var id = new Terminal("id");
+      var num = new Terminal("num");
+      var lp = new Terminal("(");
+      var x = new Terminal("x");
+      var grammar = new Grammar(S, List.of(
+          new Production(S, List.of(x, A)),
+          new Production(A, List.of(id)),
+          new Production(A, List.of(num)),
+          new Production(A, List.of(lp))
+      ));
+      var result = RailroadDiagram.generate(grammar, true);
+      assertEquals("""
+        S:
+        ○─[x]──┌─[id]──┐─►
+               ├─[num]─┤
+               └─[(]───┘
+        """, result);
+    }
+
+    @Test
+    public void bothSideHaveSeveralLines() {
+      var S = new NonTerminal("S");
+      var A = new NonTerminal("A");
+      var B = new NonTerminal("B");
+      var id = new Terminal("id");
+      var num = new Terminal("num");
+      var lp = new Terminal("(");
+      var x = new Terminal("x");
+      var y = new Terminal("y");
+      var grammar = new Grammar(S, List.of(
+          new Production(S, List.of(A, B)),
+          new Production(A, List.of(id)),
+          new Production(A, List.of(num)),
+          new Production(A, List.of(lp)),
+          new Production(B, List.of(x)),
+          new Production(B, List.of(y))
+      ));
+      var result = RailroadDiagram.generate(grammar, true);
+      assertEquals("""
+        S:
+        ○─┌─[id]──┐──┌─[x]─┐─►
+          ├─[num]─┤  └─[y]─┘
+          └─[(]───┘
+        """, result);
+    }
   }
 
 
