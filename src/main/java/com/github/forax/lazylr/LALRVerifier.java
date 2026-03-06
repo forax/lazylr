@@ -354,28 +354,11 @@ public final class LALRVerifier {
     }
 
     if (shiftAction != null) {
-      var reduceProd = reduceAction.production();
       var termPrec = precedenceMap.get(lookahead);
-      var prodPrec = precedenceMap.get(reduceProd);
-
+      var prodPrec = precedenceMap.get(reduceAction.production());
       if (termPrec != null && prodPrec != null) {
-        // Resolve: higher level wins; on tie use associativity
-        if (termPrec.level() > prodPrec.level()) {
-          // Shift wins
-          actions.put(lookahead, shiftAction);
-        } else if (prodPrec.level() > termPrec.level()) {
-          // Reduce wins
-          actions.put(lookahead, reduceAction);
-        } else {
-          // Same level: use associativity
-          if (termPrec.associativity() == Precedence.Associativity.LEFT) {
-            // Reduce wins (left associative)
-            actions.put(lookahead, reduceAction);
-          } else {
-            // Shift wins (right associative)
-            actions.put(lookahead, shiftAction);
-          }
-        }
+        var action = resolveShiftReduceConflict(shiftAction, reduceAction, termPrec, prodPrec);
+        actions.put(lookahead, action);
         return;
       }
       errorReporter.accept(
@@ -389,5 +372,21 @@ public final class LALRVerifier {
         "Unresolved reduce/reduce conflict in state " + stateIndex +
             " on terminal '" + lookahead.name() + "'" +
             " between [" + existing + "] and [" + newAction + "]");
+  }
+
+  private static Action resolveShiftReduceConflict(Action shiftAction, Action reduceAction,
+                                                   Precedence termPrec, Precedence prodPrec) {
+    // Resolve: higher level wins; on tie use associativity
+    if (termPrec.level() > prodPrec.level()) {
+      return shiftAction;
+    }
+    if (prodPrec.level() > termPrec.level()) {
+      return reduceAction;
+    }
+    // Same level: use associativity
+    if (termPrec.associativity() == Precedence.Associativity.LEFT) {
+      return reduceAction;
+    }
+    return shiftAction;
   }
 }
