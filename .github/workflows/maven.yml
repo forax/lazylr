@@ -18,22 +18,32 @@ jobs:
           java-version: '25'
           cache: maven
 
+      - name: Get VERSION from tag or commit
+        run: |
+          if [[ $GITHUB_REF == refs/tags/* ]]; then
+            echo "VERSION=${GITHUB_REF#refs/tags/}" >> $GITHUB_ENV
+          else
+            echo "VERSION=$(git rev-parse --short HEAD)" >> $GITHUB_ENV
+          fi
+
       - name: build
         run: |
           mvn -B package -Pnative
+          cp target/lazylr-*.jar lazylr-${{ env.VERSION }}.jar
+          cp target/lazylr lazylr-linux-${{ env.VERSION }}
 
       - name: Upload Java Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lazylr.jar
-          path: target/lazylr-*.jar
+          name: lazylr-java
+          path: lazylr-*.jar
           overwrite: true
 
       - name: Upload Binary Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: lazylr
-          path: target/lazylr
+          name: lazylr-linux
+          path: lazylr-linux-*
           overwrite: true
 
   release:
@@ -49,7 +59,8 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            lazylr/*
+            lazylr-java/*
+            lazylr-linux/*
           draft: false
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
