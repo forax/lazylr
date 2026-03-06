@@ -112,11 +112,11 @@ interface Tokenizer extends Iterator<Terminal> {
 
     /// Generates a detailed parsing error message with position information.
     ///
-    /// @param symbol The unexpected symbol encountered.
+    /// @param terminal The unexpected terminal encountered.
     /// @param index The character index where the error occurred.
     /// @param input The input character sequence being parsed.
     /// @return A formatted error message.
-    public static String parsingErrorMessage(Symbol symbol, int index, CharSequence input) {
+    public static String parsingErrorMessage(Terminal terminal, int index, CharSequence input) {
       var lineColumn = lineColumn(index, input);
       var line = lineColumn.line();
       var column = lineColumn.column();
@@ -125,7 +125,7 @@ interface Tokenizer extends Iterator<Terminal> {
       errorMessage
           .append("Parsing error at line ").append(line)
           .append(", column ").append(column)
-          .append(": unexpected symbol '").append(symbol.name()).append("'")
+          .append(": unexpected terminal '").append(terminal.name()).append("'")
           .append('\n');
       appendLineContentAndCaret(errorMessage, index, input);
       return errorMessage.toString();
@@ -133,10 +133,10 @@ interface Tokenizer extends Iterator<Terminal> {
 
     /// Generates a basic parsing error message without position information.
     ///
-    /// @param symbol The unexpected symbol encountered.
+    /// @param terminal The unexpected terminal encountered.
     /// @return A formatted error message.
-    public static String parsingErrorMessage(Symbol symbol) {
-      return "Parsing error: unexpected symbol '" + symbol.name() + "'";
+    public static String parsingErrorMessage(Terminal terminal) {
+      return "Parsing error: unexpected terminal '" + terminal.name() + "'";
     }
   }
 }

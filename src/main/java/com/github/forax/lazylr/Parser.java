@@ -236,15 +236,15 @@ public final class Parser {
   }
 
   /// Generate an error message for parsing exceptions
-  private static String errorMessage(Symbol symbol, Iterator<Terminal> input) {
+  private static String errorMessage(Terminal terminal, Iterator<Terminal> input) {
     if (input instanceof Tokenizer tokenizer) {
-      if (symbol.equals(Terminal.ERROR)) {
+      if (terminal.equals(Terminal.ERROR)) {
         // lexical error
         return Tokenizer.ErrorHandler.lexingErrorMessage(tokenizer.index(), tokenizer.input());
       }
-      return Tokenizer.ErrorHandler.parsingErrorMessage(symbol, tokenizer.index(), tokenizer.input());
+      return Tokenizer.ErrorHandler.parsingErrorMessage(terminal, tokenizer.index(), tokenizer.input());
     }
-    return Tokenizer.ErrorHandler.parsingErrorMessage(symbol);
+    return Tokenizer.ErrorHandler.parsingErrorMessage(terminal);
   }
 
   /// Pushes the token's destination state onto the stack and
@@ -278,7 +278,9 @@ public final class Parser {
         return true;  // Accept
       }
 
-      throw new ParsingException(errorMessage(production.head(), input));
+      // Trying to reduce a non-terminal that is not reachable from the start symbol
+      throw new AssertionError("can not reduce " + production +
+          " because there is no GOTO transition for " + production.head());
     }
 
     // 4. Push that destination state onto the stack
