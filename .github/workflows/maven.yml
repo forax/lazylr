@@ -49,8 +49,7 @@ jobs:
         uses: softprops/action-gh-release@v2
         with:
           files: |
-            lazylr/lazylr.jar
-            lazylr/lazylr
+            lazylr/*
           draft: false
           prerelease: false
           token: ${{ secrets.GITHUB_TOKEN }}
