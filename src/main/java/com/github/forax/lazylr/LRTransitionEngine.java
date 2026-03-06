@@ -1,6 +1,5 @@
 package com.github.forax.lazylr;
 
-import java.util.Comparator;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -17,11 +16,9 @@ import java.util.stream.Collectors;
 /// by the same object.
 ///
 /// ### Conflict Resolution
-/// The engine implements standard LR(1) resolution rules:
-/// * **Shift/Reduce**: Resolved using the [Precedence] levels of the [Production]
-///    and the [Terminal]. If levels are tied, [Precedence.Associativity] is used.
-/// * **Reduce/Reduce**: Resolved by picking the [Production] with the highest
-///    explicitly assigned precedence.
+/// The engine implements standard LR(1) **Shift/Reduce** resolution rules:
+/// - the highest [Precedence] level of the [Production] and the [Terminal] wins,
+/// - if levels are tied, [Precedence.Associativity] is used.
 ///
 /// ### State Identity
 /// In LR(1), a [State] is defined by its set of [Item]s, where each item includes
@@ -205,43 +202,40 @@ final class LRTransitionEngine {
   }
 
   private Action resolveAction(State currentState, Terminal lookahead) {
-    // Find all possible Reductions
-    var possibleReductions = currentState.items().stream()
-        .filter(Item::isCompleted)
-        .filter(item -> item.lookahead().equals(lookahead))
-        .toList();
+    // Find a possible Reduction
+    var reduceItem = (Item) null;
+    for(var item : currentState.items()) {
+      if (item.isCompleted() && item.lookahead().equals(lookahead)) {
+        if (reduceItem == null) {
+          reduceItem = item;
+          continue;
+        }
+        return null;  // reduce-reduce conflict
+      }
+    }
 
     // Find a possible Shift
     var shiftState = move(currentState, lookahead);
 
-    var bestCandidate = bestCandidateForReduction(possibleReductions);
-
-    if (bestCandidate != null && shiftState != null) {
+    if (reduceItem != null && shiftState != null) {
       // Shift/Reduce conflict resolution via precedence
-      return shouldReduce(bestCandidate.production(), lookahead)
-          ? new Action.Reduce(bestCandidate.production())
-          : new Action.Shift(shiftState);
+      var production = reduceItem.production();
+      var tokenPrec = precedenceMap.get(lookahead);
+      var productionPrec = precedenceMap.get(production);
+      if (productionPrec != null && tokenPrec != null) {
+        return shouldReduce(tokenPrec, productionPrec)
+            ? new Action.Reduce(production)
+            : new Action.Shift(shiftState);
+      }
+      return null;  // shift/reduce conflict
     }
-    if (bestCandidate != null) {
-      return new Action.Reduce(bestCandidate.production());
+    if (reduceItem != null) {
+      return new Action.Reduce(reduceItem.production());
     }
-    if (shiftState != null)    {
+    if (shiftState != null) {
       return new Action.Shift(shiftState);
     }
-    return null;
-  }
-
-  private Item bestCandidateForReduction(List<Item> possibleReductions) {
-    return switch (possibleReductions.size()) {
-      case 0 -> null;
-      case 1 -> possibleReductions.getFirst();
-      default -> possibleReductions.stream()
-          .max(Comparator.comparingInt(i -> {
-            var precedence = precedenceMap.get(i.production());
-            return precedence.level();
-          }))
-          .orElseThrow();
-    };
+    return null;  // shift/reduce conflict
   }
 
   /// Decides between a shift and a reduction based on precedence rules.
@@ -249,21 +243,16 @@ final class LRTransitionEngine {
   /// Logic:
   /// * Higher [Precedence#level()] wins.
   /// * If levels are equal, [Precedence.Associativity#LEFT] results in a reduction.
-  /// * Default is to **Shift** if no precedence is defined.
-  private boolean shouldReduce(Production production, Terminal lookahead) {
-    var rulePrec = precedenceMap.get(production);
-    var tokenPrec = precedenceMap.get(lookahead);
-
-    if (rulePrec != null && tokenPrec != null) {
-      if (rulePrec.level() > tokenPrec.level()) return true;  // Reduce (Rule is stronger)
-      if (rulePrec.level() < tokenPrec.level()) return false; // Shift (Token is stronger)
-
-      // Levels are equal? Use associativity
-      return rulePrec.associativity() == Precedence.Associativity.LEFT; // Left-associativity means Reduce
+  private boolean shouldReduce(Precedence tokenPrec, Precedence productionPrec) {
+    if (productionPrec.level() > tokenPrec.level()) {
+      return true;  // Reduce (Rule is stronger)
+    }
+    if (productionPrec.level() < tokenPrec.level()) {
+      return false; // Shift (Token is stronger)
     }
 
-    // Default: Shift wins (standard yacc/bison behavior)
-    return false;
+    // Levels are equal? Use associativity
+    return productionPrec.associativity() == Precedence.Associativity.LEFT; // Left-associativity means Reduce
   }
 
   /// Implements the GOTO function of LR parsing.
