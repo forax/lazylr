@@ -77,7 +77,7 @@ public final class ParserErrorTest {
     });
 
     var message = exception.getMessage();
-    assertTrue(message.contains("Parsing error"));
+    assertTrue(message.contains("Lexing error"));
     assertTrue(message.contains("line 1"));
     assertTrue(message.contains("column 6"));
     assertTrue(message.contains("id + 2"));

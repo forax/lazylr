@@ -239,6 +239,10 @@ public final class Parser {
   /// Generate an error message for parsing exceptions
   private static String errorMessage(Symbol symbol, Iterator<Terminal> input) {
     if (input instanceof Tokenizer tokenizer) {
+      if (symbol.equals(Terminal.ERROR)) {
+        // lexical error
+        return Tokenizer.ErrorHandler.lexingErrorMessage(tokenizer.index(), tokenizer.input());
+      }
       return Tokenizer.ErrorHandler.parsingErrorMessage(symbol, tokenizer.index(), tokenizer.input());
     }
     return Tokenizer.ErrorHandler.parsingErrorMessage(symbol);
