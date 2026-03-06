@@ -307,12 +307,12 @@ public final class LALRVerifier {
           // It's a reduce (or accept) item
           if (item.production().equals(augmentedStart)) {
             // accept on EOF
-            mergeAction(actions, precedenceMap, Terminal.EOF, new Accept(), item.production(), i, errorReporter);
+            mergeAction(actions, precedenceMap, Terminal.EOF, new Accept(), i, errorReporter);
           } else {
             // reduce on each terminal in FOLLOW(head)
             var follow = followSets.getOrDefault(item.production().head(), Set.of());
             for (var lookahead : follow) {
-              mergeAction(actions, precedenceMap, lookahead, new Reduce(item.production()), item.production(), i, errorReporter);
+              mergeAction(actions, precedenceMap, lookahead, new Reduce(item.production()), i, errorReporter);
             }
           }
         } else {
@@ -320,7 +320,7 @@ public final class LALRVerifier {
           var sym = item.nextSymbol();
           if (sym instanceof Terminal t) {
             var target = transitions.get(t);
-            mergeAction(actions, precedenceMap, t, new Shift(target), null, i, errorReporter);
+            mergeAction(actions, precedenceMap, t, new Shift(target), i, errorReporter);
           }
         }
       }
@@ -329,7 +329,7 @@ public final class LALRVerifier {
 
   /// Merge a new action into the action table, resolving conflicts via precedence.
   private static void mergeAction(Map<Terminal, Action> actions, Map<PrecedenceEntity, Precedence> precedenceMap,
-                                  Terminal lookahead, Action newAction, Production reduceProd, int stateIndex,
+                                  Terminal lookahead, Action newAction, int stateIndex,
                                   Consumer<String> errorReporter) {
     var existing = actions.get(lookahead);
     if (existing == null) {
@@ -341,32 +341,38 @@ public final class LALRVerifier {
     }
 
     // ---- Shift/Reduce conflict ----
-    if (isShiftReduceConflict(existing, newAction) || isShiftReduceConflict(newAction, existing)) {
-      Production reduceProd2 = (existing instanceof Reduce r) ? r.production()
-          : (newAction instanceof Reduce r2) ? r2.production() : reduceProd;
+    Shift shiftAction = null;
+    Reduce reduceAction = null;
+    if (existing instanceof Reduce r && newAction instanceof Shift s) {
+      shiftAction = s;
+      reduceAction = r;
+    } else {
+      if (existing instanceof Shift s && newAction instanceof Reduce r) {
+        shiftAction = s;
+        reduceAction = r;
+      }
+    }
 
-      Precedence termPrec = precedenceMap.get(lookahead);
-      Precedence prodPrec = precedenceMap.get(reduceProd2);
+    if (shiftAction != null) {
+      var reduceProd = reduceAction.production();
+      var termPrec = precedenceMap.get(lookahead);
+      var prodPrec = precedenceMap.get(reduceProd);
 
       if (termPrec != null && prodPrec != null) {
         // Resolve: higher level wins; on tie use associativity
         if (termPrec.level() > prodPrec.level()) {
           // Shift wins
-          Action shiftAction = (existing instanceof Shift) ? existing : newAction;
           actions.put(lookahead, shiftAction);
         } else if (prodPrec.level() > termPrec.level()) {
           // Reduce wins
-          Action reduceAction = (existing instanceof Reduce) ? existing : newAction;
           actions.put(lookahead, reduceAction);
         } else {
           // Same level: use associativity
           if (termPrec.associativity() == Precedence.Associativity.LEFT) {
             // Reduce wins (left associative)
-            Action reduceAction = (existing instanceof Reduce) ? existing : newAction;
             actions.put(lookahead, reduceAction);
           } else {
             // Shift wins (right associative)
-            Action shiftAction = (existing instanceof Shift) ? existing : newAction;
             actions.put(lookahead, shiftAction);
           }
         }
@@ -380,12 +386,8 @@ public final class LALRVerifier {
 
     // ---- Reduce/Reduce conflict ----
     errorReporter.accept(
-        "Unresolved Reduce/reduce conflict in state " + stateIndex +
+        "Unresolved reduce/reduce conflict in state " + stateIndex +
             " on terminal '" + lookahead.name() + "'" +
             " between [" + existing + "] and [" + newAction + "]");
-  }
-
-  private static boolean isShiftReduceConflict(Action a, Action b) {
-    return a instanceof Shift && b instanceof Reduce;
   }
 }
