@@ -29,6 +29,7 @@ jobs:
       - name: build
         run: |
           mvn -B package -Pnative
+          rm target/lazylr-*-javadoc.jar
           cp target/lazylr-*.jar lazylr-${{ env.VERSION }}.jar
           cp target/lazylr lazylr-linux-${{ env.VERSION }}
 
