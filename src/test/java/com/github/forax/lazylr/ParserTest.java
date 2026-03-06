@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /// Those are the same tests as in [MetaGrammarParserTest] but using objects
 /// for terminals, non-terminals, productions, etc
@@ -580,5 +582,213 @@ public final class ParserTest {
         Reduce Value : Object
         Reduce Value' : Value
         """, parse(grammar, precedence, input));
+  }
+
+
+  @Test
+  public void parsingErrorBasic() {
+    var E    = new NonTerminal("E");
+    var plus = new Terminal("+");
+    var id   = new Terminal("id");
+
+    var grammar = new Grammar(E, List.of(
+        new Production(E, List.of(E, plus, E)),
+        new Production(E, List.of(id))
+    ));
+    var precedence = Map.of(
+        plus, new Precedence(10, Precedence.Associativity.LEFT)
+    );
+
+    var parser = Parser.createParser(grammar, precedence);
+
+
+    // Try to parse invalid input: "id id"
+    var input = "id id";
+    var terminals = List.of(new Terminal("id"), new Terminal("id")).iterator();
+
+    var exception = assertThrows(ParsingException.class, () -> {
+      parser.parse(terminals, new ParserListener() {
+        @Override public void onShift(Terminal token) {}
+        @Override public void onReduce(Production production) {}
+      });
+    });
+
+    var message = exception.getMessage();
+    assertTrue(message.contains("Parsing error"));
+    assertTrue(message.contains("'id'"));
+  }
+
+  @Test
+  public void lexingErrorUnknownCharacterWithPosition() {
+    var E    = new NonTerminal("E");
+    var plus = new Terminal("+");
+    var id   = new Terminal("id");
+
+    var grammar = new Grammar(E, List.of(
+        new Production(E, List.of(E, plus, E)),
+        new Production(E, List.of(id))
+    ));
+    var precedence = Map.of(
+        plus, new Precedence(10, Precedence.Associativity.LEFT)
+    );
+
+    var parser = Parser.createParser(grammar, precedence);
+
+    var tokens = List.of(
+        new Token("id", "[a-z]+"),
+        new Token("+", "\\+"),
+        new Token("\\s+")
+    );
+    var lexer = Lexer.createLexer(tokens);
+
+    // Try to parse invalid input: "id + 2"
+    var input = "id + 2";
+    var terminals = lexer.tokenize(input);
+
+    var exception = assertThrows(ParsingException.class, () -> {
+      parser.parse(terminals, new ParserListener() {
+        @Override public void onShift(Terminal token) {}
+        @Override public void onReduce(Production production) {}
+      });
+    });
+
+    var message = exception.getMessage();
+    assertTrue(message.contains("Lexing error"));
+    assertTrue(message.contains("line 1"));
+    assertTrue(message.contains("column 6"));
+    assertTrue(message.contains("id + 2"));
+    assertTrue(message.contains("^"));
+  }
+
+  @Test
+  public void parsingErrorNotAllowedByTheGrammarWithPosition() {
+    var E    = new NonTerminal("E");
+    var plus = new Terminal("+");
+    var id   = new Terminal("id");
+
+    var grammar = new Grammar(E, List.of(
+        new Production(E, List.of(E, plus, E)),
+        new Production(E, List.of(id))
+    ));
+    var precedence = Map.of(
+        plus, new Precedence(10, Precedence.Associativity.LEFT)
+    );
+
+    var parser = Parser.createParser(grammar, precedence);
+
+    var tokens = List.of(
+        new Token("id", "[a-z]+"),
+        new Token("+", "\\+"),
+        new Token("\\s+")
+    );
+    var lexer = Lexer.createLexer(tokens);
+
+    // Try to parse invalid input: "id + +"
+    var input = "id + +";
+    var terminals = lexer.tokenize(input);
+
+    var exception = assertThrows(ParsingException.class, () -> {
+      parser.parse(terminals, new ParserListener() {
+        @Override public void onShift(Terminal token) {}
+        @Override public void onReduce(Production production) {}
+      });
+    });
+
+    var message = exception.getMessage();
+    assertTrue(message.contains("Parsing error"));
+    assertTrue(message.contains("line 1"));
+    assertTrue(message.contains("column 6"));
+    assertTrue(message.contains("id + +"));
+    assertTrue(message.contains("^"));
+  }
+
+  @Test
+  public void parsingErrorNotAllowedByTheGrammarWithMultipleLines() {
+    var E    = new NonTerminal("E");
+    var plus = new Terminal("+");
+    var id   = new Terminal("id");
+
+    var grammar = new Grammar(E, List.of(
+        new Production(E, List.of(E, plus, E)),
+        new Production(E, List.of(id))
+    ));
+    var precedence = Map.of(
+        plus, new Precedence(10, Precedence.Associativity.LEFT)
+    );
+
+    var parser = Parser.createParser(grammar, precedence);
+
+    var tokens = List.of(
+        new Token("id", "[a-z]+"),
+        new Token("+", "\\+"),
+        new Token("\\s+")
+    );
+    var lexer = Lexer.createLexer(tokens);
+
+    var input = """
+        id
+        id + +
+        id
+        """;
+    var terminals = lexer.tokenize(input);
+
+    var exception = assertThrows(ParsingException.class, () -> {
+      parser.parse(terminals, new ParserListener() {
+        @Override public void onShift(Terminal token) {}
+        @Override public void onReduce(Production production) {}
+      });
+    });
+
+    var message = exception.getMessage();
+    assertTrue(message.contains("Parsing error"));
+    assertTrue(message.contains("line 2"));
+    assertTrue(message.contains("column 4"));
+    assertTrue(message.contains("id + +"));
+    assertTrue(message.contains("^"));
+  }
+
+
+  @Test
+  public void reduceReduceConflictThrows() {
+    var S  = new NonTerminal("S");
+    var A  = new NonTerminal("A");
+    var B  = new NonTerminal("B");
+    var id = new Terminal("id");
+
+    var grammar = new Grammar(S, List.of(
+        new Production(S, List.of(A)),
+        new Production(S, List.of(B)),
+        new Production(A, List.of(id)),
+        new Production(B, List.of(id))
+    ));
+
+    var parser = Parser.createParser(grammar, Map.of());
+
+    assertThrows(ParsingException.class, () ->
+        parser.parse(List.of(id).iterator(), new ParserListener() {
+          @Override public void onShift(Terminal token) {}
+          @Override public void onReduce(Production production) {}
+        }));
+  }
+
+  @Test
+  public void shiftReduceConflictNoPrecedenceThrows() {
+    var E    = new NonTerminal("E");
+    var plus = new Terminal("+");
+    var id   = new Terminal("id");
+
+    var grammar = new Grammar(E, List.of(
+        new Production(E, List.of(E, plus, E)),
+        new Production(E, List.of(id))
+    ));
+
+    // No precedence map at all
+    var parser = Parser.createParser(grammar, Map.of());
+
+    assertThrows(ParsingException.class, () ->
+        parser.parse(List.of(id, plus, id, plus, id).iterator(), new ParserListener() {
+          @Override public void onShift(Terminal token) {}
+          @Override public void onReduce(Production production) {}
+        }));
   }
 }

@@ -222,7 +222,7 @@ final class LRTransitionEngine {
       var production = reduceItem.production();
       var tokenPrec = precedenceMap.get(lookahead);
       var productionPrec = precedenceMap.get(production);
-      if (productionPrec != null && tokenPrec != null) {
+      if (tokenPrec != null && productionPrec != null) {
         return shouldReduce(tokenPrec, productionPrec)
             ? new Action.Reduce(production)
             : new Action.Shift(shiftState);
