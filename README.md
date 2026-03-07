@@ -151,7 +151,7 @@ Then add Lazy LR as a dependency:
       <dependency>
           <groupId>com.github.forax</groupId>
           <artifactId>lazylr</artifactId>
-          <version>3.1.6</version>
+          <version>3.1.7</version>
       </dependency>
   </dependencies>
 ```
