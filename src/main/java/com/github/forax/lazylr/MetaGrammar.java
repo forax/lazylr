@@ -57,13 +57,29 @@ import java.util.stream.Stream;
 public final class MetaGrammar {
   private final List<Token> tokens;
   private final Grammar grammar;
-  private final LinkedHashMap<PrecedenceEntity, Precedence> precedenceMap;
+  private final Map<PrecedenceEntity, Precedence> precedenceMap;
 
-  private MetaGrammar(List<Token> tokens, Grammar grammar, LinkedHashMap<PrecedenceEntity, Precedence> precedenceMap) {
-    this.tokens = List.copyOf(tokens);
+  private MetaGrammar(List<Token> tokens, Grammar grammar, Map<PrecedenceEntity, Precedence> precedenceMap) {
+    this.tokens = tokens;
     this.grammar = grammar;
     this.precedenceMap = precedenceMap;
     super();
+  }
+
+  /// Creates a new {@code MetaGrammar} from its three constituent parts.
+  ///
+  /// @param tokens        the tokens (named and unamed).
+  /// @param precedenceMap the operator precedence table mapping each
+  ///                      {@link PrecedenceEntity} to its {@link Precedence} level and
+  ///                      associativity.
+  /// @param grammar       the context-free grammar built from production rules, rooted at
+  ///                      its start symbol.
+  /// @throws NullPointerException if any argument is {@code null}.
+  public MetaGrammar(List<Token> tokens, Map<? extends PrecedenceEntity, Precedence> precedenceMap, Grammar grammar) {
+    Objects.requireNonNull(tokens);
+    Objects.requireNonNull(precedenceMap);
+    Objects.requireNonNull(grammar);
+    this(List.copyOf(tokens), grammar, Collections.unmodifiableSequencedMap(new LinkedHashMap<>(precedenceMap)));
   }
 
   /// The lexer rules derived from the `tokens` section, in priority order.
@@ -93,7 +109,7 @@ public final class MetaGrammar {
   ///
   /// @return the precedence map, in declaration order.
   public Map<PrecedenceEntity, Precedence> precedenceMap() {
-    return Collections.unmodifiableMap(precedenceMap);
+    return precedenceMap;
   }
 
   // grammar definition
@@ -421,7 +437,7 @@ public final class MetaGrammar {
     //   throw new AssertionError(error);
     // });
 
-    return new MetaGrammar(rules, grammar, precedenceMap);
+    return new MetaGrammar(List.copyOf(rules), grammar, Collections.unmodifiableSequencedMap(precedenceMap));
   }
 
 
