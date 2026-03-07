@@ -7,7 +7,7 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 
-/// Those are the same tests as in [ParserTest] but using the meta grammar DSL
+/// Those are the same tests as in [ParserTest] but using the meta grammar DSL,
 /// Please update both files accordingly
 public final class MetaGrammarParserTest {
 
