@@ -2,9 +2,75 @@ package com.github.forax.lazylr;
 
 import org.junit.jupiter.api.Test;
 
+import javax.tools.DiagnosticCollector;
+import javax.tools.FileObject;
+import javax.tools.ForwardingJavaFileManager;
+import javax.tools.JavaFileObject;
+import javax.tools.SimpleJavaFileObject;
+import javax.tools.ToolProvider;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.URI;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public final class JavaCodeGeneratorTest {
+
+  /// Asserts that the given generated code snippet compiles without errors.
+  /// @param className simple class name used for the in-memory compilation unit.
+  /// @param code      the raw output of {@link JavaCodeGenerator#generate}.
+  private static void assertCompilesSuccessfully(String className, String code) throws IOException {
+    var compiler = ToolProvider.getSystemJavaCompiler();
+    assertNotNull(compiler);
+
+    var classpath = System.getProperty("java.class.path");
+    var diagnostics = new DiagnosticCollector<JavaFileObject>();
+
+    var delegate = compiler.getStandardFileManager(diagnostics, null, null);
+    try (var fileManager = new ForwardingJavaFileManager<>(delegate) {
+      @Override
+      public JavaFileObject getJavaFileForOutput(Location location,
+                                                 String className,
+                                                 JavaFileObject.Kind kind,
+                                                 FileObject sibling) {
+        var uri = URI.create("mem:///" + className + ".class");
+        return new SimpleJavaFileObject(uri, JavaFileObject.Kind.CLASS) {
+          @Override
+          public OutputStream openOutputStream() {
+            return OutputStream.nullOutputStream();
+          }
+        };
+      }
+    }) {
+
+      var uri = URI.create("mem:///" + className + ".java");
+      var source = new SimpleJavaFileObject(uri, JavaFileObject.Kind.SOURCE) {
+        @Override
+        public CharSequence getCharContent(boolean ignoreEncodingErrors) {
+          return code;
+        }
+      };
+
+      var ok = compiler
+          .getTask(null, fileManager, diagnostics, List.of("-cp", classpath), null, List.of(source))
+          .call();
+      if (!ok) {
+        var errors = diagnostics.getDiagnostics().stream()
+            .map(d -> "  line " + d.getLineNumber() + ": " + d.getMessage(null))
+            .collect(Collectors.joining("\n"));
+        var codeLines = code.lines().toList();
+        var listing = IntStream.range(0, codeLines.size())
+            .mapToObj(i -> String.format("%4d | %s", i + 1, codeLines.get(i)))
+            .collect(Collectors.joining("\n"));
+        fail("Generated code for '" + className + "' did not compile:\n" + errors
+            + "\n\n--- code ---\n" + listing);
+      }
+    }
+  }
+
 
   @Test
   public void generateThrowsOnNullMetaGrammar() {
@@ -12,7 +78,7 @@ public final class JavaCodeGeneratorTest {
   }
 
   @Test
-  public void singleNumberGrammar() {
+  public void singleNumberGrammar() throws IOException {
     var mg = MetaGrammar.create("""
         tokens {
           num: /[0-9]+/
@@ -24,6 +90,7 @@ public final class JavaCodeGeneratorTest {
 
     var code = JavaCodeGenerator.generate(mg);
 
+    assertCompilesSuccessfully("SingleNumberGrammar", code);
     assertEquals("""
         import com.github.forax.lazylr.*;
         
@@ -60,7 +127,7 @@ public final class JavaCodeGeneratorTest {
   }
 
   @Test
-  public void epsilonProduction() {
+  public void epsilonProduction() throws IOException {
     var mg = MetaGrammar.create("""
         tokens {
           num: /[0-9]+/
@@ -73,6 +140,7 @@ public final class JavaCodeGeneratorTest {
 
     var code = JavaCodeGenerator.generate(mg);
 
+    assertCompilesSuccessfully("EpsilonProduction", code);
     assertEquals("""
         import com.github.forax.lazylr.*;
         
@@ -110,7 +178,7 @@ public final class JavaCodeGeneratorTest {
   }
 
   @Test
-  public void anonymousToken() {
+  public void anonymousToken() throws IOException {
     var mg = MetaGrammar.create("""
         tokens {
           num: /[0-9]+/
@@ -122,6 +190,7 @@ public final class JavaCodeGeneratorTest {
         """);
 
     var code = JavaCodeGenerator.generate(mg);
+    assertCompilesSuccessfully("AnonymousToken", code);
 
     assertEquals("""
         import com.github.forax.lazylr.*;
@@ -160,7 +229,7 @@ public final class JavaCodeGeneratorTest {
   }
 
   @Test
-  public void additionLeftAssociative() {
+  public void additionLeftAssociative() throws IOException {
     var mg = MetaGrammar.create("""
         tokens {
           num: /[0-9]+/
@@ -177,6 +246,7 @@ public final class JavaCodeGeneratorTest {
 
     var code = JavaCodeGenerator.generate(mg);
 
+    assertCompilesSuccessfully("AdditionLeftAssociative", code);
     assertEquals("""
         import com.github.forax.lazylr.*;
         
@@ -218,7 +288,7 @@ public final class JavaCodeGeneratorTest {
   }
 
   @Test
-  public void additionAndMultiplicationPrecedence() {
+  public void additionAndMultiplicationPrecedence() throws IOException {
     var mg = MetaGrammar.create("""
         tokens {
           num: /[0-9]+/
@@ -237,6 +307,7 @@ public final class JavaCodeGeneratorTest {
 
     var code = JavaCodeGenerator.generate(mg);
 
+    assertCompilesSuccessfully("AdditionAndMultiplicationPrecedence", code);
     assertEquals("""
         import com.github.forax.lazylr.*;
         
@@ -282,7 +353,7 @@ public final class JavaCodeGeneratorTest {
   }
 
   @Test
-  public void exponentiationRightAssociative() {
+  public void exponentiationRightAssociative() throws IOException {
     var mg = MetaGrammar.create("""
         tokens {
           num: /[0-9]+/
@@ -303,6 +374,7 @@ public final class JavaCodeGeneratorTest {
 
     var code = JavaCodeGenerator.generate(mg);
 
+    assertCompilesSuccessfully("ExponentiationRightAssociative", code);
     assertEquals("""
         import com.github.forax.lazylr.*;
         
@@ -352,7 +424,7 @@ public final class JavaCodeGeneratorTest {
   }
 
   @Test
-  public void functionCallGrammar() {
+  public void functionCallGrammar() throws IOException {
     var mg = MetaGrammar.create("""
         tokens {
           sum: /sum/
@@ -370,6 +442,7 @@ public final class JavaCodeGeneratorTest {
 
     var code = JavaCodeGenerator.generate(mg);
 
+    assertCompilesSuccessfully("FunctionCallGrammar", code);
     assertEquals("""
         import com.github.forax.lazylr.*;
         
@@ -420,7 +493,7 @@ public final class JavaCodeGeneratorTest {
   }
 
   @Test
-  public void danglingElseGrammar() {
+  public void danglingElseGrammar() throws IOException {
     var mg = MetaGrammar.create("""
         tokens {
           if:   /if/
@@ -444,6 +517,7 @@ public final class JavaCodeGeneratorTest {
 
     var code = JavaCodeGenerator.generate(mg);
 
+    assertCompilesSuccessfully("DanglingElseGrammar", code);
     assertEquals("""
         import com.github.forax.lazylr.*;
         
