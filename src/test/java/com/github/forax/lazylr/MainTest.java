@@ -13,11 +13,12 @@ import java.util.Objects;
 
 import static java.nio.charset.StandardCharsets.UTF_8;
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class MainTest {
 
-  private static ProcessResult runProcess(Path workingDir, Path... args) throws IOException, InterruptedException {
+  private static ProcessResult runProcess(Path workingDir, Object... args) throws IOException, InterruptedException {
     var command = new ArrayList<String>();
     command.add(System.getProperty("java.home") + "/bin/java");
     command.add("-cp");
@@ -460,6 +461,305 @@ public class MainTest {
                   └── <E>
                       └── [num=4]
           """, result.stdout());
+    }
+  }
+
+
+  @Nested
+  public class GenerateOption {
+
+    @Test
+    public void generateWithNoGrammarFileShouldExit1(@TempDir Path tempDir) throws Exception {
+      var result = runProcess(tempDir, "--generate");
+      assertEquals(1, result.exitCode());
+      assertTrue(result.stderr().contains("lazylr"));
+    }
+
+    @Test
+    public void generateWithInputFileShouldExit1(@TempDir Path tempDir) throws Exception {
+      // --generate is incompatible with a second (input) path argument
+      var grammar = tempDir.resolve("grammar.txt");
+      var input   = tempDir.resolve("input.txt");
+      Files.writeString(grammar, """
+          tokens {
+            num: /[0-9]+/
+          }
+          grammar {
+            E: num
+          }
+          """);
+      Files.writeString(input, "42");
+
+      var result = runProcess(tempDir,
+          "--generate", grammar, input.toString());
+      assertEquals(1, result.exitCode());
+      assertTrue(result.stderr().contains("lazylr"));
+    }
+
+    @Test
+    public void generateWithMissingGrammarFileShouldExit1(@TempDir Path tempDir) throws Exception {
+      var result = runProcess(tempDir,
+          "--generate", tempDir.resolve("does_not_exist.txt").toString());
+      assertEquals(1, result.exitCode());
+      assertTrue(result.stderr().contains("grammar"));
+    }
+
+    @Test
+    public void generateShouldProduceNoStderr(@TempDir Path tempDir) throws Exception {
+      var grammar = tempDir.resolve("grammar.txt");
+      Files.writeString(grammar, """
+          tokens {
+            num: /[0-9]+/
+          }
+          grammar {
+            E: num
+          }
+          """);
+
+      var result = runProcess(tempDir, "--generate", grammar);
+      assertEquals(0, result.exitCode());
+      assertEquals("", result.stderr());
+    }
+
+    @Test
+    public void generateShouldNotSkipLALRVerification(@TempDir Path tempDir) throws Exception {
+      var grammar = tempDir.resolve("grammar.txt");
+      Files.writeString(grammar, """
+          tokens {
+            num: /[0-9]+/
+          }
+          grammar {
+            E: E '+' E
+            E: num
+          }
+          """);
+
+      var result = runProcess(tempDir, "--generate", grammar);
+      assertEquals(2, result.exitCode());
+    }
+
+    @Test
+    public void generateSingleNumberGrammar(@TempDir Path tempDir) throws Exception {
+      var grammarText = """
+          tokens {
+            num: /[0-9]+/
+          }
+          grammar {
+            E: num
+          }
+          """;
+      var grammar = tempDir.resolve("grammar.txt");
+      Files.writeString(grammar, grammarText);
+
+      var result = runProcess(tempDir, "--generate", grammar);
+      assertEquals(0, result.exitCode());
+      assertEquals(JavaCodeGenerator.generate(MetaGrammar.create(grammarText)), result.stdout());
+    }
+
+    @Test
+    public void generateAdditionGrammar(@TempDir Path tempDir) throws Exception {
+      var grammarText = """
+          tokens {
+            num: /[0-9]+/
+            /[ ]+/
+          }
+          precedence {
+            left: '+'
+          }
+          grammar {
+            E: num
+            E: E '+' E
+          }
+          """;
+      var grammar = tempDir.resolve("grammar.txt");
+      Files.writeString(grammar, grammarText);
+
+      var result = runProcess(tempDir, "--generate", grammar);
+      assertEquals(0, result.exitCode());
+      assertEquals(JavaCodeGenerator.generate(MetaGrammar.create(grammarText)), result.stdout());
+    }
+
+    @Test
+    public void generateFunctionCallGrammar(@TempDir Path tempDir) throws Exception {
+      var grammarText = """
+          tokens {
+            sum: /sum/
+            num: /[0-9]+/
+            /[ ]+/
+          }
+          grammar {
+            E:    num
+            E:    sum '(' ARGS ')'
+            ARGS: E
+            ARGS: ARGS ',' E
+            ARGS:
+          }
+          """;
+      var grammar = tempDir.resolve("grammar.txt");
+      Files.writeString(grammar, grammarText);
+
+      var result = runProcess(tempDir, "--generate", grammar);
+      assertEquals(0, result.exitCode());
+      assertEquals(JavaCodeGenerator.generate(MetaGrammar.create(grammarText)), result.stdout());
+    }
+
+    @Test
+    public void generateAndInlineTogetherShouldExit1(@TempDir Path tempDir) throws Exception {
+      // Combining --generate and --inline is not a defined mode and must be rejected.
+      var grammar = tempDir.resolve("grammar.txt");
+      Files.writeString(grammar, """
+          tokens {
+            num: /[0-9]+/
+          }
+          grammar {
+            E: num
+          }
+          """);
+
+      var result = runProcess(tempDir,
+          "--generate", "--inline", grammar);
+      assertEquals(1, result.exitCode());
+    }
+  }
+
+
+  @Nested
+  public class InlineOption {
+
+    @Test
+    public void inlineWithNoGrammarFileShouldExit1(@TempDir Path tempDir) throws Exception {
+      var result = runProcess(tempDir, "--inline");
+      assertEquals(1, result.exitCode());
+      assertTrue(result.stderr().contains("lazylr"));
+    }
+
+    @Test
+    public void inlineWithInputFileShouldExit1(@TempDir Path tempDir) throws Exception {
+      // --inline is incompatible with a second (input) path argument
+      var grammar = tempDir.resolve("grammar.txt");
+      var input   = tempDir.resolve("input.txt");
+      Files.writeString(grammar, """
+          tokens {
+            num: /[0-9]+/
+          }
+          grammar {
+            E: num
+          }
+          """);
+      Files.writeString(input, "42");
+
+      var result = runProcess(tempDir,
+          "--inline", grammar, input);
+      assertEquals(1, result.exitCode());
+      assertTrue(result.stderr().contains("lazylr"));
+    }
+
+    @Test
+    public void inlineWithMissingGrammarFileShouldExit1(@TempDir Path tempDir) throws Exception {
+      var result = runProcess(tempDir,
+          "--inline", tempDir.resolve("does_not_exist.txt"));
+      assertEquals(1, result.exitCode());
+      assertTrue(result.stderr().contains("grammar"));
+    }
+
+    @Test
+    public void inlineWithConflictShouldExit2(@TempDir Path tempDir) throws Exception {
+      // --inline still runs the LALR verifier; a conflicting grammar must exit 2.
+      var grammar = tempDir.resolve("grammar.txt");
+      Files.writeString(grammar, """
+          tokens {
+            num: /[0-9]+/
+          }
+          grammar {
+            E: E '+' E
+            E: num
+          }
+          """);
+
+      var result = runProcess(tempDir, "--inline", grammar);
+      assertEquals(2, result.exitCode());
+      assertEquals("", result.stdout());
+    }
+
+    @Test
+    public void inlineShouldProduceNoStderr(@TempDir Path tempDir) throws Exception {
+      var grammar = tempDir.resolve("grammar.txt");
+      Files.writeString(grammar, """
+          tokens {
+            num: /[0-9]+/
+          }
+          grammar {
+            E: num
+          }
+          """);
+
+      var result = runProcess(tempDir, "--inline", grammar);
+      assertEquals(0, result.exitCode());
+      assertEquals("", result.stderr());
+    }
+
+    @Test
+    public void inlineMinimalGrammar(@TempDir Path tempDir) throws Exception {
+      // Single production E → num: inlining cannot expand anything further,
+      // so the diagram is identical to the non-inline output.
+      var grammar = tempDir.resolve("grammar.txt");
+      Files.writeString(grammar, """
+          tokens {
+            num: /[0-9]+/
+          }
+          grammar {
+            E: num
+          }
+          """);
+
+      var result = runProcess(tempDir, "--inline", grammar);
+      assertEquals(0, result.exitCode());
+      assertEquals("""
+          E:
+          ○─[num]─►
+          """, result.stdout());
+    }
+
+    @Test
+    public void inlineProducesDifferentOutputThanDefault(@TempDir Path tempDir) throws Exception {
+      var grammar = tempDir.resolve("grammar.txt");
+      Files.writeString(grammar, """
+          tokens {
+            num: /[0-9]+/
+          }
+          precedence {
+            left: '+'
+            left: '*'
+          }
+          grammar {
+            E: T
+            T: num
+          }
+          """);
+
+      var defaultResult = runProcess(tempDir,           grammar);
+      var inlineResult  = runProcess(tempDir, "--inline", grammar);
+
+      assertEquals(0, defaultResult.exitCode());
+      assertEquals(0, inlineResult.exitCode());
+      assertNotEquals(defaultResult.stdout(), inlineResult.stdout());
+    }
+
+    @Test
+    public void inlineAndGenerateTogetherShouldExit1(@TempDir Path tempDir) throws Exception {
+      var grammar = tempDir.resolve("grammar.txt");
+      Files.writeString(grammar, """
+          tokens {
+            num: /[0-9]+/
+          }
+          grammar {
+            E: num
+          }
+          """);
+
+      var result = runProcess(tempDir,
+          "--inline", "--generate", grammar);
+      assertEquals(1, result.exitCode());
     }
   }
 }

@@ -4,6 +4,7 @@ import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Objects;
 
@@ -13,9 +14,13 @@ import java.util.Objects;
 /// - With a grammar file and an input file: validates the grammar, parses the input,
 ///   and prints the **derivation tree**.
 ///
+/// - With `--inline` and a grammar file: ask for the compact **railroad diagram**.
+/// - With `--generate` and a grammar file: generates Java source code for a
+///   `createGrammar()` static method that reconstructs the grammar programmatically.
+///
 /// Usage:
 /// ```
-/// lazylr <grammar> [input]
+/// lazylr [--generate|--inline] <grammar> [input]
 /// ```
 public final class Main {
   private Main() {
@@ -25,24 +30,26 @@ public final class Main {
   /// Prints usage instructions.
   private static void usage() {
     System.err.println("""
-      Usage: lazylr <grammar> [input]
+      Usage: lazylr [--generate|--inline] <grammar> [input]
       
       Arguments:
         <grammar>  path to the grammar file to validate
         [input]    optional path to an input file to parse against the grammar
       
+      Options:
+        --generate  generate Java source code for a createGrammar() static method
+        --inline    inline non-recursive non-terminal in the railroad diagram
+      
       Examples:
         lazylr grammar.txt              # validate grammar and print railroad diagram
+        lazylr --inline grammar.txt     # as above, the diagram is more compact
+        lazylr --generate grammar.txt   # generate Java code that builds the grammar
         lazylr grammar.txt input.txt    # parse input and print derivation tree
+      
       """);
   }
 
   /// Represents a node in the derivation (parse) tree.
-  /// Each node holds a [Symbol] and an immutable list of child nodes,
-  /// forming a tree that reflects the grammatical structure of the parsed input.
-  ///
-  /// @param symbol   the grammar symbol (terminal or non-terminal) at this node.
-  /// @param children the ordered list of child nodes produced by this symbol's derivation.
   private record Node(Symbol symbol, List<Node> children) {
     public Node {
       Objects.requireNonNull(symbol);
@@ -50,31 +57,12 @@ public final class Main {
     }
   }
 
-  /// Renders a derivation tree as a formatted string using box-drawing characters.
-  /// Example output:
-  /// ```
-  /// └── <expr>
-  ///     ├── [number=42]
-  ///     └── [+]
-  ///         └── [number=1]
-  /// ```
-  ///
-  /// @param node the root node of the tree to render.
-  /// @return a multi-line string representation of the tree.
   private static String tree(Node node) {
     var builder = new StringBuilder();
     tree(node, "", true, builder);
     return builder.toString();
   }
 
-  /// Recursively appends a subtree rooted at `node` to the provided `builder`.
-  /// Terminals are rendered as `[name\` or `[name=value]` (when name and value differ).
-  /// Non-terminals are rendered as `<name>`.
-  ///
-  /// @param node    the current node to render.
-  /// @param prefix  the indentation prefix accumulated from parent nodes.
-  /// @param last    `true` if this node is the last child of its parent, affecting connector style.
-  /// @param builder the [StringBuilder] to append the rendered lines to.
   private static void tree(Node node, String prefix, boolean last, StringBuilder builder) {
     var connector = last ? "└── " : "├── ";
     var text = switch (node.symbol) {
@@ -96,38 +84,62 @@ public final class Main {
     }
   }
 
-  /// Main entry point for the \`lazylr\` tool.
-  /// Behavior depends on the number of arguments:
-  /// - **1 argument** `<grammar>`: reads and validates the grammar file, checks for
-  ///   LALR conflicts, and prints the railroad diagram to standard output.
-  /// - **2 arguments** `<grammar>` `<input>`: additionally tokenizes and parses the input
-  ///   file against the grammar, then prints the derivation tree to standard output.
-  ///
-  /// Exit codes:
-  /// - `0` — success
-  /// - `1` — usage error, I/O error, or grammar/input parsing failure
-  /// - `2` — LALR conflict(s) detected in the grammar
-  ///
-  /// @param args command-line arguments: `<grammar>` and optionally `[input]`.`
+  private record CmdLineArgument (
+      boolean generate,
+      boolean inline,
+      Path grammarPath,
+      Path inputPath) {
+  }
+
+  private static CmdLineArgument parse(String[] args) {
+    var generate = false;
+    var inline = false;
+    var grammarPath = (Path) null;
+    var inputPath  = (Path) null;
+    for (var arg : args) {
+      switch (arg) {
+        case "--generate" -> generate = true;
+        case "--inline" -> inline = true;
+        default -> {
+          if (grammarPath == null) {
+            grammarPath = Path.of(arg);
+            continue;
+          }
+          if (inputPath == null) {
+            inputPath = Path.of(arg);
+            continue;
+          }
+          return null;  // too many arguments
+        }
+      }
+    }
+    if (grammarPath == null ||                          // grammarPath is mandatory
+        (inline && generate) ||                         // inline and generate are mutually exclusive
+        (inputPath != null && (inline || generate))) {  // inline/generate are only valid with no input
+      return null;
+    }
+    return new CmdLineArgument(generate, inline, grammarPath, inputPath);
+  }
+
   static void main(String[] args) {
-    if (args.length == 0 || args.length > 2) {
+    var cmdLineArgument = parse(args);
+    if (cmdLineArgument == null) {
       usage();
       System.exit(1);
       return;
     }
 
-    var grammarFile = Path.of(args[0]);
-    String grammarInput;
+    String grammarText;
     try {
-      grammarInput = Files.readString(grammarFile);
+      grammarText = Files.readString(cmdLineArgument.grammarPath);
     } catch (IOException e) {
-      System.err.println("Error while reading the grammar file " + e.getMessage());
+      System.err.println("Error while reading the grammar file: " + e.getMessage());
       System.exit(1);
       return;
     }
     MetaGrammar mg;
     try {
-      mg = MetaGrammar.create(grammarInput);
+      mg = MetaGrammar.create(grammarText);
     } catch (ParsingException e) {
       System.err.println("Error while parsing the grammar file\n" + e.getMessage());
       System.exit(1);
@@ -142,15 +154,19 @@ public final class Main {
       return;
     }
 
-    if (args.length == 1) {
-      System.out.print(RailroadDiagram.generate(mg.grammar(), false));
+    if (cmdLineArgument.generate) {
+      System.out.print(JavaCodeGenerator.generate(mg));
       return;
     }
 
-    var inputFile = Path.of(args[1]);
-    String input;
+    if (cmdLineArgument.inputPath == null) {
+      System.out.print(RailroadDiagram.generate(mg.grammar(), cmdLineArgument.inline));
+      return;
+    }
+
+    String inputText;
     try {
-      input = Files.readString(inputFile);
+      inputText = Files.readString(cmdLineArgument.inputPath);
     } catch (IOException e) {
       System.err.println("Error while reading the input file " + e.getMessage());
       System.exit(1);
@@ -173,7 +189,7 @@ public final class Main {
 
     Node node;
     try {
-      node = parser.parse(lexer.tokenize(input), evaluator);
+      node = parser.parse(lexer.tokenize(inputText), evaluator);
     } catch (ParsingException e) {
       System.err.println("Error while parsing the input file\n" + e.getMessage());
       System.exit(1);
