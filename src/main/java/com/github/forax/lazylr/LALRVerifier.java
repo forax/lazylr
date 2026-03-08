@@ -222,20 +222,21 @@ public final class LALRVerifier {
     gotoTable.add(new HashMap<>());
     stateIndex.put(initial, 0);
 
-    // BFS
     for (var i = 0; i < states.size(); i++) {
       var state = states.get(i);
-      // Collect all symbols after dots
-      var nextSymbols = new LinkedHashSet<Symbol>();
+
+      // Group advanced items by the symbol after the dot
+      var kernelsBySymbol = new LinkedHashMap<Symbol, Set<Item>>();
       for (var item : state) {
         var sym = item.nextSymbol();
         if (sym != null) {
-          nextSymbols.add(sym);
+          kernelsBySymbol.computeIfAbsent(sym, _ -> new LinkedHashSet<>()).add(item.advance());
         }
       }
-      for (var sym : nextSymbols) {
-        var next = goTo(state, sym, grammar);
-        // Check if this state already exists
+
+      for (var entry : kernelsBySymbol.entrySet()) {
+        var sym = entry.getKey();
+        var next = closure(entry.getValue(), grammar);
         var target = stateIndex.computeIfAbsent(next, _ -> {
           var idx = states.size();
           states.add(next);
@@ -266,17 +267,6 @@ public final class LALRVerifier {
       }
     }
     return result;
-  }
-
-  /// Compute goto(state, sym).
-  private static Set<Item> goTo(Set<Item> state, Symbol sym, Grammar grammar) {
-    var kernel = new LinkedHashSet<Item>();
-    for (var item : state) {
-      if (sym.equals(item.nextSymbol())) {
-        kernel.add(item.advance());
-      }
-    }
-    return closure(kernel, grammar);
   }
 
   // -----------------------------------------------------------------------
