@@ -3,9 +3,9 @@ package com.github.forax.lazylr;
 import com.github.forax.lazylr.LRTransitionEngine.Item;
 import com.github.forax.lazylr.LRTransitionEngine.State;
 
+import java.util.AbstractList;
 import java.util.ArrayDeque;
-import java.util.ArrayList;
-import java.util.Collections;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -169,29 +169,61 @@ public final class Parser {
     Objects.requireNonNull(input);
     Objects.requireNonNull(evaluator);
 
-    var listener =
-        new ParserListener() {
-          // Use ArrayList because null is allowed as a value + subList
-          private final ArrayList<V> stack = new ArrayList<>();
+    final class EvaluatorListener implements ParserListener {
+      private V[] stack;   // null is allowed as a value
+      private int size;
 
+      private EvaluatorListener() {
+        @SuppressWarnings("unchecked")
+        var stack = (V[]) new Object[32];   // big enough for most small grammars
+        this.stack = stack;
+        super();
+      }
+
+      private void add(V value) {
+        if (size == stack.length) {
+          resize();
+        }
+        stack[size++] = value;
+      }
+
+      private void resize() {
+        stack = Arrays.copyOf(stack, stack.length << 1);
+      }
+
+      @Override
+      public void onShift(Terminal token) {
+        add(evaluator.evaluate(token));
+      }
+
+      @Override
+      public void onReduce(Production production) {
+        if (production == startProduction) {
+          return;
+        }
+        var from = size - production.body().size();
+        // the VM should be able to optimize this copy if it does not escape
+        var copy = Arrays.copyOfRange(stack, from, size);
+        var result = evaluator.evaluate(production, new AbstractList<>() {
           @Override
-          public void onShift(Terminal token) {
-            stack.add(evaluator.evaluate(token));
+          public int size() {
+            return copy.length;
           }
 
           @Override
-          public void onReduce(Production production) {
-            if (production == startProduction) {
-              return;
-            }
-            var subList = stack.subList(stack.size() - production.body().size(), stack.size());
-            var result = evaluator.evaluate(production, Collections.unmodifiableList(new ArrayList<>(subList)));
-            subList.clear();
-            stack.add(result);
+          public V get(int index) {
+            return copy[index];
           }
-        };
+        });
+        Arrays.fill(stack, from, size, null);
+        size = from;
+        add(result);
+      }
+    }
+
+    var listener = new EvaluatorListener();
     parse(input, listener);
-    return listener.stack.removeLast();
+    return listener.stack[0];
   }
 
   /// Parses a stream of tokens and notifies a listener of every transition.
