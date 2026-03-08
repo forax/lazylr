@@ -146,7 +146,7 @@ The DSL has three sections:
 - **`grammar`** — BNF-style production rules; quoted literals like `'('` are automatically registered as terminals
 
 ```java
-var mg = MetaGrammar.create("""
+var mg = MetaGrammar.load("""
     tokens {
       sum: /sum/
       num: /[0-9]+/
@@ -221,7 +221,7 @@ It doesn't change the result, but you still need to tell the parser which way to
 First, let's see the conflict without precedence:
 
 ```java
-var mg = MetaGrammar.create("""
+var mg = MetaGrammar.load("""
     tokens {
       num: /[0-9]+/
       /[ ]+/
@@ -247,7 +247,7 @@ LALRVerifier.verify(mg.grammar(), Map.of(), System.err::println);
 Declaring `left: '+'` in the `precedence` section resolves it:
 
 ```java
-var mg = MetaGrammar.create("""
+var mg = MetaGrammar.load("""
     tokens {
       num: /[0-9]+/
       /[ ]+/
@@ -323,7 +323,7 @@ Different operators need different **priority levels** — multiplication should
 In the `precedence` section, **later lines have higher precedence than earlier ones**:
 
 ```java
-var mg = MetaGrammar.create("""
+var mg = MetaGrammar.load("""
     tokens {
       num: /[0-9]+/
       /[ ]+/
@@ -397,7 +397,7 @@ Mathematically, exponentiation is **right-associative**: `2 ^ 3 ^ 2` = `2 ^ (3 ^
 not `(2 ^ 3) ^ 2` = 64.
 
 ```java
-var mg = MetaGrammar.create("""
+var mg = MetaGrammar.load("""
     tokens {
       num: /[0-9]+/
       /[ ]+/
@@ -474,7 +474,7 @@ In the `precedence` section, `if` is listed first (lowest precedence) and `else`
 which forces the parser to always shift `else` rather than reduce:
 
 ```java
-var mg = MetaGrammar.create("""
+var mg = MetaGrammar.load("""
     tokens {
       if:   /if/
       then: /then/
