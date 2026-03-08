@@ -215,6 +215,7 @@ public final class LALRVerifier {
   private static Automaton buildLR0Automaton(Grammar grammar, Production augmentedStart) {
     var states = new ArrayList<Set<Item>>();
     var gotoTable = new ArrayList<Map<Symbol, Integer>>();
+    var stateIndex = new HashMap<Set<Item>, Integer>();
 
     var initial = closure(Set.of(new Item(augmentedStart, 0)), grammar);
     states.add(initial);
@@ -234,12 +235,12 @@ public final class LALRVerifier {
       for (var sym : nextSymbols) {
         var next = goTo(state, sym, grammar);
         // Check if this state already exists
-        int target = states.indexOf(next);
-        if (target == -1) {
-          target = states.size();
+        var target = stateIndex.computeIfAbsent(next, _ -> {
+          var idx = states.size();
           states.add(next);
           gotoTable.add(new HashMap<>());
-        }
+          return idx;
+        });
         gotoTable.get(i).put(sym, target);
       }
     }
