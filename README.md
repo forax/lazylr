@@ -161,7 +161,7 @@ Then add Lazy LR as a dependency:
 ## Command-Line Tool
 
 In addition to being used as a library, Lazy LR ships as a standalone CLI tool
-for validating grammars, generating code, and inspecting parse results.
+for validating grammars, inspecting parse results and generating code.
 
 Download the latest release:
 [Latest Release](https://github.com/forax/lazylr/releases/latest)
