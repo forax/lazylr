@@ -10,11 +10,27 @@ import java.util.Set;
 final class JavaCodeGenerator {
   /// Escapes a string for use as a Java string literal (double-quoted).
   private static String escapeJavaString(String s) {
-    return s.replace("\\", "\\\\")
-        .replace("\"", "\\\"")
-        .replace("\n", "\\n")
-        .replace("\r", "\\r")
-        .replace("\t", "\\t");
+    var builder = new StringBuilder();
+    for (var i = 0; i < s.length(); i++) {
+      var c = s.charAt(i);
+      switch (c) {
+        case '\\' -> builder.append("\\\\");
+        case '"'  -> builder.append("\\\"");
+        case '\n' -> builder.append("\\n");
+        case '\r' -> builder.append("\\r");
+        case '\t' -> builder.append("\\t");
+        case '\0' -> builder.append("\\0");
+        default -> {
+          if (c < 0x20 || c == 0x7F) {
+            // other ASCII control characters → \\uXXXX
+            builder.append(String.format("\\u%04X", (int) c));
+          } else {
+            builder.append(c);
+          }
+        }
+      }
+    }
+    return builder.toString();
   }
 
   /// Converts an arbitrary grammar symbol name into a valid Java identifier fragment
