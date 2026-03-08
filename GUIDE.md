@@ -17,8 +17,8 @@ uses one token of "look-ahead" to decide what action to take.
 
 It works by maintaining a **stack** and choosing between two actions:
 
-- **Shift** — push the next input token onto the stack
-- **Reduce** — replace a sequence of stack symbols with a non-terminal using a grammar production
+- **Shift**: push the next input token onto the stack
+- **Reduce**: replace a sequence of stack symbols with a non-terminal using a grammar production
 
 When the parser can't decide which action to take, that's called a **conflict** — and
 your grammar needs to be fixed.
@@ -29,8 +29,8 @@ your grammar needs to be fixed.
 
 > **Goal:** Parse and evaluate a single number like `42`.
 
-Every language needs a foundation.
-Here, the foundation is a single grammar rule: an expression `E` can be a number.
+Let's start with something simple, the grammar has one production:
+an expression `E` can be a number.
 
 ```java
 import module java.base;
@@ -137,10 +137,10 @@ LALRVerifier.verify(grammar, Map.of(), error -> {
 
 Now we introduce recursion and an **epsilon production** (a rule that derives nothing — the empty terminal).
 
-From this step onward, we use `MetaGrammar` to describe the grammar, tokens, and precedence
-in a compact textual DSL instead of building the objects by hand.
+From this step onward, we use the class `MetaGrammar` to describe the grammar, tokens, and precedence
+using a textual format instead of building the Java objects by hand.
 
-The DSL has three sections:
+The text has three sections:
 - **`tokens`** — named terminals (`name: /regex/`) and anonymous ignored patterns (`/regex/`)
 - **`precedence`** — operator associativity and priority, from lowest to highest
 - **`grammar`** — BNF-style production rules; quoted literals like `'('` are automatically registered as terminals
@@ -166,8 +166,8 @@ LALRVerifier.verify(mg.grammar(), Map.of(), System.err::println);
 
 > 💡 **Insight:** The epsilon production `ARGS:` (an empty right-hand side) allows `sum()` to be valid
 >    with zero arguments. The `ARGS: ARGS ',' E` rule is **left-recursive** — it builds the argument list
->    from left to right, which aligns naturally with how LALR parsers process input.
->    Right-recursive rules can sometimes cause stack overflows on deeply nested inputs.
+>    from left to right, which aligns naturally with how LR parsers process input.
+>    Right-recursive rules can cause stack overflows on deeply nested inputs.
 
 ```java
 var lexer = Lexer.createLexer(mg.tokens());
@@ -266,7 +266,7 @@ LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
 
 > 💡 **Insight:** Associativity resolves **Shift/Reduce conflicts** that arise from rules like `E → E + E`.
 >    When the parser has `E + E` on its stack and sees another `+`,
->    it must choose: reduce now (left-assoc) or shift and wait (right-assoc).
+>    it must choose: reduce now (left associative) or shift and wait (right associative).
 >    The precedence map encodes this decision.
 
 > **Note:** By default, the precedence of a production is the precedence of its right-most terminal,
@@ -306,7 +306,7 @@ System.out.println(result);
 // 6
 ```
 
-> 💡 **Insight:** The `args` list for `E : E + E` always has three elements — left operand, the `+` terminal
+> 💡 **Insight:** The `args` list for `E : E + E` always has three elements, left operand, the `+` terminal
 >    (whose evaluated value is `0` from the `default` branch), and right operand.
 >    The print trace confirms left-associativity: `1 + 2` is reduced *first* (producing 3),
 >    and only then is `3 + 3` evaluated. If associativity were RIGHT, you would see `2 + 3` evaluated first.
@@ -345,7 +345,7 @@ LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), msg -> System.err.println(
 > 💡 **Insight:** Precedence levels are relative, not absolute — only their ordering matters.
 >    When the parser has `E + E` on its stack and sees `*` as lookahead, it compares precedence levels.
 >    Since `*` is declared after `+`, it has higher priority, so the parser **shifts** (reads more input)
->    rather than reducing, effectively giving `*` tighter binding.
+>    rather than reducing.
 
 ```java
 var lexer = Lexer.createLexer(mg.tokens());
@@ -419,7 +419,7 @@ LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), msg -> System.err.println(
 ```
 
 > 💡 **Insight:** With **RIGHT** associativity, when the parser sees `E ^ E` on its stack
->    and a `^` lookahead, it **shifts** instead of reducing — deferring the reduction
+>    and a `^` lookahead, it **shifts** instead of reducing, deferring the reduction
 >    and effectively grouping from the right.
 
 ```java
@@ -543,16 +543,12 @@ System.out.println(parser.parse(lexer.tokenize("if 1 then if 0 then 99 else 42")
 // 42
 ```
 
-> 💡 **Insight**: The output confirms that `E: if E then E else E` was chosen over `E: if E then E` —
+> 💡 **Insight**: The output confirms that `E: if E then E else E` was chosen over `E: if E then E`,
 >    the `else` was shifted and bound to the inner `if`.
 
----
 
-## Summary: Grammar and Conflict Resolution Cheat Sheet
+## That's all
 
-| Conflict Type | Cause | Fix |
-|---|---|---|
-| **Reduce/Reduce** | Two productions match the same input | Remove redundant production |
-| **Shift/Reduce (assoc)** | Operator applied twice: `a + b + c` | Set LEFT or RIGHT associativity |
-| **Shift/Reduce (prec)** | Two operators compete: `a + b * c` | Declare higher-priority operator later in the `precedence` section |
-| **Dangling Else** | `else` could bind to multiple `if`s | Declare `else` last in `precedence` to force a shift |
+To summarize, if there is a reduce/reduce conflict, the grammar has to be simplified.
+If there is a shift/reduce conflict, the precedence map can be used to declare
+which terminal is more important than the other and what is the associativity (LEFT vs RIGHT).
