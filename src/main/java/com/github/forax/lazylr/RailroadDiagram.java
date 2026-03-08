@@ -109,12 +109,14 @@ final class RailroadDiagram {
     return new Fragment(newLines);
   }
 
-  /// The first line of the rendered fragment gets START + H prepended and H + END
-  private static Fragment topLevel(Fragment fragment) {
+  /// Wraps a rendered fragment in the top-level rail decoration, producing the
+  /// final diagram for one non-terminal.
+  /// The trailing spaces of all the lines are stripped.
+  private static String topLevel(Fragment fragment) {
     var newLines = new ArrayList<String>();
     addAllLines(fragment, fragment.width(), START, END, true, newLines);
     newLines.replaceAll(String::stripTrailing);
-    return new Fragment(newLines);
+    return String.join("\n", newLines);
   }
 
 
