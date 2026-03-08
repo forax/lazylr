@@ -127,6 +127,7 @@ System.out.println(ast);
 If you want to know more about how to design your grammar,
 there is a step-by-step [GUIDE.md](GUIDE.md).
 
+
 ## Using with Maven
 
 The binary distribution is available on the jitPack.io repository.
@@ -155,3 +156,56 @@ Then add Lazy LR as a dependency:
       </dependency>
   </dependencies>
 ```
+
+
+## Command-Line Tool
+
+In addition to being used as a library, Lazy LR ships as a standalone CLI tool
+for validating grammars, generating code, and inspecting parse results.
+
+Download the latest release:
+[Latest Release](https://github.com/forax/lazylr/releases/latest)
+
+### Usage
+
+```
+java -jar lazylr.jar [--generate|--inline] <grammar> [input]
+```
+
+### Modes
+
+**Validate and show railroad diagram** (default)
+
+```bash
+java -jar lazylr.jar [--inline] grammar.txt
+```
+
+Validates the grammar for LALR(1) conflicts and prints a railroad diagram of
+its productions. With `--inline`, non-recursive non-terminals are inlined for
+a more compact diagram.
+
+**Parse an input file and show the derivation tree**
+
+```bash
+java -jar lazylr.jar grammar.txt input.txt
+```
+
+Validates the grammar, parses the input file against it, and prints the derivation tree:
+
+```
+└── <expr>
+    ├── <expr>
+    │   └── [num=2]
+    ├── [+]
+    └── <expr>
+        ...
+```
+
+**Generate Java source**
+
+```bash
+java -jar lazylr.jar --generate grammar.txt
+```
+
+Emits a Java code containing a static method `createGrammar()` that reconstructs
+the grammar programmatically, useful for embedding a grammar without the DSL at runtime.
