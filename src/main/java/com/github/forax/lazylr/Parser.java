@@ -83,7 +83,7 @@ public final class Parser {
     return production.body().reversed().stream()
         .flatMap(s -> switch (s) {
           case Terminal t -> Stream.of(t);
-          case NonTerminal _ -> null;
+          case NonTerminal _ -> null;  // flatMap convert null to an empty stream
         })
         .findFirst()
         .flatMap(terminal -> Optional.ofNullable(precedenceMap.get(terminal)))
@@ -227,7 +227,7 @@ public final class Parser {
           currentToken = tokens.next();
         }
         case LRTransitionEngine.Action.Reduce(var production) -> {
-          if (executeReduction(stack, production, input, listener)) {
+          if (executeReduction(stack, production, listener)) {
             return;
           }
         }
@@ -256,7 +256,7 @@ public final class Parser {
 
   /// Shrinks the stack and then performs a 'GOTO' transition.
   /// Returns true if the reduction leads to an Accept state, false otherwise.
-  private boolean executeReduction(ArrayDeque<State> stack, Production production, Iterator<Terminal> input, ParserListener listener) {
+  private boolean executeReduction(ArrayDeque<State> stack, Production production, ParserListener listener) {
     listener.onReduce(production);
 
     // 1. Pop N states from the stack, where N is the number of
