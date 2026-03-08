@@ -2,6 +2,7 @@ package com.github.forax.lazylr;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
@@ -582,6 +583,70 @@ public final class ParserTest {
         Reduce Value : Object
         Reduce Value' : Value
         """, parse(grammar, precedence, input));
+  }
+
+  @Test
+  public void lr1ButNotLalr1GrammarTest() {
+    // The classic grammar that is LR(1) but NOT LALR(1):
+
+    var a = new Terminal("a");
+    var b = new Terminal("b");
+    var c = new Terminal("c");
+    var d = new Terminal("d");
+    var e = new Terminal("e");
+    var S = new NonTerminal("S");
+    var E = new NonTerminal("E");
+    var F = new NonTerminal("F");
+
+    var pSaEc = new Production(S, List.of(a, E, c));
+    var pSaFd = new Production(S, List.of(a, F, d));
+    var pSbFc = new Production(S, List.of(b, F, c));
+    var pSbEd = new Production(S, List.of(b, E, d));
+    var pEe   = new Production(E, List.of(e));
+    var pFe   = new Production(F, List.of(e));
+
+    var grammar = new Grammar(S, List.of(pSaEc, pSaFd, pSbFc, pSbEd, pEe, pFe));
+
+    // In LR(1), the states for "e" after "a" and "e" after "b" are kept separate
+    // because their lookaheads differ:
+    //   - After "a": reduce E→e on 'c', reduce F→e on 'd'
+    //   - After "b": reduce F→e on 'c', reduce E→e on 'd'
+    //
+    // In LALR(1), those two states get MERGED (same LR(0) core: E→e•, F→e•),
+   // combining lookaheads into {c, d} for BOTH E→e and F→e — a reduce/reduce conflict.
+
+    var conflicts = new ArrayList<String>();
+    LALRVerifier.verify(grammar, Map.of(), conflicts::add);
+    assertEquals(2, conflicts.size());
+
+    var parser = Parser.createParser(grammar, Map.of());
+    var evaluator = new Evaluator<String>() {
+      @Override
+      public String evaluate(Terminal token) {
+        return token.name();
+      }
+
+      @Override
+      public String evaluate(Production production, List<String> args) {
+        return production.head().name() + "(" + String.join(", ", args) + ")";
+      }
+    };
+
+    // "a e c" → S → a E c, E → e   (LR(1) knows to reduce e to E here, not F)
+    var result1 = parser.parse(List.of(a, e, c).iterator(), evaluator);
+    assertEquals("S(a, E(e), c)", result1);
+
+    // "a e d" → S → a F d, F → e   (LR(1) knows to reduce e to F here, not E)
+    var result2 = parser.parse(List.of(a, e, d).iterator(), evaluator);
+    assertEquals("S(a, F(e), d)", result2);
+
+    // "b e c" → S → b F c, F → e
+    var result3 = parser.parse(List.of(b, e, c).iterator(), evaluator);
+    assertEquals("S(b, F(e), c)", result3);
+
+    // "b e d" → S → b E d, E → e
+    var result4 = parser.parse(List.of(b, e, d).iterator(), evaluator);
+    assertEquals("S(b, E(e), d)", result4);
   }
 
 
