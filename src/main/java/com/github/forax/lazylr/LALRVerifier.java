@@ -220,6 +220,7 @@ public final class LALRVerifier {
     var initial = closure(Set.of(new Item(augmentedStart, 0)), grammar);
     states.add(initial);
     gotoTable.add(new HashMap<>());
+    stateIndex.put(initial, 0);
 
     // BFS
     for (var i = 0; i < states.size(); i++) {
