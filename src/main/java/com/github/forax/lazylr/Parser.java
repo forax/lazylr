@@ -80,14 +80,20 @@ public final class Parser {
 
   private static Precedence computePrecedence(Production production, Map<PrecedenceEntity, Precedence> precedenceMap) {
     // inherits from the precedence of the last terminal of the production
-    return production.body().reversed().stream()
-        .flatMap(s -> switch (s) {
-          case Terminal t -> Stream.of(t);
-          case NonTerminal _ -> null;  // flatMap convert null to an empty stream
-        })
-        .findFirst()
-        .flatMap(terminal -> Optional.ofNullable(precedenceMap.get(terminal)))
-        .orElseGet(() -> new Precedence(0, Precedence.Associativity.LEFT));
+    loop:
+    for (var symbol : production.body().reversed()) {
+      switch (symbol) {
+        case Terminal t -> {
+          var precedence = precedenceMap.get(t);
+          if (precedence != null) {
+            return precedence;
+          }
+          break loop;
+        }
+        case NonTerminal _ -> {}
+      }
+    }
+    return new Precedence(0, Precedence.Associativity.LEFT);
   }
 
   static Map<PrecedenceEntity, Precedence> complete(Grammar grammar, Map<? extends PrecedenceEntity, ? extends Precedence> precedenceMap) {
