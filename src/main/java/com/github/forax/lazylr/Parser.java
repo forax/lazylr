@@ -215,7 +215,8 @@ public final class Parser {
             return copy[index];
           }
         });
-        Arrays.fill(stack, from, size, null);
+        // not really needed given there is no way to stop the parser and access the stack
+        //Arrays.fill(stack, from, size, null);
         size = from;
         add(result);
       }
