@@ -73,7 +73,7 @@ public final class GuideTest {
   // -------------------------------------------------------------------------
   @Test
   public void step3_functionCall() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         tokens {
           sum: /sum/
           num: /[0-9]+/
@@ -121,7 +121,7 @@ public final class GuideTest {
   // -------------------------------------------------------------------------
   @Test
   public void step4_additionLeftAssociative() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         tokens {
           num: /[0-9]+/
           /[ ]+/
@@ -165,7 +165,7 @@ public final class GuideTest {
   // -------------------------------------------------------------------------
   @Test
   public void step5_multiplicationPrecedence() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         tokens {
           num: /[0-9]+/
           /[ ]+/
@@ -212,7 +212,7 @@ public final class GuideTest {
   // -------------------------------------------------------------------------
   @Test
   public void step6_exponentiationRightAssociative() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         tokens {
           num: /[0-9]+/
           /[ ]+/
@@ -262,7 +262,7 @@ public final class GuideTest {
   // -------------------------------------------------------------------------
   @Test
   public void step7_danglingElse() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         tokens {
           if:   /if/
           then: /then/

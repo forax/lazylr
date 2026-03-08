@@ -79,7 +79,7 @@ public final class JavaCodeGeneratorTest {
 
   @Test
   public void singleNumberGrammar() throws IOException {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         tokens {
           num: /[0-9]+/
         }
@@ -128,7 +128,7 @@ public final class JavaCodeGeneratorTest {
 
   @Test
   public void epsilonProduction() throws IOException {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         tokens {
           num: /[0-9]+/
         }
@@ -179,7 +179,7 @@ public final class JavaCodeGeneratorTest {
 
   @Test
   public void anonymousToken() throws IOException {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         tokens {
           num: /[0-9]+/
           /[ ]+/
@@ -230,7 +230,7 @@ public final class JavaCodeGeneratorTest {
 
   @Test
   public void additionLeftAssociative() throws IOException {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         tokens {
           num: /[0-9]+/
           /[ ]+/
@@ -289,7 +289,7 @@ public final class JavaCodeGeneratorTest {
 
   @Test
   public void additionAndMultiplicationPrecedence() throws IOException {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         tokens {
           num: /[0-9]+/
           /[ ]+/
@@ -354,7 +354,7 @@ public final class JavaCodeGeneratorTest {
 
   @Test
   public void exponentiationRightAssociative() throws IOException {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         tokens {
           num: /[0-9]+/
           /[ ]+/
@@ -425,7 +425,7 @@ public final class JavaCodeGeneratorTest {
 
   @Test
   public void functionCallGrammar() throws IOException {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         tokens {
           sum: /sum/
           num: /[0-9]+/
@@ -494,7 +494,7 @@ public final class JavaCodeGeneratorTest {
 
   @Test
   public void danglingElseGrammar() throws IOException {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         tokens {
           if:   /if/
           then: /then/

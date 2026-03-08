@@ -9,7 +9,7 @@ public final class ReadmeExampleTest {
   @Test
   public void example() {
     // Define your grammar
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
       tokens {
         num: /[0-9]+/
         /[ ]+/

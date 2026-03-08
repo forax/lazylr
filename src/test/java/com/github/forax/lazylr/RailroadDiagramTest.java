@@ -608,7 +608,7 @@ public final class RailroadDiagramTest {
   public class JSONTests {
     @Test
     public void jsonGrammar() {
-      var mg = MetaGrammar.create("""
+      var mg = MetaGrammar.load("""
           tokens {
             string: /"(?:\\\\.|[^"\\\\])*"/
             number: /-?(?:0|[1-9][0-9]*)(?:\\.[0-9]+)?(?:[eE][+-]?[0-9]+)?/
@@ -682,7 +682,7 @@ public final class RailroadDiagramTest {
   public class JavaScript {
     @Test
     public void javaScriptGrammar() {
-      var mg = MetaGrammar.create("""
+      var mg = MetaGrammar.load("""
           tokens {
             identifier: /[a-zA-Z_$][a-zA-Z0-9_$]*/
             number:     /[0-9]+(?:\\.[0-9]+)?/

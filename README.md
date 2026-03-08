@@ -27,7 +27,7 @@ with the agility of a modern library.
 `MetaGrammar` lets you describe tokens, precedence, and productions in a compact textual format.
 
 ```java
-var mg = MetaGrammar.create("""
+var mg = MetaGrammar.load("""
     tokens {
       num: /[0-9]+/
       /[ ]+/

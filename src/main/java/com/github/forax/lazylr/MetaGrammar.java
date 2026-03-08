@@ -229,7 +229,7 @@ public final class MetaGrammar {
   ///         declared in `input`.
   /// @throws NullPointerException if `input` is `null`.
   /// @throws ParsingException if the input is syntactically or semantically invalid.
-  public static MetaGrammar create(String input) {
+  public static MetaGrammar load(String input) {
     Objects.requireNonNull(input);
 
     var rawTokens = new ArrayList<RawToken>();

@@ -29,7 +29,7 @@ public final class MetaGrammarParserTest {
 
   @Test
   public void simple() {
-    var metaGrammar = MetaGrammar.create("""
+    var metaGrammar = MetaGrammar.load("""
         tokens {
           id: /id/
         }
@@ -70,7 +70,7 @@ public final class MetaGrammarParserTest {
 
   @Test
   public void singleId() {
-    var metaGrammar = MetaGrammar.create("""
+    var metaGrammar = MetaGrammar.load("""
         tokens {
           id: /id/
         }
@@ -91,7 +91,7 @@ public final class MetaGrammarParserTest {
 
   @Test
   public void emptyProduction() {
-    var metaGrammar = MetaGrammar.create("""
+    var metaGrammar = MetaGrammar.load("""
         tokens {
           id: /id/
         }
@@ -122,7 +122,7 @@ public final class MetaGrammarParserTest {
 
   @Test
   public void emptyProduction2() {
-    var metaGrammar = MetaGrammar.create("""
+    var metaGrammar = MetaGrammar.load("""
         tokens {
           id: /id/
         }
@@ -153,7 +153,7 @@ public final class MetaGrammarParserTest {
 
   @Test
   public void leftAssociativityPlus() {
-    var metaGrammar = MetaGrammar.create("""
+    var metaGrammar = MetaGrammar.load("""
         tokens {
           id: /id/
         }
@@ -187,7 +187,7 @@ public final class MetaGrammarParserTest {
 
   @Test
   public void rightAssociativityPow() {
-    var metaGrammar = MetaGrammar.create("""
+    var metaGrammar = MetaGrammar.load("""
         tokens {
           id: /id/
         }
@@ -222,7 +222,7 @@ public final class MetaGrammarParserTest {
 
   @Test
   public void multiplyHasHigherPrecedenceThanPlus() {
-    var metaGrammar = MetaGrammar.create("""
+    var metaGrammar = MetaGrammar.load("""
         tokens {
           id: /id/
         }
@@ -260,7 +260,7 @@ public final class MetaGrammarParserTest {
 
   @Test
   public void multiplyHasHigherPrecedenceThanPlus2() {
-    var metaGrammar = MetaGrammar.create("""
+    var metaGrammar = MetaGrammar.load("""
         tokens {
           id: /id/
         }
@@ -298,7 +298,7 @@ public final class MetaGrammarParserTest {
 
   @Test
   public void threeLevelPrecedence() {
-    var metaGrammar = MetaGrammar.create("""
+    var metaGrammar = MetaGrammar.load("""
         tokens {
           id: /id/
         }
@@ -343,7 +343,7 @@ public final class MetaGrammarParserTest {
 
   @Test
   public void samePrecedenceMixedOperators() {
-    var metaGrammar = MetaGrammar.create("""
+    var metaGrammar = MetaGrammar.load("""
         tokens {
           id: /id/
         }
@@ -380,7 +380,7 @@ public final class MetaGrammarParserTest {
 
   @Test
   public void longLeftAssocChain() {
-    var metaGrammar = MetaGrammar.create("""
+    var metaGrammar = MetaGrammar.load("""
         tokens {
           id: /id/
         }
@@ -422,7 +422,7 @@ public final class MetaGrammarParserTest {
 
   @Test
   public void longRightAssocChain() {
-    var metaGrammar = MetaGrammar.create("""
+    var metaGrammar = MetaGrammar.load("""
         tokens {
           id: /id/
         }
@@ -461,7 +461,7 @@ public final class MetaGrammarParserTest {
 
   @Test
   public void fourOperatorExpression() {
-    var metaGrammar = MetaGrammar.create("""
+    var metaGrammar = MetaGrammar.load("""
         tokens {
           id: /id/
         }
@@ -511,7 +511,7 @@ public final class MetaGrammarParserTest {
 
   @Test
   public void jsonTest() {
-    var metaGrammar = MetaGrammar.create("""
+    var metaGrammar = MetaGrammar.load("""
         tokens {
           STRING: /STRING/
           NUMBER: /NUMBER/

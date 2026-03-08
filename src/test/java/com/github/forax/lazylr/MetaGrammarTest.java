@@ -27,7 +27,7 @@ public final class MetaGrammarTest {
 
   @Test
   public void minimalEpsilonGrammar() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         grammar {
           Empty:
         }
@@ -47,7 +47,7 @@ public final class MetaGrammarTest {
 
   @Test
   public void oneProductionGrammar() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         grammar {
           Expr: Expr plus Term
         }
@@ -61,7 +61,7 @@ public final class MetaGrammarTest {
 
   @Test
   public void simpleExpressionGrammar() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         grammar {
           Expr: Expr plus Term
           Expr: Term
@@ -80,7 +80,7 @@ public final class MetaGrammarTest {
 
   @Test
   public void anExpressionGrammarWithComments() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         grammar {      // a comment here
           Expr: Term   // another comment
           Term: num    // another another comment
@@ -97,7 +97,7 @@ public final class MetaGrammarTest {
 
   @Test
   public void aGrammarWithEmptyLines() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         tokens {
         
         }
@@ -121,7 +121,7 @@ public final class MetaGrammarTest {
 
   @Test
   public void simpleExpressionGrammarWithTokens() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         tokens {
           num: /[0-9]+/
           plus: /\\+/
@@ -142,7 +142,7 @@ public final class MetaGrammarTest {
 
   @Test
   public void grammarWithQuotedLiterals() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         grammar {
           Stmt: 'if' Expr 'then' Stmt 'else' Stmt
           Stmt: 'if' Expr 'then' Stmt
@@ -174,7 +174,7 @@ public final class MetaGrammarTest {
 
   @Test
   public void grammarWithQuotedLiteralsThatRequireEscaping() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         tokens {
           num: /[0-9]+/
         }
@@ -195,7 +195,7 @@ public final class MetaGrammarTest {
 
   @Test
   public void grammarWithPrecedence() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         tokens {
           num:  /[0-9]+/
           plus: /\\+/
@@ -236,7 +236,7 @@ public final class MetaGrammarTest {
 
   @Test
   public void unnamedSkipTokenIsAccepted() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         tokens {
           ident: /[a-zA-Z]+/
           /[ \\t\\n]+/
@@ -255,7 +255,7 @@ public final class MetaGrammarTest {
 
   @Test
   public void keywordsUsedAsSymbolNames() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         grammar {
           tokens: ident
           grammar: tokens
@@ -273,7 +273,7 @@ public final class MetaGrammarTest {
 
   @Test
   public void multipleSectionsOfSameKind() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         tokens {
           num: /[0-9]+/
         }
@@ -298,7 +298,7 @@ public final class MetaGrammarTest {
 
   @Test
   public void startSymbolIsFirstNonTerminal() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         grammar {
           A: B
           B: C
@@ -317,7 +317,7 @@ public final class MetaGrammarTest {
 
   @Test
   public void precedenceWithQuotedLiterals() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         precedence {
           left:  '+', '-'
           left:  '*', '/'
@@ -357,7 +357,7 @@ public final class MetaGrammarTest {
 
   @Test
   public void jsonLikeGrammar() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         tokens {
           string: /"[^"]*"/
           number: /[0-9]+(?:\\.[0-9]+)?/
@@ -412,12 +412,12 @@ public final class MetaGrammarTest {
 
   @Test
   public void nullInputThrowsNullPointerException() {
-    assertThrows(NullPointerException.class, () -> MetaGrammar.create(null));
+    assertThrows(NullPointerException.class, () -> MetaGrammar.load(null));
   }
 
   @Test
   public void emptyGrammarSectionThrowsParsingException() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         grammar {
         }
         """);
@@ -433,7 +433,7 @@ public final class MetaGrammarTest {
 
   @Test
   public void noGrammarSectionThrowsIllegalStateException() {
-    var mg = MetaGrammar.create("""
+    var mg = MetaGrammar.load("""
         """);
 
     var tokens = mg.tokens();
@@ -447,7 +447,7 @@ public final class MetaGrammarTest {
 
   @Test
   public void invalidAssociativityThrowsParsingException() {
-    assertThrows(ParsingException.class, () -> MetaGrammar.create("""
+    assertThrows(ParsingException.class, () -> MetaGrammar.load("""
         precedence {
           none: num
         }

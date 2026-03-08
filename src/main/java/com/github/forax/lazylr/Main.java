@@ -138,7 +138,7 @@ public final class Main {
     }
     MetaGrammar mg;
     try {
-      mg = MetaGrammar.create(grammarText);
+      mg = MetaGrammar.load(grammarText);
     } catch (ParsingException e) {
       System.err.println("Error while parsing the grammar file\n" + e.getMessage());
       System.exit(1);
