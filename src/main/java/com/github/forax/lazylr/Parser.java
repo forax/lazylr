@@ -223,7 +223,7 @@ public final class Parser {
 
     var listener = new EvaluatorListener();
     parse(input, listener);
-    return listener.stack[0];
+    return listener.stack[listener.size - 1];
   }
 
   /// Parses a stream of tokens and notifies a listener of every transition.
