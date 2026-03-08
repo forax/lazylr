@@ -193,7 +193,9 @@ final class RailroadDiagram {
 
   /// Generates railroad diagrams for all recursive non-terminals
   /// (starting with the start symbol) in the grammar.
-  /// Non-recursive non-terminals may be inlined at their call sites.
+  /// @param grammar the grammar to generate diagrams for.
+  /// @param inlineNonRecursive when true, non-recursive non-terminals
+  ///        are inlined rather than emitted as separate diagrams.
   public static String generate(Grammar grammar, boolean inlineNonRecursive) {
     var recursive = inlineNonRecursive ? computeRecursiveNonTerminals(grammar) : grammar.nonTerminals();
     var renderer = new Renderer(grammar, recursive);
