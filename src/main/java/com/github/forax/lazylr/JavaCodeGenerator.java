@@ -23,12 +23,12 @@ final class JavaCodeGenerator {
     return name.replaceAll("[^A-Za-z0-9]", "_");
   }
 
-  private static String quoteRegex(String name) {
-    if (name.startsWith("\\Q") && name.endsWith("\\E")) {
-      var regex = name.substring(2, name.length() - 2);
-      return "Pattern.quote(\"" + regex + "\")";
+  private static String quoteRegex(String text) {
+    if (text.startsWith("\\Q") && text.endsWith("\\E")) {
+      var regex = text.substring(2, text.length() - 2);
+      return "Pattern.quote(\"" + escapeJavaString(regex) + "\")";
     }
-    return "\"" + name + "\"";
+    return "\"" + escapeJavaString(text) + "\"";
   }
 
   private static final class TerminalNameMap {
