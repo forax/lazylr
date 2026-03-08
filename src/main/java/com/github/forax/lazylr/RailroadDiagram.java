@@ -159,13 +159,15 @@ final class RailroadDiagram {
   private static Set<NonTerminal> computeRecursiveNonTerminals(Grammar grammar) {
     var deps = new HashMap<NonTerminal, Set<NonTerminal>>();
     for (var nt : grammar.nonTerminals()) {
-      var refs = grammar.productionsFor(nt).stream()
-          .flatMap(p -> p.body().stream())
-          .flatMap(s -> switch (s) {
-            case NonTerminal nonTerminal -> Stream.of(nonTerminal);
-            case Terminal _ -> null;
-          })
-          .collect(Collectors.toSet());
+      var refs = new HashSet<NonTerminal>();
+      for(var production : grammar.productionsFor(nt)) {
+        for(var symbol : production.body()) {
+          switch (symbol) {
+            case NonTerminal nonTerminal -> refs.add(nonTerminal);
+            case Terminal _ -> {}
+          }
+        }
+      }
       deps.put(nt, refs);
     }
 
