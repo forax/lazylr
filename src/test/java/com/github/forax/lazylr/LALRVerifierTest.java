@@ -119,6 +119,48 @@ public final class LALRVerifierTest {
   }
 
   @Test
+  public void verifyShiftBeforeReduce() {
+    var x = new Terminal("x");
+    var y = new Terminal("y");
+    var A = new NonTerminal("A");
+    var B = new NonTerminal("B");
+
+    var pS1 = new Production(S, List.of(A));
+    var pS2 = new Production(S, List.of(B));
+    var pB  = new Production(A, List.of(x, y));
+    var pA  = new Production(B, List.of(x));
+
+    var grammar = new Grammar(S, List.of(pS1, pS2, pB, pA));
+
+    var precLow  = new Precedence(1, Precedence.Associativity.LEFT);
+    var precHigh = new Precedence(2, Precedence.Associativity.LEFT);
+    var precedenceMap = Map.of(pA, precLow, x, precHigh);
+
+    LALRVerifier.verify(grammar, precedenceMap, ERROR_REPORTER);
+  }
+
+  @Test
+  public void verifyReduceBeforeShift() {
+    var x = new Terminal("x");
+    var y = new Terminal("y");
+    var A = new NonTerminal("A");
+    var B = new NonTerminal("B");
+
+    var pS1 = new Production(S, List.of(B));  // those two lines are swapped
+    var pS2 = new Production(S, List.of(A));
+    var pB  = new Production(A, List.of(x, y));
+    var pA  = new Production(B, List.of(x));
+
+    var grammar = new Grammar(S, List.of(pS1, pS2, pB, pA));
+
+    var precLow  = new Precedence(1, Precedence.Associativity.LEFT);
+    var precHigh = new Precedence(2, Precedence.Associativity.LEFT);
+    var precedenceMap = Map.of(pA, precLow, x, precHigh);
+
+    LALRVerifier.verify(grammar, precedenceMap, ERROR_REPORTER);
+  }
+
+  @Test
   public void verifyEmptyProduction() {
     // S -> A num
     // A -> ε | "+"
