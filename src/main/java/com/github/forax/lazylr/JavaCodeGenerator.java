@@ -6,6 +6,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
 
 final class JavaCodeGenerator {
   /// Escapes a string for use as a Java string literal (double-quoted).
@@ -47,42 +49,42 @@ final class JavaCodeGenerator {
     return "\"" + escapeJavaString(text) + "\"";
   }
 
-  private static final class TerminalNameMap {
+  private static final class TerminalIdMap {
     private final HashMap<String, Integer> counterMap = new HashMap<>();
-    private final LinkedHashMap<Terminal, String> terminalNameMap = new LinkedHashMap<>();
+    private final LinkedHashMap<Terminal, String> terminalIdMap = new LinkedHashMap<>();
 
     public void add(Terminal terminal) {
-      if (terminalNameMap.containsKey(terminal)) {
+      if (terminalIdMap.containsKey(terminal)) {
         return;
       }
-      var name = sanitizeId(terminal.name());
-      var counter = counterMap.get(name);
+      var id = sanitizeId(terminal.name());
+      var counter = counterMap.get(id);
       if (counter == null) {
-        counterMap.put(name, 1);
+        counterMap.put(id, 1);
       } else {
-        counterMap.put(name, counter + 1);
-        name += counter;
+        counterMap.put(id, counter + 1);
+        id += counter;
       }
-      terminalNameMap.put(terminal, name);
+      terminalIdMap.put(terminal, id);
     }
 
-    public String name(Terminal terminal) {
-      return terminalNameMap.get(terminal);
+    public String id(Terminal terminal) {
+      return terminalIdMap.get(terminal);
     }
 
     public Set<Map.Entry<Terminal, String>> entrySet() {
-      return terminalNameMap.entrySet();
+      return terminalIdMap.entrySet();
     }
   }
 
-  private static TerminalNameMap collectTerminals(List<Production> productions,
-                                                          Map<PrecedenceEntity, Precedence> precedenceMap) {
+  private static TerminalIdMap collectTerminals(List<Production> productions,
+                                                Map<PrecedenceEntity, Precedence> precedenceMap) {
     // Collect unique terminals
-    var terminalNameMap = new TerminalNameMap();
+    var terminalIdMap = new TerminalIdMap();
     for (var production : productions) {
       for (var symbol : production.body()) {
         switch (symbol) {
-          case Terminal t -> terminalNameMap.add(t);
+          case Terminal t -> terminalIdMap.add(t);
           case NonTerminal _ -> {}
         }
       }
@@ -90,11 +92,12 @@ final class JavaCodeGenerator {
     // Also add terminals that appear in the precedence map but not in productions
     for (var entity : precedenceMap.keySet()) {
       switch (entity) {
-        case Terminal t -> terminalNameMap.add(t);
+        case Terminal t -> terminalIdMap.add(t);
         case Production _ -> {}
       }
     }
-    return terminalNameMap;
+
+    return terminalIdMap;
   }
 
 
@@ -124,7 +127,12 @@ final class JavaCodeGenerator {
 
     // Collect unique non-terminals and terminals
     var nonTerminals = grammar.nonTerminals();
-    var terminalNameMap = collectTerminals(productions, precedenceMap);
+    var terminalIdMap = collectTerminals(productions, precedenceMap);
+
+    // Map each production to an index
+    var productionIndexMap = IntStream.range(0, productions.size())
+        .boxed()
+        .collect(Collectors.toMap(productions::get, i -> i));
 
     // -- Emit NonTerminal declarations
     sb.append("  // Non-terminals\n");
@@ -136,10 +144,10 @@ final class JavaCodeGenerator {
 
     // -- Emit Terminal declarations
     sb.append("  // Terminals\n");
-    for (var entry : terminalNameMap.entrySet()) {
+    for (var entry : terminalIdMap.entrySet()) {
       var terminal = entry.getKey();
-      var name = entry.getValue();
-      sb.append("  var t_").append(name)
+      var id = entry.getValue();
+      sb.append("  var t_").append(id)
           .append(" = new Terminal(\"").append(escapeJavaString(terminal.name())).append("\");\n");
     }
     sb.append('\n');
@@ -161,7 +169,7 @@ final class JavaCodeGenerator {
           sb.append(separator);
           switch (symbol) {
             case NonTerminal nt -> sb.append("nt_").append(sanitizeId(nt.name()));
-            case Terminal t -> sb.append("t_").append(terminalNameMap.name(t));
+            case Terminal t -> sb.append("t_").append(terminalIdMap.id(t));
           }
           separator = ", ";
         }
@@ -212,8 +220,8 @@ final class JavaCodeGenerator {
         var entity = entry.getKey();
         var prec = entry.getValue();
         var entityRef = switch (entity) {
-          case Terminal t -> "t_" + terminalNameMap.name(t);
-          case Production p -> "p" + productions.indexOf(p);
+          case Terminal t -> "t_" + terminalIdMap.id(t);
+          case Production p -> "p" + productionIndexMap.get(p);
         };
         sb.append("  precedenceMap.put(").append(entityRef).append(", ")
             .append("new Precedence(").append(prec.level()).append(", ")
