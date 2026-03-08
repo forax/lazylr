@@ -59,7 +59,9 @@ public final class LALRVerifierTest {
 
   @Test
   public void failOnReduceReduceConflict() {
-    // S -> A | B; A -> num; B -> num
+    // S -> A | B
+    // A -> num
+    // B -> num
     var A = new NonTerminal("A");
     var B = new NonTerminal("B");
     var pS1 = new Production(S, List.of(A));
@@ -120,6 +122,9 @@ public final class LALRVerifierTest {
 
   @Test
   public void verifyShiftBeforeReduce() {
+    // S -> A | B
+    // A -> x y
+    // B -> x
     var x = new Terminal("x");
     var y = new Terminal("y");
     var A = new NonTerminal("A");
@@ -141,6 +146,9 @@ public final class LALRVerifierTest {
 
   @Test
   public void verifyReduceBeforeShift() {
+    // S -> B | A
+    // A -> x y
+    // B -> x
     var x = new Terminal("x");
     var y = new Terminal("y");
     var A = new NonTerminal("A");
