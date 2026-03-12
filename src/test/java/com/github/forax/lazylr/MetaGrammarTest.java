@@ -1,12 +1,17 @@
 package com.github.forax.lazylr;
 
+import com.sun.jdi.Value;
 import org.junit.jupiter.api.Test;
 
+import javax.lang.model.util.Elements;
+import java.lang.reflect.Member;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.regex.Pattern;
 
+import static com.github.forax.lazylr.Precedence.Associativity.LEFT;
+import static com.github.forax.lazylr.Precedence.Associativity.RIGHT;
 import static org.junit.jupiter.api.Assertions.*;
 
 public final class MetaGrammarTest {
@@ -228,9 +233,9 @@ public final class MetaGrammarTest {
 
     var precedenceMap = mg.precedenceMap();
     assertEquals(Map.of(
-        new Terminal("plus"), new Precedence(1, Precedence.Associativity.LEFT),
-        new Terminal("star"), new Precedence(2, Precedence.Associativity.LEFT),
-        new Terminal("pow"), new Precedence(3, Precedence.Associativity.RIGHT)
+        new Terminal("plus"), new Precedence(1, LEFT),
+        new Terminal("star"), new Precedence(2, LEFT),
+        new Terminal("pow"), new Precedence(3, RIGHT)
     ), precedenceMap);
   }
 
@@ -348,11 +353,127 @@ public final class MetaGrammarTest {
 
     var precedenceMap = mg.precedenceMap();
     assertEquals(Map.of(
-        new Terminal("+"), new Precedence(1, Precedence.Associativity.LEFT),
-        new Terminal("-"), new Precedence(1, Precedence.Associativity.LEFT),
-        new Terminal("*"), new Precedence(2, Precedence.Associativity.LEFT),
-        new Terminal("/"), new Precedence(2, Precedence.Associativity.LEFT)
+        new Terminal("+"), new Precedence(1, LEFT),
+        new Terminal("-"), new Precedence(1, LEFT),
+        new Terminal("*"), new Precedence(2, LEFT),
+        new Terminal("/"), new Precedence(2, LEFT)
     ), precedenceMap);
+  }
+
+
+  @Test
+  public void precedenceInfoOnProductionWithNamedTerminal() {
+    var mg = MetaGrammar.load("""
+        tokens {
+          num: /[0-9]+/
+          minus: /\\-/
+          plus: /\\+/
+        }
+        precedence {
+          left:  plus
+          right: minus
+        }
+        grammar {
+          E: E plus E
+          E: minus E    %prec minus
+          E: num
+        }
+        """);
+
+    var grammar = mg.grammar();
+    var precedenceMap = mg.precedenceMap();
+
+    assertEquals(Map.of(
+        new Terminal("plus"), new Precedence(1, Precedence.Associativity.LEFT),
+        new Terminal("minus"), new Precedence(2, Precedence.Associativity.RIGHT),
+        grammar.productions().get(1), new Precedence(2, Precedence.Associativity.RIGHT)),
+        precedenceMap);
+    }
+
+  @Test
+  public void precedenceInfoOnProductionWithQuotedTerminal() {
+    var mg = MetaGrammar.load("""
+        tokens {
+          num: /[0-9]+/
+        }
+        precedence {
+          left:  '+'
+          right: '-'
+        }
+        grammar {
+          E: E '+' E
+          E: '-' E    %prec '-'
+          E: num
+        }
+        """);
+
+    var grammar = mg.grammar();
+    var precedenceMap = mg.precedenceMap();
+
+    assertEquals(Map.of(
+        new Terminal("+"), new Precedence(1, Precedence.Associativity.LEFT),
+        new Terminal("-"), new Precedence(2, Precedence.Associativity.RIGHT),
+        grammar.productions().get(1), new Precedence(2, Precedence.Associativity.RIGHT)),
+    precedenceMap);
+  }
+
+  @Test
+  public void precedenceInfoDoesNotAffectOtherProductions() {
+    var mg = MetaGrammar.load("""
+      tokens {
+        num: /[0-9]+/
+      }
+      precedence {
+        left:  '-'
+        right: UNARY
+      }
+      grammar {
+        E: E '-' E
+        E: '-' E    %prec UNARY
+        E: num
+      }
+      """);
+
+    var grammar = mg.grammar();
+    var precedenceMap = mg.precedenceMap();
+
+    assertEquals(Map.of(
+            new Terminal("-"), new Precedence(1, Precedence.Associativity.LEFT),
+            grammar.productions().get(1), new Precedence(2, Precedence.Associativity.RIGHT)),
+        precedenceMap);
+  }
+
+  @Test
+  public void precedenceInfoReferencingUnknownTerminalThrows() {
+    assertThrows(ParsingException.class, () -> MetaGrammar.load("""
+      tokens {
+        num: /[0-9]+/
+      }
+      precedence {
+        left: '+'
+      }
+      grammar {
+        E: '-' E    %prec NOSUCHTOKEN
+        E: num
+      }
+      """));
+  }
+
+  @Test
+  public void precedenceInfoReferencingTerminalWithNoPrecedenceThrows() {
+    assertThrows(ParsingException.class, () -> MetaGrammar.load("""
+      tokens {
+        num:   /[0-9]+/
+        minus: /\\-/
+      }
+      precedence {
+        left: '+'
+      }
+      grammar {
+        E: minus E    %prec minus
+        E: num
+      }
+      """));
   }
 
   @Test

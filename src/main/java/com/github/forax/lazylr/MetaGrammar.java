@@ -122,6 +122,7 @@ public final class MetaGrammar {
     var grammar    = new Terminal("grammar");
     var left       = new Terminal("left");
     var right      = new Terminal("right");
+    var prec       = new Terminal("prec");
     var lbrace     = new Terminal("{");
     var rbrace     = new Terminal("}");
     var colon      = new Terminal(":");
@@ -137,6 +138,7 @@ public final class MetaGrammar {
     var precLine     = new NonTerminal("PrecLine");
     var literals     = new NonTerminal("Literals");
     var grammarRules = new NonTerminal("GrammarRules");
+    var precSymbol   = new NonTerminal("PrecSymbol");
     var grammarRule  = new NonTerminal("GrammarRule");
     var symbols      = new NonTerminal("Symbols");
     var symbol       = new NonTerminal("Symbol");
@@ -173,8 +175,11 @@ public final class MetaGrammar {
         new Production(grammarRules, List.of(grammarRules, grammarRule)),
         new Production(grammarRules, List.of()),
 
-        new Production(grammarRule,  List.of(name, colon, symbols, eol)),
-        new Production(grammarRule,  List.of(name, colon, eol)),
+        new Production(precSymbol,   List.of(prec, symbol)),
+        new Production(precSymbol,   List.of()),
+
+        new Production(grammarRule, List.of(name, colon, symbols, precSymbol, eol)),
+        new Production(grammarRule, List.of(name, colon, precSymbol, eol)),
         new Production(grammarRule,  List.of(eol)),
 
         new Production(symbols,      List.of(symbols, symbol)),
@@ -198,6 +203,7 @@ public final class MetaGrammar {
       new Token("grammar",    "grammar"),
       new Token("left",       "left"),
       new Token("right",      "right"),
+      new Token("prec",       "\\%prec"),
       new Token("{",          "\\{"),
       new Token("}",          "\\}"),
       new Token(":",          ":"),
@@ -214,7 +220,7 @@ public final class MetaGrammar {
 
   private record RawToken(String name, String regex) {}
   private record RawSymbol(String name, boolean quoted) {}
-  private record RawProduction(String head, List<RawSymbol> symbols) {}
+  private record RawProduction(String head, List<RawSymbol> symbols, /*nullable*/ RawSymbol precSymbol) {}
   private record RawPrecedence(Precedence.Associativity associativity, List<RawSymbol> symbols) {}
 
   /// Parses a grammar specification.
@@ -312,17 +318,25 @@ public final class MetaGrammar {
             yield null;
           }
 
+          // -- PrecSymbol
+          case "PrecSymbol : prec Symbol" ->
+              args.get(1);
+          case "PrecSymbol : ε" ->
+              null;
+
           // -- GrammarRule
-          case "GrammarRule : Name : eol" -> {
+          case "GrammarRule : Name : PrecSymbol eol" -> {
             var head = (String) args.getFirst();
-            rawProductions.add(new RawProduction(head, List.of()));
+            var precSymbol = (RawSymbol) args.get(2);
+            rawProductions.add(new RawProduction(head, List.of(), precSymbol));
             yield null;
           }
-          case "GrammarRule : Name : Symbols eol" -> {
-            String lhs = (String) args.get(0);
+          case "GrammarRule : Name : Symbols PrecSymbol eol" -> {
+            String head = (String) args.get(0);
             @SuppressWarnings("unchecked")
             var symbols = (ArrayList<RawSymbol>) args.get(2);
-            rawProductions.add(new RawProduction(lhs, symbols));
+            var precSymbol = (RawSymbol) args.get(3);
+            rawProductions.add(new RawProduction(head, symbols, precSymbol));
             yield null;
           }
 
@@ -355,9 +369,9 @@ public final class MetaGrammar {
 
   // Post-processing, the evaluator should never fail, the build method should check the coherence
   private static MetaGrammar build(ArrayList<RawToken> rawTokens,
-                                   ArrayList<RawPrecedence> precedences,
+                                   ArrayList<RawPrecedence> rawPrecedences,
                                    ArrayList<RawProduction> rawProductions) {
-    // Extract implicit quoted symbols
+    // Extract implicit quoted symbols from productions (do not use %prec terminal)
     var quotedTerminalMap = rawProductions.stream()
         .flatMap(p -> p.symbols.stream())
         .filter(RawSymbol::quoted)
@@ -411,17 +425,36 @@ public final class MetaGrammar {
       productions.add(new Production(head, body));
     }
 
-    // Precedence
+    // Terminal precedence
     var precedenceMap = new LinkedHashMap<PrecedenceEntity, Precedence>();
-    for(var i = 0; i < precedences.size(); i++) {
-      var precedence = precedences.get(i);
-      var associativity = precedence.associativity;
-      var level = i + 1;
-      for(var symbol : precedence.symbols) {
+    var freeSymbolPrecedenceMap = new LinkedHashMap<RawSymbol, Precedence>();
+    for(var i = 0; i < rawPrecedences.size(); i++) {
+      var rawPrecedence = rawPrecedences.get(i);
+      var precedence = new Precedence(i + 1, rawPrecedence.associativity);
+      for (var symbol : rawPrecedence.symbols) {
         var name = symbol.name;
         var terminal = symbol.quoted ? quotedTerminalMap.get(name) : terminalMap.get(name);
-        precedenceMap.put(terminal, new Precedence(level, associativity));
+        if (terminal == null) {
+          freeSymbolPrecedenceMap.put(symbol, precedence);
+        } else {
+          precedenceMap.put(terminal, precedence);
+        }
       }
+    }
+
+    // Production precedence
+    for (var i = 0; i < productions.size(); i++) {
+      var symbol = rawProductions.get(i).precSymbol();
+      if (symbol == null) {
+        continue;
+      }
+      var name = symbol.name;
+      var terminal = symbol.quoted ? quotedTerminalMap.get(name) : terminalMap.get(name);
+      var precedence = terminal != null ? precedenceMap.get(terminal) : freeSymbolPrecedenceMap.get(symbol);
+      if (precedence == null) {
+        throw new ParsingException("%prec references terminal with no declared precedence: " + name);
+      }
+      precedenceMap.put(productions.get(i), precedence);
     }
 
     // Grammar
