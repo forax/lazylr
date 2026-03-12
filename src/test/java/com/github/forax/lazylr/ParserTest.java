@@ -668,7 +668,6 @@ public final class ParserTest {
 
 
     // Try to parse invalid input: "id id"
-    var input = "id id";
     var terminals = List.of(new Terminal("id"), new Terminal("id")).iterator();
 
     var exception = assertThrows(ParsingException.class, () -> {
