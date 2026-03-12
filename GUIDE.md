@@ -244,7 +244,7 @@ LALRVerifier.verify(mg.grammar(), Map.of(), System.err::println);
 > 💡 **Insight:** The conflict occurs because the parser doesn't know whether
 >    to finish the first addition (1+2) or wait to see if the second addition takes priority.
 
-Declaring `left: '+'` in the `precedence` section resolves it:
+Declaring `left: '+'` in the `precedence` section and '%prec' '+' after the production resolves it:
 
 ```java
 var mg = MetaGrammar.load("""
@@ -257,7 +257,7 @@ var mg = MetaGrammar.load("""
     }
     grammar {
       E: num
-      E: E '+' E
+      E: E '+' E    %prec '+'
     }
     """);
 
@@ -267,10 +267,11 @@ LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
 > 💡 **Insight:** Associativity resolves **Shift/Reduce conflicts** that arise from rules like `E → E + E`.
 >    When the parser has `E + E` on its stack and sees another `+`,
 >    it must choose: reduce now (left associative) or shift and wait (right associative).
->    The precedence map encodes this decision.
+>    The `%prec` annotation is used to indicate the precedence of a production.
+>    The precedence map encodes this association.
 
-> **Note:** By default, the precedence of a production is the precedence of its right-most terminal,
->    so there is no need to also list the production in the precedence map.
+> **Note:** The annotation '%prec' is not strictly needed here, by default,  the precedence of
+>    a production is the precedence of its right-most terminal (here '+').
 
 ```java
 var lexer = Lexer.createLexer(mg.tokens());

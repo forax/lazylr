@@ -131,7 +131,7 @@ public final class GuideTest {
         }
         grammar {
           E: num
-          E: E '+' E
+          E: E '+' E    %prec '+'
         }
         """);
 
