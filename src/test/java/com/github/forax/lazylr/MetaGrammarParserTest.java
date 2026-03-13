@@ -691,6 +691,50 @@ public final class MetaGrammarParserTest {
 
 
   @Test
+  public void productionPrecedenceGrammarTest() {
+    var mg = MetaGrammar.load("""
+        precedence {
+          left: '+', '-'
+          right: UNARY
+        }
+        grammar {
+          E: E '+' E
+          E: E '-' E
+          E: '+' E     %prec UNARY
+          E: '-' E     %prec UNARY
+          E: id
+        }
+        """);
+
+    var E     = new NonTerminal("E");
+    var id    = new Terminal("id");
+    var plus  = new Terminal("+");
+    var minus = new Terminal("-");
+
+    var grammar = mg.grammar();
+    var precedence = mg.precedenceMap();
+
+    var input = List.of(id, plus, id, minus, plus, id);
+
+    assertEquals("""
+        Shift id
+        Reduce E : id
+        Shift +
+        Shift id
+        Reduce E : id
+        Reduce E : E + E
+        Shift -
+        Shift +
+        Shift id
+        Reduce E : id
+        Reduce E : + E
+        Reduce E : E - E
+        Reduce E' : E
+        """, parse(grammar, precedence, input));
+  }
+
+
+  @Test
   public void parsingErrorBasic() {
     var metaGrammar = MetaGrammar.load("""
       precedence {

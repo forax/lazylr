@@ -651,6 +651,47 @@ public final class ParserTest {
 
 
   @Test
+  public void productionPrecedenceGrammarTest() {
+    var E     = new NonTerminal("E");
+    var id    = new Terminal("id");
+    var plus  = new Terminal("+");
+    var minus = new Terminal("-");
+
+    var pEplusE = new Production(E, List.of(E, plus, E));
+    var pEminusE = new Production(E, List.of(E, minus, E));
+    var pPlusE = new Production(E, List.of(plus, E));
+    var pMinusE = new Production(E, List.of(minus, E));
+    var pEid = new Production(E, List.of(id));
+    var grammar = new Grammar(E, List.of(pEplusE, pEminusE, pPlusE, pMinusE, pEid));
+
+    var precedence = Map.of(
+        plus, new Precedence(1, Precedence.Associativity.LEFT),
+        minus, new Precedence(1, Precedence.Associativity.LEFT),
+        pPlusE, new Precedence(2, Precedence.Associativity.RIGHT),
+        pMinusE, new Precedence(2, Precedence.Associativity.RIGHT)
+    );
+
+    var input = List.of(id, plus, id, minus, plus, id);
+
+    assertEquals("""
+        Shift id
+        Reduce E : id
+        Shift +
+        Shift id
+        Reduce E : id
+        Reduce E : E + E
+        Shift -
+        Shift +
+        Shift id
+        Reduce E : id
+        Reduce E : + E
+        Reduce E : E - E
+        Reduce E' : E
+        """, parse(grammar, precedence, input));
+  }
+
+
+  @Test
   public void parsingErrorBasic() {
     var E    = new NonTerminal("E");
     var plus = new Terminal("+");
