@@ -1,10 +1,7 @@
 package com.github.forax.lazylr;
 
-import com.sun.jdi.Value;
 import org.junit.jupiter.api.Test;
 
-import javax.lang.model.util.Elements;
-import java.lang.reflect.Member;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
