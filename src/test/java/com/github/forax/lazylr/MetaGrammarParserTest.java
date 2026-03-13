@@ -2,10 +2,13 @@ package com.github.forax.lazylr;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 /// Those are the same tests as in [ParserTest] but using the meta grammar DSL,
 /// Please update both files accordingly
@@ -30,9 +33,6 @@ public final class MetaGrammarParserTest {
   @Test
   public void simple() {
     var metaGrammar = MetaGrammar.load("""
-        tokens {
-          id: /id/
-        }
         precedence {
           left: '+'
           left: '*'
@@ -47,6 +47,9 @@ public final class MetaGrammarParserTest {
     var plus = new Terminal("+");
     var mul  = new Terminal("*");
     var id   = new Terminal("id");
+
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
 
     assertEquals("""
         Shift id
@@ -64,20 +67,19 @@ public final class MetaGrammarParserTest {
         Reduce E : E * E
         Reduce E : E + E
         Reduce E' : E
-        """, parse(metaGrammar.grammar(), metaGrammar.precedenceMap(),
-        List.of(id, plus, id, plus, id, mul, id)));
+        """, parse(grammar, precedence, List.of(id, plus, id, plus, id, mul, id)));
   }
 
   @Test
   public void singleId() {
     var metaGrammar = MetaGrammar.load("""
-        tokens {
-          id: /id/
-        }
         grammar {
           E: id
         }
         """);
+
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
 
     var id = new Terminal("id");
 
@@ -85,16 +87,12 @@ public final class MetaGrammarParserTest {
         Shift id
         Reduce E : id
         Reduce E' : E
-        """, parse(metaGrammar.grammar(), metaGrammar.precedenceMap(),
-        List.of(id)));
+        """, parse(grammar, precedence, List.of(id)));
   }
 
   @Test
   public void emptyProduction() {
     var metaGrammar = MetaGrammar.load("""
-        tokens {
-          id: /id/
-        }
         precedence {
           left: '+'
         }
@@ -104,6 +102,9 @@ public final class MetaGrammarParserTest {
           E:
         }
         """);
+
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
 
     var plus = new Terminal("+");
     var id   = new Terminal("id");
@@ -116,16 +117,12 @@ public final class MetaGrammarParserTest {
       Reduce E : ε
       Reduce E : E + E
       Reduce E' : E
-      """, parse(metaGrammar.grammar(), metaGrammar.precedenceMap(),
-        List.of(id, plus)));
+      """, parse(grammar, precedence, List.of(id, plus)));
   }
 
   @Test
   public void emptyProduction2() {
     var metaGrammar = MetaGrammar.load("""
-        tokens {
-          id: /id/
-        }
         precedence {
           left: '+'
         }
@@ -136,10 +133,13 @@ public final class MetaGrammarParserTest {
         }
         """);
 
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
+
     var plus = new Terminal("+");
     var id   = new Terminal("id");
 
-    // ε + id =>  the first operand is empty, reducing to E via ε-production
+    // ε + id => the first operand is empty, reducing to E via ε-production
     assertEquals("""
       Reduce E : ε
       Shift +
@@ -147,16 +147,12 @@ public final class MetaGrammarParserTest {
       Reduce E : id
       Reduce E : E + E
       Reduce E' : E
-      """, parse(metaGrammar.grammar(), metaGrammar.precedenceMap(),
-        List.of(plus, id)));
+      """, parse(grammar, precedence, List.of(plus, id)));
   }
 
   @Test
   public void leftAssociativityPlus() {
     var metaGrammar = MetaGrammar.load("""
-        tokens {
-          id: /id/
-        }
         precedence {
           left: '+'
         }
@@ -165,6 +161,9 @@ public final class MetaGrammarParserTest {
           E: id
         }
         """);
+
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
 
     var plus = new Terminal("+");
     var id   = new Terminal("id");
@@ -181,16 +180,12 @@ public final class MetaGrammarParserTest {
         Reduce E : id
         Reduce E : E + E
         Reduce E' : E
-        """, parse(metaGrammar.grammar(), metaGrammar.precedenceMap(),
-        List.of(id, plus, id, plus, id)));
+        """, parse(grammar, precedence, List.of(id, plus, id, plus, id)));
   }
 
   @Test
   public void rightAssociativityPow() {
     var metaGrammar = MetaGrammar.load("""
-        tokens {
-          id: /id/
-        }
         precedence {
           right: '^'
         }
@@ -199,6 +194,9 @@ public final class MetaGrammarParserTest {
           E: id
         }
         """);
+
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
 
     var pow = new Terminal("^");
     var id  = new Terminal("id");
@@ -216,16 +214,12 @@ public final class MetaGrammarParserTest {
         Reduce E : E ^ E
         Reduce E : E ^ E
         Reduce E' : E
-        """, parse(metaGrammar.grammar(), metaGrammar.precedenceMap(),
-        List.of(id, pow, id, pow, id)));
+        """, parse(grammar, precedence, List.of(id, pow, id, pow, id)));
   }
 
   @Test
   public void multiplyHasHigherPrecedenceThanPlus() {
     var metaGrammar = MetaGrammar.load("""
-        tokens {
-          id: /id/
-        }
         precedence {
           left: '+'
           left: '*'
@@ -236,6 +230,9 @@ public final class MetaGrammarParserTest {
           E: id
         }
         """);
+
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
 
     var plus = new Terminal("+");
     var mul  = new Terminal("*");
@@ -254,16 +251,12 @@ public final class MetaGrammarParserTest {
         Reduce E : E * E
         Reduce E : E + E
         Reduce E' : E
-        """, parse(metaGrammar.grammar(), metaGrammar.precedenceMap(),
-        List.of(id, plus, id, mul, id)));
+        """, parse(grammar, precedence, List.of(id, plus, id, mul, id)));
   }
 
   @Test
   public void multiplyHasHigherPrecedenceThanPlus2() {
     var metaGrammar = MetaGrammar.load("""
-        tokens {
-          id: /id/
-        }
         precedence {
           left: '+'
           left: '*'
@@ -274,6 +267,9 @@ public final class MetaGrammarParserTest {
           E: id
         }
         """);
+
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
 
     var plus = new Terminal("+");
     var mul  = new Terminal("*");
@@ -292,16 +288,12 @@ public final class MetaGrammarParserTest {
         Reduce E : id
         Reduce E : E + E
         Reduce E' : E
-        """, parse(metaGrammar.grammar(), metaGrammar.precedenceMap(),
-        List.of(id, mul, id, plus, id)));
+        """, parse(grammar, precedence, List.of(id, mul, id, plus, id)));
   }
 
   @Test
   public void threeLevelPrecedence() {
     var metaGrammar = MetaGrammar.load("""
-        tokens {
-          id: /id/
-        }
         precedence {
           left:  '+'
           left:  '*'
@@ -314,6 +306,9 @@ public final class MetaGrammarParserTest {
           E: id
         }
         """);
+
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
 
     var plus = new Terminal("+");
     var mul  = new Terminal("*");
@@ -337,16 +332,12 @@ public final class MetaGrammarParserTest {
         Reduce E : E * E
         Reduce E : E + E
         Reduce E' : E
-        """, parse(metaGrammar.grammar(), metaGrammar.precedenceMap(),
-        List.of(id, plus, id, mul, id, pow, id)));
+        """, parse(grammar, precedence, List.of(id, plus, id, mul, id, pow, id)));
   }
 
   @Test
   public void samePrecedenceMixedOperators() {
     var metaGrammar = MetaGrammar.load("""
-        tokens {
-          id: /id/
-        }
         precedence {
           left: '+', '-'
         }
@@ -356,6 +347,9 @@ public final class MetaGrammarParserTest {
           E: id
         }
         """);
+
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
 
     var plus = new Terminal("+");
     var sub  = new Terminal("-");
@@ -374,16 +368,12 @@ public final class MetaGrammarParserTest {
         Reduce E : id
         Reduce E : E - E
         Reduce E' : E
-        """, parse(metaGrammar.grammar(), metaGrammar.precedenceMap(),
-        List.of(id, plus, id, sub, id)));
+        """, parse(grammar, precedence, List.of(id, plus, id, sub, id)));
   }
 
   @Test
   public void longLeftAssocChain() {
     var metaGrammar = MetaGrammar.load("""
-        tokens {
-          id: /id/
-        }
         precedence {
           left: '+'
         }
@@ -392,6 +382,9 @@ public final class MetaGrammarParserTest {
           E: id
         }
         """);
+
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
 
     var plus = new Terminal("+");
     var id   = new Terminal("id");
@@ -416,16 +409,13 @@ public final class MetaGrammarParserTest {
         Reduce E : id
         Reduce E : E + E
         Reduce E' : E
-        """, parse(metaGrammar.grammar(), metaGrammar.precedenceMap(),
+        """, parse(grammar, precedence,
         List.of(id, plus, id, plus, id, plus, id, plus, id)));
   }
 
   @Test
   public void longRightAssocChain() {
     var metaGrammar = MetaGrammar.load("""
-        tokens {
-          id: /id/
-        }
         precedence {
           right: '^'
         }
@@ -434,6 +424,9 @@ public final class MetaGrammarParserTest {
           E: id
         }
         """);
+
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
 
     var pow = new Terminal("^");
     var id  = new Terminal("id");
@@ -455,16 +448,13 @@ public final class MetaGrammarParserTest {
         Reduce E : E ^ E
         Reduce E : E ^ E
         Reduce E' : E
-        """, parse(metaGrammar.grammar(), metaGrammar.precedenceMap(),
+        """, parse(grammar, precedence,
         List.of(id, pow, id, pow, id, pow, id)));
   }
 
   @Test
   public void fourOperatorExpression() {
     var metaGrammar = MetaGrammar.load("""
-        tokens {
-          id: /id/
-        }
         precedence {
           left: '+', '-'
           left: '*', '/'
@@ -477,6 +467,9 @@ public final class MetaGrammarParserTest {
           E: id
         }
         """);
+
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
 
     var plus = new Terminal("+");
     var sub  = new Terminal("-");
@@ -505,20 +498,13 @@ public final class MetaGrammarParserTest {
         Reduce E : id
         Reduce E : E - E
         Reduce E' : E
-        """, parse(metaGrammar.grammar(), metaGrammar.precedenceMap(),
+        """, parse(grammar, precedence,
         List.of(id, mul, id, div, id, plus, id, sub, id)));
   }
 
   @Test
   public void jsonTest() {
     var metaGrammar = MetaGrammar.load("""
-        tokens {
-          STRING: /STRING/
-          NUMBER: /NUMBER/
-          true:   /true/
-          false:  /false/
-          null:   /null/
-        }
         grammar {
           Value: Object
           Value: Array
@@ -538,6 +524,9 @@ public final class MetaGrammarParserTest {
           Elements: Elements ',' Value
         }
         """);
+
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
 
     var objStart  = new Terminal("{");
     var objEnd    = new Terminal("}");
@@ -631,6 +620,286 @@ public final class MetaGrammarParserTest {
         Reduce Object : { Members }
         Reduce Value : Object
         Reduce Value' : Value
-        """, parse(metaGrammar.grammar(), metaGrammar.precedenceMap(), input));
+        """, parse(grammar, precedence, input));
+  }
+
+  @Test
+  public void lr1ButNotLalr1GrammarTest() {
+    // The classic grammar that is LR(1) but NOT LALR(1):
+
+    var metaGrammar = MetaGrammar.load("""
+      grammar {
+        S: a E c
+        S: a F d
+        S: b F c
+        S: b E d
+        E: e
+        F: e
+      }
+      """);
+
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
+
+    // In LR(1), the states for "e" after "a" and "e" after "b" are kept separate
+    // because their lookaheads differ:
+    //   - After "a": reduce E→e on 'c', reduce F→e on 'd'
+    //   - After "b": reduce F→e on 'c', reduce E→e on 'd'
+    //
+    // In LALR(1), those two states get MERGED (same LR(0) core: E→e•, F→e•),
+    // combining lookaheads into {c, d} for BOTH E→e and F→e — a reduce/reduce conflict.
+
+    var conflicts = new ArrayList<String>();
+    LALRVerifier.verify(grammar, Map.of(), conflicts::add);
+    assertEquals(2, conflicts.size());
+
+    var parser = Parser.createParser(grammar, precedence);
+    var evaluator = new Evaluator<String>() {
+      @Override
+      public String evaluate(Terminal token) {
+        return token.name();
+      }
+
+      @Override
+      public String evaluate(Production production, List<String> args) {
+        return production.head().name() + "(" + String.join(", ", args) + ")";
+      }
+    };
+
+    var a = new Terminal("a");
+    var b = new Terminal("b");
+    var c = new Terminal("c");
+    var d = new Terminal("d");
+    var e = new Terminal("e");
+
+    // "a e c" → S → a E c, E → e   (LR(1) knows to reduce e to E here, not F)
+    var result1 = parser.parse(List.of(a, e, c).iterator(), evaluator);
+    assertEquals("S(a, E(e), c)", result1);
+
+    // "a e d" → S → a F d, F → e   (LR(1) knows to reduce e to F here, not E)
+    var result2 = parser.parse(List.of(a, e, d).iterator(), evaluator);
+    assertEquals("S(a, F(e), d)", result2);
+
+    // "b e c" → S → b F c, F → e
+    var result3 = parser.parse(List.of(b, e, c).iterator(), evaluator);
+    assertEquals("S(b, F(e), c)", result3);
+
+    // "b e d" → S → b E d, E → e
+    var result4 = parser.parse(List.of(b, e, d).iterator(), evaluator);
+    assertEquals("S(b, E(e), d)", result4);
+  }
+
+
+  @Test
+  public void parsingErrorBasic() {
+    var metaGrammar = MetaGrammar.load("""
+      precedence {
+        left: '+'
+      }
+      grammar {
+        E: E '+' E
+        E: id
+      }
+      """);
+
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
+
+    var parser = Parser.createParser(grammar, precedence);
+
+    // Try to parse invalid input: "id id"
+    var terminals = List.of(new Terminal("id"), new Terminal("id")).iterator();
+
+    var exception = assertThrows(ParsingException.class, () -> {
+      parser.parse(terminals, new ParserListener() {
+        @Override public void onShift(Terminal token) {}
+        @Override public void onReduce(Production production) {}
+      });
+    });
+
+    var message = exception.getMessage();
+    assertTrue(message.contains("Parsing error"));
+    assertTrue(message.contains("'id'"));
+  }
+
+  @Test
+  public void lexingErrorUnknownCharacterWithPosition() {
+    var metaGrammar = MetaGrammar.load("""
+      precedence {
+        left: '+'
+      }
+      grammar {
+        E: E '+' E
+        E: id
+      }
+      """);
+
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
+
+    var parser = Parser.createParser(grammar, precedence);
+
+    var tokens = List.of(
+        new Token("id", "[a-z]+"),
+        new Token("+", "\\+"),
+        new Token("\\s+")
+    );
+    var lexer = Lexer.createLexer(tokens);
+
+    // Try to parse invalid input: "id + 2"
+    var input = "id + 2";
+    var terminals = lexer.tokenize(input);
+
+    var exception = assertThrows(ParsingException.class, () -> {
+      parser.parse(terminals, new ParserListener() {
+        @Override public void onShift(Terminal token) {}
+        @Override public void onReduce(Production production) {}
+      });
+    });
+
+    var message = exception.getMessage();
+    assertTrue(message.contains("Lexing error"));
+    assertTrue(message.contains("line 1"));
+    assertTrue(message.contains("column 6"));
+    assertTrue(message.contains("id + 2"));
+    assertTrue(message.contains("^"));
+  }
+
+  @Test
+  public void parsingErrorNotAllowedByTheGrammarWithPosition() {
+    var metaGrammar = MetaGrammar.load("""
+      precedence {
+        left: '+'
+      }
+      grammar {
+        E: E '+' E
+        E: id
+      }
+      """);
+
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
+
+    var parser = Parser.createParser(grammar, precedence);
+
+    var tokens = List.of(
+        new Token("id", "[a-z]+"),
+        new Token("+", "\\+"),
+        new Token("\\s+")
+    );
+    var lexer = Lexer.createLexer(tokens);
+
+    // Try to parse invalid input: "id + +"
+    var input = "id + +";
+    var terminals = lexer.tokenize(input);
+
+    var exception = assertThrows(ParsingException.class, () -> {
+      parser.parse(terminals, new ParserListener() {
+        @Override public void onShift(Terminal token) {}
+        @Override public void onReduce(Production production) {}
+      });
+    });
+
+    var message = exception.getMessage();
+    assertTrue(message.contains("Parsing error"));
+    assertTrue(message.contains("line 1"));
+    assertTrue(message.contains("column 6"));
+    assertTrue(message.contains("id + +"));
+    assertTrue(message.contains("^"));
+  }
+
+  @Test
+  public void parsingErrorNotAllowedByTheGrammarWithMultipleLines() {
+    var metaGrammar = MetaGrammar.load("""
+      precedence {
+        left: '+'
+      }
+      grammar {
+        E: E '+' E
+        E: id
+      }
+      """);
+
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
+
+    var parser = Parser.createParser(grammar, precedence);
+
+    var tokens = List.of(
+        new Token("id", "[a-z]+"),
+        new Token("+", "\\+"),
+        new Token("\\s+")
+    );
+    var lexer = Lexer.createLexer(tokens);
+
+    var input = """
+        id
+        id + +
+        id
+        """;
+    var terminals = lexer.tokenize(input);
+
+    var exception = assertThrows(ParsingException.class, () -> {
+      parser.parse(terminals, new ParserListener() {
+        @Override public void onShift(Terminal token) {}
+        @Override public void onReduce(Production production) {}
+      });
+    });
+
+    var message = exception.getMessage();
+    assertTrue(message.contains("Parsing error"));
+    assertTrue(message.contains("line 2"));
+    assertTrue(message.contains("column 4"));
+    assertTrue(message.contains("id + +"));
+    assertTrue(message.contains("^"));
+  }
+
+  @Test
+  public void reduceReduceConflictThrows() {
+    var metaGrammar = MetaGrammar.load("""
+      grammar {
+        S: A
+        S: B
+        A: id
+        B: id
+      }
+      """);
+
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
+
+    var id = new Terminal("id");
+
+    var parser = Parser.createParser(grammar, precedence);
+
+    assertThrows(ParsingException.class, () ->
+        parser.parse(List.of(id).iterator(), new ParserListener() {
+          @Override public void onShift(Terminal token) {}
+          @Override public void onReduce(Production production) {}
+        }));
+  }
+
+  @Test
+  public void shiftReduceConflictNoPrecedenceThrows() {
+    var metaGrammar = MetaGrammar.load("""
+      grammar {
+        E: E '+' E
+        E: id
+      }
+      """);
+
+    var id   = new Terminal("id");
+    var plus = new Terminal("+");
+
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
+
+    var parser = Parser.createParser(grammar, precedence);
+
+    assertThrows(ParsingException.class, () ->
+        parser.parse(List.of(id, plus, id, plus, id).iterator(), new ParserListener() {
+          @Override public void onShift(Terminal token) {}
+          @Override public void onReduce(Production production) {}
+        }));
   }
 }

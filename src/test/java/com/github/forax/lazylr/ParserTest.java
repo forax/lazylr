@@ -125,7 +125,7 @@ public final class ParserTest {
         plus, new Precedence(10, Precedence.Associativity.LEFT)
     );
 
-    // ε + id =>  the first operand is empty, reducing to E via ε-production
+    // ε + id => the first operand is empty, reducing to E via ε-production
     assertEquals("""
       Reduce E : ε
       Shift +
@@ -613,7 +613,7 @@ public final class ParserTest {
     //   - After "b": reduce F→e on 'c', reduce E→e on 'd'
     //
     // In LALR(1), those two states get MERGED (same LR(0) core: E→e•, F→e•),
-   // combining lookaheads into {c, d} for BOTH E→e and F→e — a reduce/reduce conflict.
+    // combining lookaheads into {c, d} for BOTH E→e and F→e — a reduce/reduce conflict.
 
     var conflicts = new ArrayList<String>();
     LALRVerifier.verify(grammar, Map.of(), conflicts::add);
@@ -665,7 +665,6 @@ public final class ParserTest {
     );
 
     var parser = Parser.createParser(grammar, precedence);
-
 
     // Try to parse invalid input: "id id"
     var terminals = List.of(new Terminal("id"), new Terminal("id")).iterator();
@@ -811,7 +810,6 @@ public final class ParserTest {
     assertTrue(message.contains("^"));
   }
 
-
   @Test
   public void reduceReduceConflictThrows() {
     var S  = new NonTerminal("S");
@@ -846,7 +844,6 @@ public final class ParserTest {
         new Production(E, List.of(id))
     ));
 
-    // No precedence map at all
     var parser = Parser.createParser(grammar, Map.of());
 
     assertThrows(ParsingException.class, () ->
