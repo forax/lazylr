@@ -3,12 +3,14 @@ package com.github.forax.lazylr;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /// Those are the same tests as in [MetaGrammarParserTest] but using objects
 /// for terminals, non-terminals, productions, etc
@@ -30,6 +32,86 @@ public final class ParserTest {
     });
     return result.toString();
   }
+
+  @Test
+  public void createParserGrammarNull() {
+    assertThrows(NullPointerException.class, () ->
+        Parser.createParser(null, Map.of()));
+  }
+
+  @Test
+  public void createParserPrecedenceNull() {
+    var start = new NonTerminal("S");
+    var grammar = new Grammar(start, List.of(
+        new Production(start, List.of(new Terminal("a")))));
+    assertThrows(NullPointerException.class, () ->
+        Parser.createParser(grammar, null));
+  }
+
+  @Test
+  public void parseEvaluatorInputNull() {
+    var start = new NonTerminal("S");
+    var grammar = new Grammar(start, List.of(
+        new Production(start, List.of(new Terminal("a")))));
+    var parser = Parser.createParser(grammar, Map.of());
+    var evaluator = new Evaluator<>() {
+      @Override
+      public Object evaluate(Terminal terminal) {
+        return fail();
+      }
+
+      @Override
+      public Object evaluate(Production production, List<Object> args) {
+        return fail();
+      }
+    };
+    assertThrows(NullPointerException.class, () ->
+        parser.parse(null, evaluator));
+  }
+
+  @Test
+  public void parseEvaluatorNull() {
+    var start = new NonTerminal("S");
+    var grammar = new Grammar(start, List.of(
+        new Production(start, List.of(new Terminal("a")))));
+    var parser = Parser.createParser(grammar, Map.of());
+    var tokens = Collections.<Terminal>emptyIterator();
+    assertThrows(NullPointerException.class, () ->
+        parser.parse(tokens, (Evaluator<?>) null));
+  }
+
+  @Test
+  public void parseListenerInputNull() {
+    var start = new NonTerminal("S");
+    var grammar = new Grammar(start, List.of(
+        new Production(start, List.of(new Terminal("a")))));
+    var parser = Parser.createParser(grammar, Map.of());
+    ParserListener listener = new ParserListener() {
+      @Override
+      public void onShift(Terminal token) {
+        fail();
+      }
+
+      @Override
+      public void onReduce(Production production) {
+        fail();
+      }
+    };
+    assertThrows(NullPointerException.class,
+        () -> parser.parse(null, listener));
+  }
+
+  @Test
+  public void parseListenerNull() {
+    var start = new NonTerminal("S");
+    var grammar = new Grammar(start, List.of(
+        new Production(start, List.of(new Terminal("a")))));
+    var parser = Parser.createParser(grammar, Map.of());
+    var tokens = Collections.<Terminal>emptyIterator();
+    assertThrows(NullPointerException.class, () ->
+        parser.parse(tokens, (ParserListener) null));
+  }
+
 
   @Test
   public void simple() {

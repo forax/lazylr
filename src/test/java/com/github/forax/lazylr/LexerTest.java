@@ -4,12 +4,31 @@ import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 import java.util.NoSuchElementException;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 public final class LexerTest {
+
+  @Test
+  public void createLexerTokensNull() {
+    assertThrows(NullPointerException.class, () ->
+        Lexer.createLexer(null));
+  }
+
+  @Test
+  public void tokenizeInputNull() {
+    var lexer = Lexer.createLexer(List.of(new Token("ID", "[a-z]+")));
+    assertThrows(NullPointerException.class, () ->
+        lexer.tokenize(null));
+  }
+
+  @Test
+  public void iteratorNextOutOfBounds() {
+    var lexer = Lexer.createLexer(List.of(new Token("ID", "[a-z]+")));
+    var terminals = lexer.tokenize("");  // Empty input results in no matches
+    assertThrows(NoSuchElementException.class, terminals::next);
+  }
 
   @Test
   public void simpleTokenization() {

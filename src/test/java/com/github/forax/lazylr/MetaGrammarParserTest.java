@@ -3,12 +3,14 @@ package com.github.forax.lazylr;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 /// Those are the same tests as in [ParserTest] but using the meta grammar DSL,
 /// Please update both files accordingly
@@ -29,6 +31,101 @@ public final class MetaGrammarParserTest {
     });
     return result.toString();
   }
+
+  @Test
+  public void createParserGrammarNull() {
+    assertThrows(NullPointerException.class, () ->
+        Parser.createParser(null, Map.of()));
+  }
+
+  @Test
+  public void createParserPrecedenceNull() {
+    var mg = MetaGrammar.load("""
+        grammar {
+          S : 'x'
+        }
+        """);
+    var grammar = mg.grammar();
+    assertThrows(NullPointerException.class, () ->
+        Parser.createParser(grammar, null));
+  }
+
+  @Test
+  public void parseEvaluatorInputNull() {
+    var mg = MetaGrammar.load("""
+        grammar {
+          S : 'x'
+        }
+        """);
+    var grammar = mg.grammar();
+    var parser = Parser.createParser(grammar, Map.of());
+    var evaluator = new Evaluator<>() {
+      @Override
+      public Object evaluate(Terminal terminal) {
+        return fail();
+      }
+
+      @Override
+      public Object evaluate(Production production, List<Object> args) {
+        return fail();
+      }
+    };
+    assertThrows(NullPointerException.class, () ->
+        parser.parse(null, evaluator));
+  }
+
+  @Test
+  public void parseEvaluatorNull() {
+    var mg = MetaGrammar.load("""
+        grammar {
+          S : 'a'
+        }
+        """);
+    var grammar = mg.grammar();
+    var parser = Parser.createParser(grammar, Map.of());
+    var tokens = Collections.<Terminal>emptyIterator();
+    assertThrows(NullPointerException.class, () ->
+        parser.parse(tokens, (Evaluator<?>) null));
+  }
+
+  @Test
+  public void parseListenerInputNull() {
+    var mg = MetaGrammar.load("""
+        grammar {
+          S : 'x'
+        }
+        """);
+    var grammar = mg.grammar();
+    var parser = Parser.createParser(grammar, Map.of());
+    ParserListener listener = new ParserListener() {
+      @Override
+      public void onShift(Terminal token) {
+        fail();
+      }
+
+      @Override
+      public void onReduce(Production production) {
+        fail();
+      }
+    };
+    assertThrows(NullPointerException.class,
+        () -> parser.parse(null, listener));
+  }
+
+  @Test
+  public void parseListenerNull() {
+    var mg = MetaGrammar.load("""
+        grammar {
+          S : 'x'
+        }
+        """);
+    var grammar = mg.grammar();
+    var parser = Parser.createParser(grammar, Map.of());
+    var tokens = Collections.<Terminal>emptyIterator();
+    assertThrows(NullPointerException.class, () ->
+        parser.parse(tokens, (ParserListener) null));
+  }
+
 
   @Test
   public void simple() {
