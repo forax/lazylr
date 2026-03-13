@@ -31,12 +31,12 @@ public final class Production implements PrecedenceEntity {
   /// @param head The left-hand side [NonTerminal] of the production.
   /// @param body The right-hand side [Symbol]s of the production.
   /// @throws NullPointerException if the head is null.
-  public Production(NonTerminal head, List<Symbol> body) {
+  public Production(NonTerminal head, List<? extends Symbol> body) {
     Objects.requireNonNull(head);
-    body = List.copyOf(body);
-    var hashCode = head.hashCode() ^ body.hashCode();
+    var symbols = List.<Symbol>copyOf(body);
+    var hashCode = head.hashCode() ^ symbols.hashCode();
     this.head = head;
-    this.body = body;
+    this.body = symbols;
     this.hashCode = hashCode;
     super();
   }
