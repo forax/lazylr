@@ -2,6 +2,8 @@ package com.github.forax.lazylr;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -570,5 +572,136 @@ public final class MetaGrammarTest {
           none: num
         }
         """));
+  }
+
+  @Test
+  public void constructorWithValidArguments() {
+    var tokens = List.of(new Token("num", "[0-9]+"));
+    var num = new Terminal("num");
+    var expr = new NonTerminal("Expr");
+    var production = new Production(expr, List.of(num));
+    var grammar = new Grammar(expr, List.of(production));
+    var precedenceMap = Map.of(num, new Precedence(1, LEFT));
+
+    var mg = new MetaGrammar(tokens, precedenceMap, grammar);
+
+    assertEquals(tokens, mg.tokens());
+    assertEquals(grammar, mg.grammar());
+    assertEquals(precedenceMap, mg.precedenceMap());
+  }
+
+  @Test
+  public void constructorWithEmptyCollections() {
+    var expr = new NonTerminal("Expr");
+    var num = new Terminal("num");
+    var production = new Production(expr, List.of(num));
+    var grammar = new Grammar(expr, List.of(production));
+
+    var mg = new MetaGrammar(List.of(), Map.of(), grammar);
+
+    assertTrue(mg.tokens().isEmpty());
+    assertTrue(mg.precedenceMap().isEmpty());
+    assertEquals(grammar, mg.grammar());
+  }
+
+  @Test
+  public void constructorNullTokensThrowsNullPointerException() {
+    var expr = new NonTerminal("Expr");
+    var num = new Terminal("num");
+    var grammar = new Grammar(expr, List.of(new Production(expr, List.of(num))));
+
+    assertThrows(NullPointerException.class,
+        () -> new MetaGrammar(null, Map.of(), grammar));
+  }
+
+  @Test
+  public void constructorNullPrecedenceMapThrowsNullPointerException() {
+    var expr = new NonTerminal("Expr");
+    var num = new Terminal("num");
+    var grammar = new Grammar(expr, List.of(new Production(expr, List.of(num))));
+
+    assertThrows(NullPointerException.class,
+        () -> new MetaGrammar(List.of(), null, grammar));
+  }
+
+  @Test
+  public void constructorNullGrammarThrowsNullPointerException() {
+    assertThrows(NullPointerException.class,
+        () -> new MetaGrammar(List.of(), Map.of(), null));
+  }
+
+  @Test
+  public void constructorTokensListIsDefensivelyCopied() {
+    var num = new Terminal("num");
+    var tokens = new ArrayList<>(List.of(new Token("num", "[0-9]+")));
+    var expr = new NonTerminal("Expr");
+    var grammar = new Grammar(expr,
+        List.of(new Production(expr, List.of(num))));
+
+    var mg = new MetaGrammar(tokens, Map.of(), grammar);
+    tokens.add(new Token("id", "[a-z]+"));
+
+    assertEquals(List.of(new Token("num", "[0-9]+")), mg.tokens());
+  }
+
+  @Test
+  public void constructorPrecedenceMapIsDefensivelyCopied() {
+    var num = new Terminal("num");
+    var plus = new Terminal("plus");
+    var expr = new NonTerminal("Expr");
+    var grammar = new Grammar(expr,
+        List.of(new Production(expr, List.of(num))));
+    var precedenceMap = new LinkedHashMap<PrecedenceEntity, Precedence>();
+    precedenceMap.put(num, new Precedence(1, LEFT));
+
+    var mg = new MetaGrammar(List.of(), precedenceMap, grammar);
+    precedenceMap.put(plus, new Precedence(2, RIGHT));
+
+    assertEquals(1, mg.precedenceMap().size());
+  }
+
+  @Test
+  public void constructorReturnedTokensIsUnmodifiable() {
+    var num = new Terminal("num");
+    var expr = new NonTerminal("Expr");
+    var grammar = new Grammar(expr,
+        List.of(new Production(expr, List.of(num))));
+    var tokens = List.of(new Token("num", "[0-9]+"));
+
+    var mg = new MetaGrammar(tokens, Map.of(), grammar);
+
+    assertThrows(UnsupportedOperationException.class,
+        () -> mg.tokens().add(new Token("id", "[a-z]+")));
+  }
+
+  @Test
+  public void constructorReturnedPrecedenceMapIsUnmodifiable() {
+    var num = new Terminal("num");
+    var expr = new NonTerminal("Expr");
+    var grammar = new Grammar(expr,
+        List.of(new Production(expr, List.of(num))));
+
+    var mg = new MetaGrammar(List.of(), Map.of(), grammar);
+
+    assertThrows(UnsupportedOperationException.class,
+        () -> mg.precedenceMap().put(num, new Precedence(1, LEFT)));
+  }
+
+  @Test
+  public void constructorPrecedenceMapPreservesInsertionOrder() {
+    var plus = new Terminal("plus");
+    var star = new Terminal("star");
+    var pow  = new Terminal("pow");
+    var expr = new NonTerminal("Expr");
+    var grammar = new Grammar(expr,
+        List.of(new Production(expr, List.of(plus))));
+    var precedenceMap = new LinkedHashMap<PrecedenceEntity, Precedence>();
+    precedenceMap.put(plus, new Precedence(1, LEFT));
+    precedenceMap.put(star, new Precedence(2, LEFT));
+    precedenceMap.put(pow,  new Precedence(3, RIGHT));
+
+    var mg = new MetaGrammar(List.of(), precedenceMap, grammar);
+
+    assertEquals(List.of(plus, star, pow), List.copyOf(mg.precedenceMap().keySet()));
   }
 }
