@@ -533,8 +533,8 @@ var evaluator = new Evaluator<Integer>() {
 };
 
 System.out.println(parser.parse(lexer.tokenize("if 1 then 10 else 20"), evaluator));
-System.out.println(parser.parse(lexer.tokenize("if 0 then 10 else 20"), evaluator));
-System.out.println(parser.parse(lexer.tokenize("if 1 then if 0 then 99 else 42"), evaluator));
+    System.out.println(parser.parse(lexer.tokenize("if 0 then 10 else 20"), evaluator));
+    System.out.println(parser.parse(lexer.tokenize("if 1 then if 0 then 99 else 42"), evaluator));
 ```
 
 ```
@@ -547,6 +547,124 @@ System.out.println(parser.parse(lexer.tokenize("if 1 then if 0 then 99 else 42")
 > 💡 **Insight**: The output confirms that `E: if E then E else E` was chosen over `E: if E then E`,
 >    the `else` was shifted and bound to the inner `if`.
 
+---
+
+## Step 8: Unary Operators and Production Precedence
+
+> **Goal:** Parse `- 4 * 5` as `(-4) * 5`, not `-(4 * 5)`.
+
+So far all our operators have been binary. Now we add a **prefix unary operator**: `-E` (negation).
+To better see the parse structure, we switch from evaluating to integers to building an **AST**
+(Abstract Syntax Tree) — a tree of records that makes grouping explicit.
+
+The problem: the token `-` is shared between binary subtraction (`E '-' E`) and unary
+negation (`'-' E`). By default, a production's precedence is taken from its **rightmost terminal**,
+so `E: '-' E` inherits the precedence of `-` — which sits at the `left: '-'` level, *below* `*`.
+This means the parser will shift `*` before reducing the unary minus, parsing `- 4 * 5` as `-(4 * 5)`:
+
+```java
+sealed interface Node {}
+record Sub(Node left, Node right) implements Node {}
+record Mul(Node left, Node right) implements Node {}
+record UnaryMinus(Node node) implements Node {}
+record Num() implements Node {}
+```
+
+```java
+var evaluator = new Evaluator<Node>() {
+  public Node evaluate(Terminal t) {
+    return switch (t.name()) {
+      case "num" -> new Num();
+      default -> null;
+    };
+  }
+  public Node evaluate(Production p, List<Node> args) {
+    return switch (p.name()) {
+      case "E : num"   -> args.getFirst();
+      case "E : E - E" -> new Sub(args.get(0), args.get(2));
+      case "E : E * E" -> new Mul(args.get(0), args.get(2));
+      case "E : - E"   -> new UnaryMinus(args.get(1));
+      default -> throw new IllegalStateException("Unexpected production: " + p.name());
+    };
+  }
+};
+
+var badMg = MetaGrammar.load("""
+    tokens {
+      num: /[0-9]+/
+      /[ ]+/
+    }
+    precedence {
+      left: '-'
+      left: '*'
+    }
+    grammar {
+      E: num
+      E: E '-' E
+      E: E '*' E
+      E: '-' E
+    }
+    """);
+
+var badLexer  = Lexer.createLexer(badMg.tokens());
+var badParser = Parser.createParser(badMg.grammar(), badMg.precedenceMap());
+
+var node = badParser.parse(badLexer.tokenize("- 4 * 5"), evaluator);
+System.out.println(node);
+```
+
+```
+// Output:
+// UnaryMinus[node=Mul[left=Num[], right=Num[]]]
+```
+
+> ⚠️ **What's happening?** The parser has `'-' E` on the stack (having seen `- 4`) and `*` as lookahead.
+>    It compares the unary production's precedence, inherited from `-`, below `*` — against `*`.
+>    Since `*` wins, the parser **shifts**, consuming `* 5` before reducing. The result is `-(4 * 5)`
+>    instead of the correct `(-4) * 5`.
+
+The fix is to use a **virtual precedence token** `UNARY`: a name declared in the `precedence` section that
+is never emitted by the lexer, used solely to give the unary production an independent, higher
+precedence level via `%prec`:
+
+```java
+var mg = MetaGrammar.load("""
+    tokens {
+      num: /[0-9]+/
+      /[ ]+/
+    }
+    precedence {
+      left:  '-'
+      left:  '*'
+      right: UNARY
+    }
+    grammar {
+      E: num
+      E: E '-' E
+      E: E '*' E
+      E: '-' E      %prec UNARY
+    }
+    """);
+
+var lexer  = Lexer.createLexer(mg.tokens());
+var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
+
+node = parser.parse(lexer.tokenize("- 4 * 5"), evaluator);
+System.out.println(node);
+```
+
+```
+// Output:
+// Mul[left=UnaryMinus[node=Num[]], right=Num[]]
+```
+
+> 💡 **Insight:** `UNARY` is declared *after* `*`, giving it higher priority than any binary operator.
+>    The `%prec UNARY` annotation on `E: '-' E` overrides the default precedence (inherited from `-`)
+>    with the `UNARY` level. Now when the parser has `'-' E` on the stack and sees `*` as lookahead,
+>    `UNARY` outranks `*`, so the parser **reduces**, binding the unary minus tightly to its operand
+>    before any binary operator gets a chance to steal it.
+
+---
 
 ## That's all
 

@@ -316,4 +316,83 @@ public final class GuideTest {
     assertEquals(20, parser.parse(lexer.tokenize("if 0 then 10 else 20"), evaluator));
     assertEquals(42, parser.parse(lexer.tokenize("if 1 then if 0 then 99 else 42"), evaluator));
   }
+
+  // -------------------------------------------------------------------------
+  // Step 8 – Unary Operators and Production Precedence and AST
+  // -------------------------------------------------------------------------
+  @Test
+  public void step8_unaryOperatorsAndAST() {
+    /*sealed*/ interface Node {}
+    record Sub(Node left, Node right) implements Node {}
+    record Mul(Node left, Node right) implements Node {}
+    record UnaryMinus(Node node) implements Node {}
+    record Num() implements Node {}
+
+    var evaluator = new Evaluator<Node>() {
+      public Node evaluate(Terminal t) {
+        return switch (t.name()) {
+          case "num" -> new Num();
+          default -> null;
+        };
+      }
+      public Node evaluate(Production p, List<Node> args) {
+        return switch (p.name()) {
+          case "E : num" -> args.getFirst();
+          case "E : E - E" -> new Sub(args.get(0), args.get(2));
+          case "E : E * E" -> new Mul(args.get(0), args.get(2));
+          case "E : - E" -> new UnaryMinus(args.get(1));
+          default -> throw new IllegalStateException("Unexpected production: " + p.name());
+        };
+      }
+    };
+
+    // This is not a correct grammar, precedence of the unary minus is wrong
+    var badMg = MetaGrammar.load("""
+        tokens {
+          num: /[0-9]+/
+          /[ ]+/
+        }
+        precedence {
+          left: '+', '-'
+          left: '*'
+        }
+        grammar {
+          E: num
+          E: E '-' E
+          E: E '*' E
+          E: '-' E
+        }
+        """);
+
+    var badLexer  = Lexer.createLexer(badMg.tokens());
+    var badParser = Parser.createParser(badMg.grammar(), badMg.precedenceMap());
+
+    var node = badParser.parse(badLexer.tokenize("- 4 * 5"), evaluator);
+    assertEquals("UnaryMinus[node=Mul[left=Num[], right=Num[]]]", node.toString());
+
+    // Use a virtual terminal UNARY to fix the precedence of the unary minus
+    var mg = MetaGrammar.load("""
+        tokens {
+          num: /[0-9]+/
+          /[ ]+/
+        }
+        precedence {
+          left: '+', '-'
+          left: '*'
+          right: UNARY
+        }
+        grammar {
+          E: num
+          E: E '-' E
+          E: E '*' E
+          E: '-' E      %prec UNARY
+        }
+    """);
+
+    var lexer  = Lexer.createLexer(mg.tokens());
+    var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
+
+    node = parser.parse(lexer.tokenize("- 4 * 5"), evaluator);
+    assertEquals("Mul[left=UnaryMinus[node=Num[]], right=Num[]]", node.toString());
+  }
 }
