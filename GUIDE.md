@@ -483,7 +483,7 @@ The classic "dangling else" problem: given `if A then if B then X else Y`, which
 
 In the `tokens` section, Keywords like `if`, `then`, and `else` must be declared as named tokens,
 before `num`, so the lexer gives them priority over any general identifier pattern.
-In the `precedence` section, `if` is listed first (lowest precedence) and `else` last (highest),
+In the `precedence` section, `then` is listed first (lowest precedence) and `else` last (highest),
 which forces the parser to always shift `else` rather than reduce:
 
 ```java
@@ -496,7 +496,7 @@ var mg = MetaGrammar.load("""
       /[ ]+/
     }
     precedence {
-      right: if
+      right: then
       left:  '+'
       left:  '*'
       right: '^'

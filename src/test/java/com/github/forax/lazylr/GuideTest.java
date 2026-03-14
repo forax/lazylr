@@ -291,7 +291,7 @@ public final class GuideTest {
           /[ ]+/
         }
         precedence {
-          right: if
+          right: then
           left:  '+'
           left:  '*'
           right: '^'

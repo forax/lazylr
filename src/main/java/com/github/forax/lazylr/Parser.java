@@ -76,8 +76,19 @@ public final class Parser {
     return new Parser(engine, initialState, startProd);
   }
 
+
+  /// Returns a copy of [precedenceMap] extended with an inferred [Precedence]
+  /// for each [Production] not already present, derived from its rightmost terminal
+  /// with known precedence.
+  static Map<PrecedenceEntity, Precedence> complete(Grammar grammar, Map<? extends PrecedenceEntity, ? extends Precedence> precedenceMap) {
+    var newPrecedenceMap = new HashMap<PrecedenceEntity, Precedence>(precedenceMap);
+    for (var production : grammar.productions()) {
+      newPrecedenceMap.computeIfAbsent(production, _ -> computePrecedence(production, newPrecedenceMap));
+    }
+    return newPrecedenceMap;
+  }
+
   private static Precedence computePrecedence(Production production, Map<PrecedenceEntity, Precedence> precedenceMap) {
-    // inherits from the precedence of the last terminal of the production
     loop:
     for (var symbol : production.body().reversed()) {
       switch (symbol) {
@@ -91,16 +102,9 @@ public final class Parser {
         case NonTerminal _ -> {}
       }
     }
-    return new Precedence(0, Precedence.Associativity.LEFT);
+    return null;  // No precedence
   }
 
-  static Map<PrecedenceEntity, Precedence> complete(Grammar grammar, Map<? extends PrecedenceEntity, ? extends Precedence> precedenceMap) {
-    var newPrecedenceMap = new HashMap<PrecedenceEntity, Precedence>(precedenceMap);
-    for (var production : grammar.productions()) {
-      newPrecedenceMap.computeIfAbsent(production, _ -> computePrecedence(production, newPrecedenceMap));
-    }
-    return newPrecedenceMap;
-  }
 
   private static Iterator<Terminal> wrapAndAppendEOF(Iterator<? extends Terminal> iterator) {
     // if it's a Tokenized (Iterator + better error reporting) wrap to a Tokenizer
@@ -206,7 +210,9 @@ public final class Parser {
           return;
         }
         var from = size - production.body().size();
-        // the VM should be able to optimize this copy if it does not escape
+        // We do a defensive copy to not expose the internal stack
+        // This code is carefully crafted to help VM escape analysis
+        // if the user code in Evaluator.evaluate does not escape the List
         var copy = Arrays.copyOfRange(stack, from, size);
         var result = evaluator.evaluate(production, new AbstractList<>() {
           @Override

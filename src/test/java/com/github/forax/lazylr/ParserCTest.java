@@ -103,6 +103,7 @@ public final class ParserCTest {
     // Labels used by production for Precedence
     Production pUnaryMinus;
     Production pDereference;
+    Production pIfThen;
 
     var grammar = new Grammar(translationUnit, List.of(
         new Production(translationUnit, List.of(stmt)),
@@ -122,7 +123,7 @@ public final class ParserCTest {
         new Production(stmtList, List.of(stmtList, stmt)),
         new Production(stmt, List.of(decl)),
         new Production(stmt, List.of(expr, semi)),
-        new Production(stmt, List.of(ifTerm, lParen, expr, rParen, stmt)),
+        pIfThen = new Production(stmt, List.of(ifTerm, lParen, expr, rParen, stmt)),
         new Production(stmt, List.of(ifTerm, lParen, expr, rParen, stmt, elseTerm, stmt)),
         new Production(stmt, List.of(whileTerm, lParen, expr, rParen, stmt)),
         new Production(stmt, List.of(returnTerm, expr, semi)),
@@ -163,6 +164,7 @@ public final class ParserCTest {
 
     // Precedence Map (using Terminals and specific Productions)
     var precedence = Map.ofEntries(
+        Map.entry(pIfThen,     new Precedence( 0, Precedence.Associativity.RIGHT)),
         Map.entry(elseTerm,    new Precedence(10, Precedence.Associativity.RIGHT)),
         Map.entry(assign,      new Precedence(20, Precedence.Associativity.RIGHT)),
         Map.entry(eq,          new Precedence(30, Precedence.Associativity.LEFT)),
@@ -182,7 +184,7 @@ public final class ParserCTest {
         Map.entry(lParen,      new Precedence(80, Precedence.Associativity.LEFT)) // Function Calls
     );
 
-    //LALRVerifier.verify(grammar, precedence, error -> { throw new AssertionError(error); });
+    LALRVerifier.verify(grammar, precedence, error -> { throw new AssertionError(error); });
 
     return Parser.createParser(grammar, precedence);
   }
