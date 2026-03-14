@@ -1,6 +1,9 @@
 package com.github.forax.lazylr;
 
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
+
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -215,5 +218,34 @@ public final class LALRVerifierTest {
     var grammar = new Grammar(S, List.of(pS, pAe, pBe));
 
     LALRVerifier.verify(grammar, Map.of(),  ERROR_REPORTER);
+  }
+
+  @Test
+  public void verifyLALRGrammar() {
+    // Grammar (DeRemer 1971) — LALR(1) but not SLR(1):
+    //   S → L = R  |  R
+    //   L → * R    |  id
+    //   R → L
+    //
+    // SLR(1) fails because '=' ∈ FOLLOW(R) globally (via R → L and S → L = R),
+    // producing a spurious shift/reduce conflict on '=' in the state that contains
+    // both [S → L • = R] and [R → L •].
+    // LALR(1) succeeds because the per-state lookahead for [R → L •] in that
+    // state is only {EOF} — '=' is never valid there.
+    var S = new NonTerminal("S");
+    var L = new NonTerminal("L");
+    var R = new NonTerminal("R");
+    var EQ  = new Terminal("=");
+    var MUL = new Terminal("*");
+    var ID  = new Terminal("id");
+    var grammar = new Grammar(S, List.of(
+        new Production(S, List.of(L, EQ, R)),
+        new Production(S, List.of(R)),
+        new Production(L, List.of(MUL, R)),
+        new Production(L, List.of(ID)),
+        new Production(R, List.of(L))
+    ));
+
+    LALRVerifier.verify(grammar, Map.of(), ERROR_REPORTER);
   }
 }
