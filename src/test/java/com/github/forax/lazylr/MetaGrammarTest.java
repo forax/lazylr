@@ -531,12 +531,24 @@ public final class MetaGrammarTest {
 
 
   @Test
+  public void duplicateProductionwThrowsIllegalArgumentException() {
+    assertThrows(IllegalArgumentException.class, () ->
+      MetaGrammar.load("""
+        grammar {
+          S: a
+          S: a
+        }
+        """)
+    );
+  }
+
+  @Test
   public void nullInputThrowsNullPointerException() {
     assertThrows(NullPointerException.class, () -> MetaGrammar.load(null));
   }
 
   @Test
-  public void emptyGrammarSectionThrowsParsingException() {
+  public void emptyGrammarSectionThrowsIllegalStateException() {
     var mg = MetaGrammar.load("""
         grammar {
         }
