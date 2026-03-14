@@ -59,6 +59,8 @@ public final class MetaGrammar {
   private final Grammar grammar;
   private final Map<PrecedenceEntity, Precedence> precedenceMap;
 
+  // Parameter order is intentionally different from the public constructor,
+  // allowing overload resolution to distinguish them without a dummy parameter.
   private MetaGrammar(List<Token> tokens, Grammar grammar, Map<PrecedenceEntity, Precedence> precedenceMap) {
     this.tokens = tokens;
     this.grammar = grammar;
