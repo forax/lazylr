@@ -288,8 +288,8 @@ public final class LALRVerifier {
       newGoto.add(new HashMap<>());
     }
     var oldGoto = lr1.gotoTable();
-    for (var stateIndicies : coresMap.values()) {
-      var representative = stateIndicies.getFirst();
+    for (var stateIndices : coresMap.values()) {
+      var representative = stateIndices.getFirst();
       for (var entry : oldGoto.get(representative).entrySet()) {
         newGoto.get(remap[representative]).put(entry.getKey(), remap[entry.getValue()]);
       }
