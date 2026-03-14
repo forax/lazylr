@@ -116,8 +116,8 @@ public final class Token {
   @Override
   public String toString() {
     if (name == null) {
-      return "Rule(" + regex + ")";
+      return "Token(" + regex + ")";
     }
-    return "Rule(" + name + ", " + regex + ")";
+    return "Token(" + name + ", " + regex + ")";
   }
 }
