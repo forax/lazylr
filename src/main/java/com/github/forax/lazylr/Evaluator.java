@@ -1,6 +1,9 @@
 package com.github.forax.lazylr;
 
 import java.util.List;
+import java.util.Objects;
+import java.util.function.BiFunction;
+import java.util.function.Function;
 
 /// An interface for transforming a successful parse into a domain-specific
 /// result, such as an Abstract Syntax Tree (AST) or an interpreted value.
@@ -14,6 +17,40 @@ import java.util.List;
 ///    to convert the raw token into a value (e.g., parsing a string "123" into an `Integer`).
 /// * **Internal Nodes**: When a [Production] is reduced, it calls
 ///    [#evaluate(Production, List)] with the results of its children.
+///
+/// ### Creating an Evaluator
+/// Implement this interface directly with a class:
+/// ```java
+/// class IntEvaluator implements Evaluator<Integer> {
+///   public Integer evaluate(Terminal terminal) {
+///     return switch (terminal.name()) {
+///       case "num" -> Integer.parseInt(terminal.value());
+///       default    -> 0;
+///     };
+///   }
+///   public Integer evaluate(Production production, List<Integer> args) {
+///     return switch (production.name()) {
+///       case "E : num"   -> args.get(0);
+///       case "E : E + E" -> args.get(0) + args.get(2);
+///       default -> throw new IllegalStateException("unknown production: " + production.name());
+///     };
+///   }
+/// }
+/// ```
+/// Or use [#of(Function, BiFunction)] to compose two lambdas inline:
+/// ```java
+/// var evaluator = Evaluator.of(
+///     terminal -> switch (terminal.name()) {
+///       case "num" -> Integer.parseInt(terminal.value());
+///       default    -> 0;
+///     },
+///     (production, args) -> switch (p.name()) {
+///       case "E : num"   -> args.get(0);
+///       case "E : E + E" -> args.get(0) + args.get(2);
+///       default -> throw new IllegalStateException("unknown production: " + production.name());
+///     }
+/// );
+/// ```
 ///
 /// @param <T> The type of the value produced by the evaluation.
 ///
@@ -43,4 +80,36 @@ public interface Evaluator<T> {
   /// @return The result of the reduction (the new value for the production non-terminal)
   ///         or `null` if the production has no value.
   T evaluate(Production production, List<T> arguments);
+
+
+  /// Creates an [Evaluator] from two functions, one for terminals and one for productions.
+  ///
+  /// This factory method is a convenient alternative to implementing the interface
+  /// with a class when the evaluation logic fits naturally as lambdas or
+  /// method references.
+  ///
+  /// @param terminalEvaluator a function that maps a [Terminal] to a value;
+  ///        corresponds to [#evaluate(Terminal)]
+  /// @param productionEvaluator a function that maps a [Production] and its
+  ///        evaluated arguments to a value; corresponds to [#evaluate(Production, List)]
+  /// @return an [Evaluator] that delegates to the two provided functions
+  /// @throws NullPointerException if either argument is `null`
+  /// @param <V> the type of value produced by the evaluation
+  static <V> Evaluator<V> of(
+      Function<? super Terminal, ? extends V> terminalEvaluator,
+      BiFunction<? super Production, ? super List<V>, ? extends V> productionEvaluator) {
+    Objects.requireNonNull(terminalEvaluator);
+    Objects.requireNonNull(productionEvaluator);
+    return new Evaluator<>() {
+      @Override
+      public V evaluate(Terminal terminal) {
+        return terminalEvaluator.apply(terminal);
+      }
+
+      @Override
+      public V evaluate(Production production, List<V> arguments) {
+        return productionEvaluator.apply(production, arguments);
+      }
+    };
+  }
 }
