@@ -466,10 +466,6 @@ public final class MetaGrammar {
       grammar = null;
     }
 
-    // LALRVerifier.verify(grammar, precedenceMap, error -> {
-    //   throw new AssertionError(error);
-    // });
-
     return new MetaGrammar(List.copyOf(rules), grammar, Collections.unmodifiableSequencedMap(precedenceMap));
   }
 
