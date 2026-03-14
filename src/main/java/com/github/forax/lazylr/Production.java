@@ -34,7 +34,7 @@ public final class Production implements PrecedenceEntity {
   public Production(NonTerminal head, List<? extends Symbol> body) {
     Objects.requireNonNull(head);
     var symbols = List.<Symbol>copyOf(body);
-    var hashCode = head.hashCode() ^ symbols.hashCode();
+    var hashCode = 31 * head.hashCode() + symbols.hashCode();
     this.head = head;
     this.body = symbols;
     this.hashCode = hashCode;
