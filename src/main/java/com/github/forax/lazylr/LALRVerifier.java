@@ -181,7 +181,8 @@ public final class LALRVerifier {
       for (var prod : grammar.productions()) {
         var body = prod.body();
         for (int i = 0; i < body.size(); i++) {
-          if (!(body.get(i) instanceof NonTerminal nt)) {
+          var symbol = body.get(i);
+          if (!(symbol instanceof NonTerminal nt)) {
             continue;
           }
           var follow = followSets.get(nt);
