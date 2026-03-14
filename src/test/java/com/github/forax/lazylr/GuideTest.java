@@ -27,20 +27,23 @@ public final class GuideTest {
     ));
     var parser = Parser.createParser(grammar, Map.of());
 
-    // compute the result
-    var input = "42";
-    var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
-      public Integer evaluate(Terminal t) {
-        System.out.println("seen terminal " + t.name());
-        return Integer.parseInt(t.value());
+    class IntEvaluator implements Evaluator<Integer> {
+      @Override
+      public Integer evaluate(Terminal terminal) {
+        System.out.println("seen terminal " + terminal.name());
+        return Integer.parseInt(terminal.value());
       }
-
-      public Integer evaluate(Production p, List<Integer> args) {
+      @Override
+      public Integer evaluate(Production production, List<Integer> args) {
         // args corresponds to the value of the symbols in the Production list (0-indexed).
-        System.out.println("seen production " + p.name() + " with " + args);
+        System.out.println("seen production " + production.name() + " with " + args);
         return args.get(0);
       }
-    });
+    }
+
+    // compute the result
+    var input = "42";
+    var result = parser.parse(lexer.tokenize(input), new IntEvaluator());
 
     assertEquals(42, result);
   }
@@ -93,25 +96,29 @@ public final class GuideTest {
     var lexer  = Lexer.createLexer(mg.tokens());
     var parser = Parser.createParser(mg.grammar(), Map.of());
 
-    var input  = "sum(42, 17)";
-    var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
-      public Integer evaluate(Terminal t) {
-        return switch (t.name()) {
-          case "num" -> Integer.parseInt(t.value());
+    class IntEvaluator implements Evaluator<Integer> {
+      @Override
+      public Integer evaluate(Terminal terminal) {
+        return switch (terminal.name()) {
+          case "num" -> Integer.parseInt(terminal.value());
           default    -> 0;
         };
       }
-      public Integer evaluate(Production p, List<Integer> args) {
-        return switch (p.name()) {
+      @Override
+      public Integer evaluate(Production production, List<Integer> args) {
+        return switch (production.name()) {
           case "E : num"          -> args.get(0);
           case "ARGS : E"         -> args.get(0);
           case "ARGS : ARGS , E"  -> args.get(0) + args.get(2);
           case "ARGS : ε"         -> 0;
           case "E : sum ( ARGS )" -> args.get(2);
-          default -> throw new IllegalStateException("unknown production: " + p.name());
+          default -> throw new IllegalStateException("unknown production: " + production.name());
         };
       }
-    });
+    }
+
+    var input  = "sum(42, 17)";
+    var result = parser.parse(lexer.tokenize(input), new IntEvaluator());
 
     assertEquals(59, result);
   }
@@ -140,22 +147,27 @@ public final class GuideTest {
     var lexer  = Lexer.createLexer(mg.tokens());
     var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
-    var input  = "1 + 2 + 3";
-    var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
-      public Integer evaluate(Terminal t) {
-        return switch (t.name()) {
-          case "num" -> Integer.parseInt(t.value());
+    class IntEvaluator implements Evaluator<Integer> {
+      @Override
+      public Integer evaluate(Terminal terminal) {
+        return switch (terminal.name()) {
+          case "num" -> Integer.parseInt(terminal.value());
           default    -> 0;
         };
       }
-      public Integer evaluate(Production p, List<Integer> args) {
-        return switch (p.name()) {
+
+      @Override
+      public Integer evaluate(Production production, List<Integer> args) {
+        return switch (production.name()) {
           case "E : num"   -> args.get(0);
           case "E : E + E" -> args.get(0) + args.get(2);
-          default -> throw new IllegalStateException("unknown production: " + p.name());
+          default -> throw new IllegalStateException("unknown production: " + production.name());
         };
       }
-    });
+    }
+
+    var input  = "1 + 2 + 3";
+    var result = parser.parse(lexer.tokenize(input), new IntEvaluator());
 
     assertEquals(6, result);
   }
@@ -186,23 +198,27 @@ public final class GuideTest {
     var lexer  = Lexer.createLexer(mg.tokens());
     var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
-    var input  = "2 + 3 * 4";
-    var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
-      public Integer evaluate(Terminal t) {
-        return switch (t.name()) {
-          case "num" -> Integer.parseInt(t.value());
+    class IntEvaluator implements Evaluator<Integer> {
+      @Override
+      public Integer evaluate(Terminal terminal) {
+        return switch (terminal.name()) {
+          case "num" -> Integer.parseInt(terminal.value());
           default    -> 0;
         };
       }
-      public Integer evaluate(Production p, List<Integer> args) {
-        return switch (p.name()) {
+      @Override
+      public Integer evaluate(Production production, List<Integer> args) {
+        return switch (production.name()) {
           case "E : num"   -> args.get(0);
           case "E : E + E" -> args.get(0) + args.get(2);
           case "E : E * E" -> args.get(0) * args.get(2);
-          default -> throw new IllegalStateException("unknown production: " + p.name());
+          default -> throw new IllegalStateException("unknown production: " + production.name());
         };
       }
-    });
+    }
+
+    var input  = "2 + 3 * 4";
+    var result = parser.parse(lexer.tokenize(input), new IntEvaluator());
 
     assertEquals(14, result);
   }
@@ -235,24 +251,28 @@ public final class GuideTest {
     var lexer  = Lexer.createLexer(mg.tokens());
     var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
-    var input  = "2 ^ 3 ^ 2";
-    var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
-      public Integer evaluate(Terminal t) {
-        return switch (t.name()) {
-          case "num" -> Integer.parseInt(t.value());
+    class IntEvaluator implements Evaluator<Integer> {
+      @Override
+      public Integer evaluate(Terminal terminal) {
+        return switch (terminal.name()) {
+          case "num" -> Integer.parseInt(terminal.value());
           default    -> 0;
         };
       }
-      public Integer evaluate(Production p, List<Integer> args) {
-        return switch (p.name()) {
+      @Override
+      public Integer evaluate(Production production, List<Integer> args) {
+        return switch (production.name()) {
           case "E : num"   -> args.get(0);
           case "E : E + E" -> args.get(0) + args.get(2);
           case "E : E * E" -> args.get(0) * args.get(2);
           case "E : E ^ E" -> (int) Math.pow(args.get(0), args.get(2));
-          default -> throw new IllegalStateException("unknown production: " + p.name());
+          default -> throw new IllegalStateException("unknown production: " + production.name());
         };
       }
-    });
+    }
+
+    var input  = "2 ^ 3 ^ 2";
+    var result = parser.parse(lexer.tokenize(input), new IntEvaluator());
 
     assertEquals(512, result);
   }
@@ -292,25 +312,28 @@ public final class GuideTest {
     var lexer  = Lexer.createLexer(mg.tokens());
     var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
-    var evaluator = new Evaluator<Integer>() {
-      public Integer evaluate(Terminal t) {
-        return switch (t.name()) {
-          case "num" -> Integer.parseInt(t.value());
+    class IntEvaluator implements Evaluator<Integer> {
+      @Override
+      public Integer evaluate(Terminal terminal) {
+        return switch (terminal.name()) {
+          case "num" -> Integer.parseInt(terminal.value());
           default    -> 0;
         };
       }
-      public Integer evaluate(Production p, List<Integer> args) {
-        return switch (p.name()) {
+      @Override
+      public Integer evaluate(Production production, List<Integer> args) {
+        return switch (production.name()) {
           case "E : num"                -> args.get(0);
           case "E : E + E"              -> args.get(0) + args.get(2);
           case "E : E * E"              -> args.get(0) * args.get(2);
           case "E : E ^ E"              -> (int) Math.pow(args.get(0), args.get(2));
           case "E : if E then E"        -> args.get(1) != 0 ? args.get(3) : 0;
           case "E : if E then E else E" -> args.get(1) != 0 ? args.get(3) : args.get(5);
-          default -> throw new IllegalStateException("unknown production: " + p.name());
+          default -> throw new IllegalStateException("unknown production: " + production.name());
         };
       }
-    };
+    }
+    var evaluator = new IntEvaluator();
 
     assertEquals(10, parser.parse(lexer.tokenize("if 1 then 10 else 20"), evaluator));
     assertEquals(20, parser.parse(lexer.tokenize("if 0 then 10 else 20"), evaluator));
@@ -328,23 +351,26 @@ public final class GuideTest {
     record UnaryMinus(Node node) implements Node {}
     record Num() implements Node {}
 
-    var evaluator = new Evaluator<Node>() {
-      public Node evaluate(Terminal t) {
-        return switch (t.name()) {
+    class NodeEvaluator implements Evaluator<Node> {
+      @Override
+      public Node evaluate(Terminal terminal) {
+        return switch (terminal.name()) {
           case "num" -> new Num();
           default -> null;
         };
       }
-      public Node evaluate(Production p, List<Node> args) {
-        return switch (p.name()) {
+      @Override
+      public Node evaluate(Production production, List<Node> args) {
+        return switch (production.name()) {
           case "E : num" -> args.getFirst();
           case "E : E - E" -> new Sub(args.get(0), args.get(2));
           case "E : E * E" -> new Mul(args.get(0), args.get(2));
           case "E : - E" -> new UnaryMinus(args.get(1));
-          default -> throw new IllegalStateException("Unexpected production: " + p.name());
+          default -> throw new IllegalStateException("Unexpected production: " + production.name());
         };
       }
-    };
+    }
+    var evaluator = new NodeEvaluator();
 
     // This is not a correct grammar, precedence of the unary minus is wrong
     var badMg = MetaGrammar.load("""
@@ -353,7 +379,7 @@ public final class GuideTest {
           /[ ]+/
         }
         precedence {
-          left: '+', '-'
+          left: '-'
           left: '*'
         }
         grammar {
@@ -377,7 +403,7 @@ public final class GuideTest {
           /[ ]+/
         }
         precedence {
-          left: '+', '-'
+          left: '-'
           left: '*'
           right: UNARY
         }

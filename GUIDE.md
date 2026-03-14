@@ -60,9 +60,7 @@ var lexer = Lexer.createLexer(List.of(
 
 var parser = Parser.createParser(grammar, Map.of());
 
-// compute the result
-var input = "42";
-var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
+class IntEvaluator implements Evaluator<Integer> {
   public Integer evaluate(Terminal t) {
     System.out.println("seen terminal " + t.name());
     return Integer.parseInt(t.value());
@@ -73,7 +71,11 @@ var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
     System.out.println("seen production " + p.name() + " with " + args);
     return args.get(0);
   }
-});
+}
+
+// compute the result
+var input = "42";
+var result = parser.parse(lexer.tokenize(input), new IntEvaluator());
 System.out.println(result);
 ```
 
@@ -173,8 +175,7 @@ LALRVerifier.verify(mg.grammar(), Map.of(), System.err::println);
 var lexer = Lexer.createLexer(mg.tokens());
 var parser = Parser.createParser(mg.grammar(), Map.of());
 
-var input = "sum(42, 17)";
-var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
+class IntEvaluator implements Evaluator<Integer> {
   public Integer evaluate(Terminal t) {
     return switch (t.name()) {
       case "num" -> Integer.parseInt(t.value());
@@ -192,7 +193,10 @@ var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
       default -> throw new IllegalStateException("unknown production " + p.name());
     };
   }
-});
+}
+
+var input = "sum(42, 17)";
+var result = parser.parse(lexer.tokenize(input), new IntEvaluator());
 System.out.println(result);
 ```
 
@@ -277,8 +281,7 @@ LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
 var lexer = Lexer.createLexer(mg.tokens());
 var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
-var input = "1 + 2 + 3";
-var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
+class IntEvaluator implements Evaluator<Integer> {
   public Integer evaluate(Terminal t) {
     return switch (t.name()) {
       case "num" -> Integer.parseInt(t.value());
@@ -296,7 +299,10 @@ var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
       default -> throw new IllegalStateException("unknown production " + p.name());
     };
   }
-});
+}
+
+var input = "1 + 2 + 3";
+var result = parser.parse(lexer.tokenize(input), new IntEvaluator());
 System.out.println(result);
 ```
 
@@ -352,14 +358,14 @@ LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), msg -> System.err.println(
 var lexer = Lexer.createLexer(mg.tokens());
 var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
-var input = "2 + 3 * 4";
-var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
+class IntEvaluator implements Evaluator<Integer> {
   public Integer evaluate(Terminal t) {
     return switch (t.name()) {
       case "num" -> Integer.parseInt(t.value());
       default -> 0;
     };
   }
+
   public Integer evaluate(Production p, List<Integer> args) {
     return switch (p.name()) {
       case "E : num"   -> args.get(0);
@@ -374,7 +380,10 @@ var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
       default -> throw new IllegalStateException("unknown production " + p.name());
     };
   }
-});
+}
+
+var input = "2 + 3 * 4";
+var result = parser.parse(lexer.tokenize(input), new IntEvaluator());
 System.out.println(result);
 ```
 
@@ -427,14 +436,14 @@ LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), msg -> System.err.println(
 var lexer = Lexer.createLexer(mg.tokens());
 var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
-var input = "2 ^ 3 ^ 2";
-var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
+class IntEvaluator implements Evaluator<Integer> {
   public Integer evaluate(Terminal t) {
     return switch (t.name()) {
       case "num" -> Integer.parseInt(t.value());
       default -> 0;
     };
   }
+  
   public Integer evaluate(Production p, List<Integer> args) {
     return switch (p.name()) {
       case "E : num"   -> args.get(0);
@@ -447,7 +456,10 @@ var result = parser.parse(lexer.tokenize(input), new Evaluator<Integer>() {
       default -> throw new IllegalStateException("unknown production " + p.name());
     };
   }
-});
+}
+
+var input = "2 ^ 3 ^ 2";
+var result = parser.parse(lexer.tokenize(input), new IntEvaluator());
 System.out.println(result);
 ```
 
@@ -512,13 +524,14 @@ LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), msg -> System.err.println(
 var lexer = Lexer.createLexer(mg.tokens());
 var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
-var evaluator = new Evaluator<Integer>() {
+class IntEvaluator implements Evaluator<Integer> {
   public Integer evaluate(Terminal t) {
     return switch (t.name()) {
       case "num" -> Integer.parseInt(t.value());
       default -> 0;
     };
   }
+
   public Integer evaluate(Production p, List<Integer> args) {
     return switch (p.name()) {
       case "E : num"                -> args.get(0);
@@ -530,11 +543,12 @@ var evaluator = new Evaluator<Integer>() {
       default -> throw new IllegalStateException("unknown production: " + p.name());
     };
   }
-};
+}
+var evaluator = new IntEvaluator();
 
 System.out.println(parser.parse(lexer.tokenize("if 1 then 10 else 20"), evaluator));
-    System.out.println(parser.parse(lexer.tokenize("if 0 then 10 else 20"), evaluator));
-    System.out.println(parser.parse(lexer.tokenize("if 1 then if 0 then 99 else 42"), evaluator));
+System.out.println(parser.parse(lexer.tokenize("if 0 then 10 else 20"), evaluator));
+System.out.println(parser.parse(lexer.tokenize("if 1 then if 0 then 99 else 42"), evaluator));
 ```
 
 ```
@@ -571,13 +585,14 @@ record Num() implements Node {}
 ```
 
 ```java
-var evaluator = new Evaluator<Node>() {
+class NodeEvaluator implements Evaluator<Node> {
   public Node evaluate(Terminal t) {
     return switch (t.name()) {
       case "num" -> new Num();
       default -> null;
     };
   }
+
   public Node evaluate(Production p, List<Node> args) {
     return switch (p.name()) {
       case "E : num"   -> args.getFirst();
@@ -587,7 +602,8 @@ var evaluator = new Evaluator<Node>() {
       default -> throw new IllegalStateException("Unexpected production: " + p.name());
     };
   }
-};
+}
+var evaluator = new NodeEvaluator();
 
 var badMg = MetaGrammar.load("""
     tokens {
