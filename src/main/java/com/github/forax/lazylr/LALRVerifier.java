@@ -2,6 +2,7 @@ package com.github.forax.lazylr;
 
 import java.util.*;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 /// Verifies whether a grammar is LALR(1), using a precedence map
 /// to resolve shift/reduce conflicts.
@@ -48,19 +49,17 @@ public final class LALRVerifier {
     var fullPrecedenceMap = Parser.complete(grammar, precedenceMap);
     var augmentedStart = buildAugmentedProduction(grammar);
     var firstSets = computeFirstSets(grammar);
-    var followSets = computeFollowSets(grammar, firstSets);
-    var automaton = buildLR0Automaton(grammar, augmentedStart);
-    var states = automaton.states();
-    var gotoTable = automaton.gotoTable();
-    buildActionTable(states, gotoTable, fullPrecedenceMap, augmentedStart, followSets, errorReporter);
+    var lr1Automaton = buildLR1Automaton(grammar, augmentedStart, firstSets);
+    var lalrAutomaton = mergeLR1States(lr1Automaton);
+    buildActionTable(lalrAutomaton.states, lalrAutomaton.gotoTable, fullPrecedenceMap, augmentedStart, errorReporter);
   }
 
   // -----------------------------------------------------------------------
   // Internal representation
   // -----------------------------------------------------------------------
 
-  /// An LR(0) item: a production with a "dot" position.
-  private record Item(Production production, int dot) {
+  /// An LR(1) item: a production with a "dot" position and a lookahead terminal.
+  private record Item(Production production, int dot, Terminal lookahead) {
 
     public boolean isComplete() {
       return dot == production.body().size();
@@ -74,9 +73,9 @@ public final class LALRVerifier {
       return production.body().get(dot);
     }
 
-    /// Advance the dot past the next symbol.
+    /// Advance the dot past the next symbol, keeping the same lookahead.
     public Item advance() {
-      return new Item(production, dot + 1);
+      return new Item(production, dot + 1, lookahead);
     }
 
     @Override
@@ -92,6 +91,7 @@ public final class LALRVerifier {
       if (dot == body.size()) {
         builder.append(" •");
       }
+      builder.append("  [").append(lookahead.name()).append("]");
       return builder.toString();
     }
   }
@@ -105,8 +105,7 @@ public final class LALRVerifier {
 
   private static Production buildAugmentedProduction(Grammar grammar) {
     var augmentedStartSymbol = new NonTerminal("__start__");
-    return new Production(augmentedStartSymbol,
-        List.of(grammar.startSymbol()));
+    return new Production(augmentedStartSymbol, List.of(grammar.startSymbol()));
   }
 
   // -----------------------------------------------------------------------
@@ -164,61 +163,59 @@ public final class LALRVerifier {
   }
 
   // -----------------------------------------------------------------------
-  // Step 3: FOLLOW sets
+  // Step 3: LR(1) closure
   // -----------------------------------------------------------------------
 
-  private static Map<NonTerminal, Set<Terminal>> computeFollowSets(Grammar grammar, Map<NonTerminal, Set<Terminal>> firstSets) {
-    var followSets = new HashMap<NonTerminal, Set<Terminal>>();
-    for (var nt : grammar.nonTerminals()) {
-      followSets.put(nt, new HashSet<>());
+  /// Compute FIRST(β a) where β is a list of symbols and a is a terminal.
+  /// If β is nullable, a is included; ε is never included in the result.
+  private static Set<Terminal> firstOfSequenceWithTerminal(List<Symbol> symbols, Terminal terminal,
+                                                           Map<NonTerminal, Set<Terminal>> firstSets) {
+    var result = firstOfSequence(symbols, firstSets);
+    if (result.remove(Terminal.EPSILON)) {
+      result.add(terminal);
     }
-    // The augmented start's follow set includes EOF
-    followSets.get(grammar.startSymbol()).add(Terminal.EOF);
+    return result;
+  }
 
-    boolean changed = true;
-    while (changed) {
-      changed = false;
-      for (var prod : grammar.productions()) {
-        var body = prod.body();
-        for (int i = 0; i < body.size(); i++) {
-          var symbol = body.get(i);
-          if (!(symbol instanceof NonTerminal nt)) {
-            continue;
-          }
-          var follow = followSets.get(nt);
-          // FIRST of everything after position i
-          var rest = body.subList(i + 1, body.size());
-          var firstRest = firstOfSequence(rest, firstSets);
-          // Add FIRST(rest) \ {ε} to FOLLOW(nt)
-          for (var terminal : firstRest) {
-            if (!terminal.equals(Terminal.EPSILON)) {
-              if (follow.add(terminal)) {
-                changed = true;
-              }
-            }
-          }
-          // If ε ∈ FIRST(rest), add FOLLOW(head) to FOLLOW(nt)
-          if (firstRest.contains(Terminal.EPSILON)) {
-            if (follow.addAll(followSets.get(prod.head()))) {
-              changed = true;
-            }
+  /// Compute the LR(1) closure of an item set.
+  /// For each item [A → α • B β, a], adds [B → • γ, b] for every b in FIRST(βa).
+  private static Set<Item> closure(Set<Item> items, Grammar grammar,
+                                   Map<NonTerminal, Set<Terminal>> firstSets) {
+    var result = new LinkedHashSet<>(items);
+    var worklist = new ArrayDeque<>(items);
+    while (!worklist.isEmpty()) {
+      var item = worklist.poll();
+      if (!(item.nextSymbol() instanceof NonTerminal nt)) {
+        continue;
+      }
+      // β is everything after the dot's symbol; a is the item's lookahead
+      var body = item.production().body();
+      var rest = body.subList(item.dot() + 1, body.size());
+      var lookaheads = firstOfSequenceWithTerminal(rest, item.lookahead(), firstSets);
+      for (var production : grammar.productionsFor(nt)) {
+        for (var lookahead : lookaheads) {
+          var newItem = new Item(production, 0, lookahead);
+          if (result.add(newItem)) {
+            worklist.add(newItem);
           }
         }
       }
     }
-    return followSets;
+    return result;
   }
 
   // -----------------------------------------------------------------------
-  // Step 4: LR(0) automaton
+  // Step 4: LR(1) automaton
   // -----------------------------------------------------------------------
 
-  private static Automaton buildLR0Automaton(Grammar grammar, Production augmentedStart) {
+  private static Automaton buildLR1Automaton(Grammar grammar, Production augmentedStart,
+                                             Map<NonTerminal, Set<Terminal>> firstSets) {
     var states = new ArrayList<Set<Item>>();
     var gotoTable = new ArrayList<Map<Symbol, Integer>>();
     var stateIndex = new HashMap<Set<Item>, Integer>();
 
-    var initial = closure(Set.of(new Item(augmentedStart, 0)), grammar);
+    // Seed: [__start__ → • S, EOF]
+    var initial = closure(Set.of(new Item(augmentedStart, 0, Terminal.EOF)), grammar, firstSets);
     states.add(initial);
     gotoTable.add(new HashMap<>());
     stateIndex.put(initial, 0);
@@ -237,7 +234,7 @@ public final class LALRVerifier {
 
       for (var entry : kernelsBySymbol.entrySet()) {
         var sym = entry.getKey();
-        var next = closure(entry.getValue(), grammar);
+        var next = closure(entry.getValue(), grammar, firstSets);
         var target = stateIndex.computeIfAbsent(next, _ -> {
           var idx = states.size();
           states.add(next);
@@ -250,28 +247,58 @@ public final class LALRVerifier {
     return new Automaton(states, gotoTable);
   }
 
-  /// Compute closure of an item set.
-  private static Set<Item> closure(Set<Item> items, Grammar grammar) {
-    var result = new LinkedHashSet<>(items);
-    var worklist = new ArrayDeque<>(items);
-    while (!worklist.isEmpty()) {
-      var item = worklist.poll();
-      var sym = item.nextSymbol();
-      if (!(sym instanceof NonTerminal nt)) {
-        continue;
+  // -----------------------------------------------------------------------
+  // Step 5: Merge LR(1) states with identical LR(0) cores → LALR(1)
+  // -----------------------------------------------------------------------
+
+  /// An LR(0) core identifies a state by its items stripped of lookaheads.
+  private record Core(Production production, int dot) {}
+
+  private static Automaton mergeLR1States(Automaton lr1) {
+    var states = lr1.states();
+
+    // Group state indices by their LR(0) core set
+    var coresMap = new LinkedHashMap<Set<Core>, List<Integer>>();
+    for (var i = 0; i < states.size(); i++) {
+      var core = states.get(i).stream()
+          .map(item -> new Core(item.production(), item.dot()))
+          .collect(Collectors.toCollection(LinkedHashSet::new));
+      coresMap.computeIfAbsent(core, _ -> new ArrayList<>()).add(i);
+    }
+
+    // Build merged states and an old-index → new-index remapping table
+    var newStates = new ArrayList<Set<Item>>();
+    var remap = new int[states.size()];
+    for (var stateIndices : coresMap.values()) {
+      var newIndex = newStates.size();
+      // Union of the lookaheads of all states sharing the same core
+      var merged = new LinkedHashSet<Item>();
+      for (var index : stateIndices) {
+        merged.addAll(states.get(index));
+        remap[index] = newIndex;
       }
-      for (var prod : grammar.productionsFor(nt)) {
-        var newItem = new Item(prod, 0);
-        if (result.add(newItem)) {
-          worklist.add(newItem);
-        }
+      newStates.add(merged);
+    }
+
+    // Rewrite the goto table using remapped indices.
+    // All states in a stateIndices share the same core transitions, so using
+    // the first representative of each stateIndices is enough.
+    var newGoto = new ArrayList<Map<Symbol, Integer>>();
+    for (var i = 0; i < newStates.size(); i++) {
+      newGoto.add(new HashMap<>());
+    }
+    var oldGoto = lr1.gotoTable();
+    for (var stateIndicies : coresMap.values()) {
+      var representative = stateIndicies.getFirst();
+      for (var entry : oldGoto.get(representative).entrySet()) {
+        newGoto.get(remap[representative]).put(entry.getKey(), remap[entry.getValue()]);
       }
     }
-    return result;
+    return new Automaton(newStates, newGoto);
   }
 
   // -----------------------------------------------------------------------
-  // Step 5: Build LALR(1) action table (detect / resolve conflicts)
+  // Step 6: Build LALR(1) action table (detect / resolve conflicts)
   // -----------------------------------------------------------------------
 
   // Action kinds
@@ -282,31 +309,26 @@ public final class LALRVerifier {
 
   private static void buildActionTable(List<Set<Item>> states, List<Map<Symbol, Integer>> gotoTable,
                                        Map<PrecedenceEntity, Precedence> precedenceMap,
-                                       Production augmentedStart, Map<NonTerminal, Set<Terminal>> followSets,
+                                       Production augmentedStart,
                                        Consumer<String> errorReporter) {
-    // action[state][terminal] = Action
     var actionTable = new ArrayList<Map<Terminal, Action>>();
-    for (int i = 0; i < states.size(); i++) {
+    for (var i = 0; i < states.size(); i++) {
       actionTable.add(new HashMap<>());
     }
 
-    for (int i = 0; i < states.size(); i++) {
+    for (var i = 0; i < states.size(); i++) {
       var state = states.get(i);
       var actions = actionTable.get(i);
       var transitions = gotoTable.get(i);
 
       for (var item : state) {
         if (item.isComplete()) {
-          // It's a reduce (or accept) item
           if (item.production().equals(augmentedStart)) {
-            // accept on EOF
+            // Accept on EOF, the augmented start item carries EOF as its lookahead
             mergeAction(actions, precedenceMap, Terminal.EOF, new Accept(), i, errorReporter);
           } else {
-            // reduce on each terminal in FOLLOW(head)
-            var follow = followSets.getOrDefault(item.production().head(), Set.of());
-            for (var lookahead : follow) {
-              mergeAction(actions, precedenceMap, lookahead, new Reduce(item.production()), i, errorReporter);
-            }
+            // Reduce on this item's lookahead
+            mergeAction(actions, precedenceMap, item.lookahead, new Reduce(item.production()), i, errorReporter);
           }
         } else {
           // Shift on terminal
@@ -339,11 +361,9 @@ public final class LALRVerifier {
     if (existing instanceof Reduce r && newAction instanceof Shift s) {
       shiftAction = s;
       reduceAction = r;
-    } else {
-      if (existing instanceof Shift s && newAction instanceof Reduce r) {
-        shiftAction = s;
-        reduceAction = r;
-      }
+    } else if (existing instanceof Shift s && newAction instanceof Reduce r) {
+      shiftAction = s;
+      reduceAction = r;
     }
 
     if (shiftAction != null) {
@@ -358,6 +378,7 @@ public final class LALRVerifier {
           "Unresolved shift/reduce conflict in state " + stateIndex +
               " on terminal '" + lookahead.name() + "'" +
               " between [" + existing + "] and [" + newAction + "]");
+      return;
     }
 
     // ---- Reduce/Reduce conflict ----
