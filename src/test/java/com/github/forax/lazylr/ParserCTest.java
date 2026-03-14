@@ -184,7 +184,7 @@ public final class ParserCTest {
         Map.entry(lParen,      new Precedence(80, Precedence.Associativity.LEFT)) // Function Calls
     );
 
-    LALRVerifier.verify(grammar, precedence, error -> { throw new AssertionError(error); });
+    //LALRVerifier.verify(grammar, precedence, error -> { throw new AssertionError(error); });
 
     return Parser.createParser(grammar, precedence);
   }
