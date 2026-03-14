@@ -44,7 +44,7 @@ import java.util.function.Function;
 ///       case "num" -> Integer.parseInt(terminal.value());
 ///       default    -> 0;
 ///     },
-///     (production, args) -> switch (p.name()) {
+///     (production, args) -> switch (production.name()) {
 ///       case "E : num"   -> args.get(0);
 ///       case "E : E + E" -> args.get(0) + args.get(2);
 ///       default -> throw new IllegalStateException("unknown production: " + production.name());
