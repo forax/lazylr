@@ -1,5 +1,7 @@
 package com.github.forax.lazylr;
 
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Objects;
 
 /// Defines the priority and grouping rules for a [PrecedenceEntity].
@@ -38,5 +40,33 @@ public record Precedence(int level, Associativity associativity) {
       throw new IllegalArgumentException("Precedence level must be non-negative");
     }
     Objects.requireNonNull(associativity);
+  }
+
+  /// Returns a copy of [precedenceMap] extended with an inferred [Precedence]
+  /// for each [Production] not already present, derived from its rightmost terminal
+  /// with known precedence.
+  static Map<PrecedenceEntity, Precedence> complete(Grammar grammar, Map<? extends PrecedenceEntity, ? extends Precedence> precedenceMap) {
+    var newPrecedenceMap = new HashMap<PrecedenceEntity, Precedence>(precedenceMap);
+    for (var production : grammar.productions()) {
+      newPrecedenceMap.computeIfAbsent(production, _ -> computePrecedence(production, newPrecedenceMap));
+    }
+    return newPrecedenceMap;
+  }
+
+  private static Precedence computePrecedence(Production production, Map<PrecedenceEntity, Precedence> precedenceMap) {
+    loop:
+    for (var symbol : production.body().reversed()) {
+      switch (symbol) {
+        case Terminal t -> {
+          var precedence = precedenceMap.get(t);
+          if (precedence != null) {
+            return precedence;
+          }
+          break loop;
+        }
+        case NonTerminal _ -> {}
+      }
+    }
+    return null;  // No precedence
   }
 }

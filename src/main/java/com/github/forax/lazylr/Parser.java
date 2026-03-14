@@ -6,7 +6,6 @@ import com.github.forax.lazylr.LRTransitionEngine.State;
 import java.util.AbstractList;
 import java.util.ArrayDeque;
 import java.util.Arrays;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -51,7 +50,7 @@ public final class Parser {
     Objects.requireNonNull(precedenceMap);
 
     // Complete the precedence map by computing the precedence of the production if necessary
-    var fullPrecedenceMap = complete(grammar, precedenceMap);
+    var fullPrecedenceMap = Precedence.complete(grammar, precedenceMap);
 
     // Compute FIRST sets
     var firstSets = LRAlgorithm.computeFirstSets(grammar);
@@ -75,36 +74,6 @@ public final class Parser {
     // Create the Parser
     return new Parser(engine, initialState, startProd);
   }
-
-
-  /// Returns a copy of [precedenceMap] extended with an inferred [Precedence]
-  /// for each [Production] not already present, derived from its rightmost terminal
-  /// with known precedence.
-  static Map<PrecedenceEntity, Precedence> complete(Grammar grammar, Map<? extends PrecedenceEntity, ? extends Precedence> precedenceMap) {
-    var newPrecedenceMap = new HashMap<PrecedenceEntity, Precedence>(precedenceMap);
-    for (var production : grammar.productions()) {
-      newPrecedenceMap.computeIfAbsent(production, _ -> computePrecedence(production, newPrecedenceMap));
-    }
-    return newPrecedenceMap;
-  }
-
-  private static Precedence computePrecedence(Production production, Map<PrecedenceEntity, Precedence> precedenceMap) {
-    loop:
-    for (var symbol : production.body().reversed()) {
-      switch (symbol) {
-        case Terminal t -> {
-          var precedence = precedenceMap.get(t);
-          if (precedence != null) {
-            return precedence;
-          }
-          break loop;
-        }
-        case NonTerminal _ -> {}
-      }
-    }
-    return null;  // No precedence
-  }
-
 
   private static Iterator<Terminal> wrapAndAppendEOF(Iterator<? extends Terminal> iterator) {
     // if it's a Tokenized (Iterator + better error reporting) wrap to a Tokenizer
