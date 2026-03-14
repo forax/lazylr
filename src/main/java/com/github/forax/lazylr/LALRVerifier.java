@@ -85,7 +85,7 @@ public final class LALRVerifier {
       var builder = new StringBuilder(production.head().name()).append(" :");
       for (var i = 0; i < body.size(); i++) {
         if (i == dot) {
-          builder.append(" .");
+          builder.append(" •");
         }
         builder.append(" ").append(body.get(i).name());
       }
