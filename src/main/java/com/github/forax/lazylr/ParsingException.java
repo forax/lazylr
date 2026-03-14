@@ -1,11 +1,9 @@
 package com.github.forax.lazylr;
 
-import java.util.Iterator;
-
 /// Exception thrown by the [Parser] during parsing.
 /// 
-/// @see Parser#parse(Iterator, ParserListener)
-/// @see Parser#parse(Iterator, Evaluator)
+/// @see Parser#parse(java.util.Iterator, ParserListener)
+/// @see Parser#parse(java.util.Iterator, Evaluator)
 public final class ParsingException extends RuntimeException {
   /// Creates a new ParsingException with a message.
   /// @param message The error message.
