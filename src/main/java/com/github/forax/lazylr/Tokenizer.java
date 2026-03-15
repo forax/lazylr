@@ -28,6 +28,10 @@ interface Tokenizer extends Iterator<Terminal> {
     private record LineColumn(int line, int column) {}
 
     /// Computes the line and column number for a given character index.
+    ///
+    /// This method scans the input from the beginning, which is O(n) in the input length.
+    /// This is acceptable because it is only called when a lexing or parsing error occurs,
+    /// and the parser stops at the first error.
     private static LineColumn lineColumn(int index, CharSequence input) {
       var line = 1;
       var column = 1;
