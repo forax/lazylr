@@ -49,7 +49,7 @@ public final class Parser {
   /// handle this production, as it is handled automatically.
   ///
   /// If the grammar contains shift/reduce conflicts resolvable by precedence,
-  /// the [precedenceMap] is used to resolve them.
+  /// the `precedenceMap` is used to resolve them.
   ///
   /// The returned [Parser] is not thread-safe.
   ///
