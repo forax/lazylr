@@ -36,13 +36,26 @@ public final class Parser {
     super();
   }
 
-  /// Creates an LR parser.
+  /// Creates a lazy LR(1) parser for the given grammar.
   ///
-  /// This factory method augments the grammar with a unique start production
-  /// (`S' -> S $`) and then create a parser on the grammar.
+  /// The returned parser computes states on demand as input is processed,
+  /// rather than building the full parse table upfront.
+  /// This means the cost of [#createParser] is low and not proportional
+  /// to the full grammar.
+  ///
+  /// The grammar is augmented with a start production `S' -> S`,
+  /// which means [ParserListener#onReduce] will fire once for that production
+  /// at the end of a successful parse. Users of [Evaluator] do not need to
+  /// handle this production, as it is handled automatically.
+  ///
+  /// If the grammar contains shift/reduce conflicts resolvable by precedence,
+  /// the [precedenceMap] is used to resolve them.
+  ///
+  /// The returned [Parser] is not thread-safe.
   ///
   /// @param grammar       The context-free grammar to parse.
-  /// @param precedenceMap A map defining priority and associativity for operators/rules.
+  /// @param precedenceMap A map defining the precedence and associativity of terminals
+  ///                      (e.g., operators) and productions.
   /// @return A parser ready to process token streams.
   /// @throws NullPointerException if grammar or precedenceMap is null.
   public static Parser createParser(Grammar grammar, Map<? extends PrecedenceEntity, ? extends Precedence> precedenceMap) {
