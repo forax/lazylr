@@ -55,7 +55,8 @@ public final class Grammar {
     }
   }
 
-  /// Returns all [Production] rules where the given [NonTerminal] is the head.
+  /// Returns all [Production] rules where the given [NonTerminal] is the head,
+  /// in declaration order.
   ///
   /// @param nonTerminal The head symbol to look up.
   /// @return An unmodifiable list of productions belonging to the symbol.
