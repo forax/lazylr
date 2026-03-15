@@ -37,6 +37,18 @@ import java.util.stream.Collectors;
 ///
 /// This class is thread-safe and can be safely shared between multiple threads.
 public final class LALRVerifier {
+  // Design note:
+  // LALRVerifier and Parser both build LR automata from the same grammar, and share
+  // concepts like FIRST sets and LR(1) closure. However, they intentionally do not
+  // share code because they have different goals and different performance requirements.
+  //
+  // Parser has to be fast: it is designed to be lazy (states are computed on
+  // demand), memory-efficient, and optimized.
+  //
+  // LALRVerifier is a development tool, called once to validate a grammar during
+  // development, not during normal execution. Its implementation prioritizes
+  // clarity and proximity to the theoretical LALR(1) construction over performance.
+  // Sharing implementation with Parser would make them both harder to evolve independently.
 
   private LALRVerifier() {
     throw new AssertionError();
