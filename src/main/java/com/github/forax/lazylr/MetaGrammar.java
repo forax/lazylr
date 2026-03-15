@@ -98,6 +98,10 @@ public final class MetaGrammar {
   /// @return the [Grammar] built from all production in the specification.
   /// @throws IllegalStateException if the grammar section is empty
   public Grammar grammar() {
+    // Design note: we do not use Optional here because an empty grammar is a corner
+    // case (you may want to use a Lexer without a Parser, in which case no grammar
+    // section is needed), and forcing all callers to unwrap an Optional would add
+    // noise for no benefit.
     if (grammar == null) {
       throw new IllegalStateException("the grammar section is empty");
     }
