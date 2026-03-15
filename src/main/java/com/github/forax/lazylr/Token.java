@@ -38,7 +38,7 @@ public final class Token {
     }
     var matcher = pattern.matcher("");
     if (matcher.groupCount() != 0) {
-      throw new IllegalArgumentException("pattern " + regex + " should not use group " + regex);
+      throw new IllegalArgumentException("pattern " + regex + " should not use groups");
     }
   }
 
