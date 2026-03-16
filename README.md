@@ -161,7 +161,7 @@ Then add Lazy LR as a dependency:
 ## Command-Line Tool
 
 In addition to being used as a library, Lazy LR ships as a standalone CLI tool
-for validating grammars, inspecting parse results and generating code.
+for validating grammars, inspecting parse results, and generating code.
 
 Download the latest release:
 [Latest Release](https://github.com/forax/lazylr/releases/latest)
@@ -177,12 +177,12 @@ java -jar lazylr.jar [--generate|--inline] <grammar> [input]
 **Validate and show railroad diagram** (default)
 
 ```bash
-java -jar lazylr.jar [--inline] grammar.txt
+java -jar lazylr.jar [--print] grammar.txt
 ```
 
-Validates the grammar for LALR(1) conflicts and prints a railroad diagram of
-its productions. With `--inline`, non-recursive non-terminals are inlined for
-a more compact diagram.
+Validates the grammar for LALR(1) conflicts and prints on stderr the LALR(1) automaton
+if there is a conflict.
+With `--print`, the automaton is printed unconditionally on stdout.
 
 **Parse an input file and show the derivation tree**
 
