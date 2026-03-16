@@ -95,10 +95,12 @@ public final class LALRVerifier {
     var firstSets = computeFirstSets(grammar);
     var lr1Automaton = buildLR1Automaton(grammar, augmentedStart, firstSets);
     var lalrAutomaton = mergeLR1States(lr1Automaton);
-    printAutomaton(lalrAutomaton, augmentedStart, out);
-    //var fullPrecedenceMap = Precedence.complete(grammar, precedenceMap);
-    //buildActionTable(lalrAutomaton.states, lalrAutomaton.gotoTable, fullPrecedenceMap, augmentedStart);
+    var fullPrecedenceMap = Precedence.complete(grammar, precedenceMap);
+    var actionTable =
+        buildActionTable(lalrAutomaton.states, lalrAutomaton.gotoTable, fullPrecedenceMap, augmentedStart);
+    printAutomaton(lalrAutomaton, augmentedStart, actionTable, out);
   }
+
 
   // -----------------------------------------------------------------------
   // Internal representation
@@ -483,7 +485,7 @@ public final class LALRVerifier {
 
 
 
-  private static void printAutomaton(Automaton automaton, Production augmentedStart, PrintStream out) {
+  private static void printAutomaton(Automaton automaton, Production augmentedStart, List<Map<Terminal, Result>> actionTable, PrintStream out) {
     var states = automaton.states();
     var gotoTable = automaton.gotoTable();
 
