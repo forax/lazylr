@@ -9,17 +9,17 @@ import java.util.Objects;
 
 /// Entry point for the `lazylr` command-line tool.
 /// This tool processes a grammar file and optionally an input file:
-/// - With only a grammar file: validates the grammar and prints its **railroad diagram**.
+/// - With only a grammar file: validates the grammar and optionally prints its **automaton**.
 /// - With a grammar file and an input file: validates the grammar, parses the input,
 ///   and prints the **derivation tree**.
 ///
-/// - With `--inline` and a grammar file: ask for the compact **railroad diagram**.
+/// - With `--print` and a grammar file: print the **automaton** inconditionnaly.
 /// - With `--generate` and a grammar file: generates Java source code for a
 ///   `createGrammar()` static method that reconstructs the grammar programmatically.
 ///
 /// Usage:
 /// ```
-/// lazylr [--generate|--inline] <grammar> [input]
+/// lazylr [--generate|--print] <grammar> [input]
 /// ```
 public final class Main {
   private Main() {
@@ -29,7 +29,7 @@ public final class Main {
   /// Prints usage instructions.
   private static void usage() {
     System.err.println("""
-      Usage: lazylr [--generate|--inline] <grammar> [input]
+      Usage: lazylr [--generate|--print] <grammar> [input]
       
       Arguments:
         <grammar>  path to the grammar file to validate
@@ -37,11 +37,11 @@ public final class Main {
       
       Options:
         --generate  generate Java source code for a createGrammar() static method
-        --inline    inline non-recursive non-terminal in the railroad diagram
+        --print    inconditionnaly print the automaton
       
       Examples:
-        lazylr grammar.txt              # validate grammar and print railroad diagram
-        lazylr --inline grammar.txt     # as above, the diagram is more compact
+        lazylr grammar.txt              # validate grammar and print the automaton if there is a conflict
+        lazylr --print grammar.txt      # as above, but the automaton is printed unconditionnaly
         lazylr --generate grammar.txt   # generate Java code that builds the grammar
         lazylr grammar.txt input.txt    # parse input and print derivation tree
       
@@ -85,20 +85,20 @@ public final class Main {
 
   private record CmdLineArgument (
       boolean generate,
-      boolean inline,
+      boolean print,
       Path grammarPath,
       Path inputPath) {
   }
 
   private static CmdLineArgument parse(String[] args) {
     var generate = false;
-    var inline = false;
+    var print = false;
     var grammarPath = (Path) null;
     var inputPath  = (Path) null;
     for (var arg : args) {
       switch (arg) {
         case "--generate" -> generate = true;
-        case "--inline" -> inline = true;
+        case "--print" -> print = true;
         default -> {
           if (grammarPath == null) {
             grammarPath = Path.of(arg);
@@ -112,12 +112,12 @@ public final class Main {
         }
       }
     }
-    if (grammarPath == null ||                          // grammarPath is mandatory
-        (inline && generate) ||                         // inline and generate are mutually exclusive
-        (inputPath != null && (inline || generate))) {  // inline/generate are only valid with no input
+    if (grammarPath == null ||                         // grammarPath is mandatory
+        (print && generate) ||                         // print and generate are mutually exclusive
+        (inputPath != null && (print || generate))) {  // print/generate are only valid with no input
       return null;
     }
-    return new CmdLineArgument(generate, inline, grammarPath, inputPath);
+    return new CmdLineArgument(generate, print, grammarPath, inputPath);
   }
 
   static void main(String[] args) {
@@ -145,10 +145,10 @@ public final class Main {
       return;
     }
 
-    var conflicts = new ArrayList<String>();
-    LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), conflicts::add);
-    if (!conflicts.isEmpty()) {
-      conflicts.forEach(System.err::println);
+    var printStream = cmdLineArgument.print ? System.out : System.err;
+    var verified = LALRVerifier.verify(mg.grammar(), mg.precedenceMap(),
+        printStream, cmdLineArgument.print, System.err::println);
+    if (!verified) {
       System.exit(2);
       return;
     }
@@ -159,7 +159,6 @@ public final class Main {
     }
 
     if (cmdLineArgument.inputPath == null) {
-      System.out.print(RailroadDiagram.generate(mg.grammar(), cmdLineArgument.inline));
       return;
     }
 

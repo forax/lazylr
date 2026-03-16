@@ -69,14 +69,14 @@ public class MainTest {
     public void noArgumentsShouldPrintUsageAndExit1(@TempDir Path tempDir) throws Exception {
       var result = runProcess(tempDir);
       assertEquals(1, result.exitCode());
-      assertTrue(result.stderr().contains("lazylr"));
+      assertTrue(result.stderr.contains("lazylr"));
     }
 
     @Test
     public void invalidNumberOfArgumentsShouldPrintUsageAndExit1(@TempDir Path tempDir) throws Exception {
       var result = runProcess(tempDir, Path.of("foo1"), Path.of("foo2"), Path.of("foo3"));
       assertEquals(1, result.exitCode());
-      assertTrue(result.stderr().contains("lazylr"));
+      assertTrue(result.stderr.contains("lazylr"));
     }
   }
 
@@ -88,7 +88,7 @@ public class MainTest {
     public void missingGrammarFileShouldExit1(@TempDir Path tempDir) throws Exception {
       var result = runProcess(tempDir, tempDir.resolve("does_not_exist.txt"));
       assertEquals(1, result.exitCode());
-      assertTrue(result.stderr().contains("grammar"));
+      assertTrue(result.stderr.contains("grammar"));
     }
 
     @Test
@@ -98,7 +98,7 @@ public class MainTest {
 
       var result = runProcess(tempDir, dir);
       assertEquals(1, result.exitCode());
-      assertTrue(result.stderr().contains("grammar"));
+      assertTrue(result.stderr.contains("grammar"));
     }
   }
 
@@ -113,7 +113,7 @@ public class MainTest {
 
       var result = runProcess(tempDir, grammar);
       assertEquals(1, result.exitCode());
-      assertTrue(result.stderr().contains("grammar"));
+      assertTrue(result.stderr.contains("grammar"));
     }
 
     @Test
@@ -161,8 +161,8 @@ public class MainTest {
 
       var result = runProcess(tempDir, grammar);
       assertEquals(2, result.exitCode());
-      assertTrue(result.stdout().isEmpty());
-      assertTrue(result.stderr().contains("conflict") || result.stderr().contains("reduce/reduce"));
+      assertTrue(result.stdout.isEmpty());
+      assertTrue(result.stderr.contains("conflict") || result.stderr.contains("reduce/reduce"));
     }
 
     @Test
@@ -180,8 +180,8 @@ public class MainTest {
 
       var result = runProcess(tempDir, grammar);
       assertEquals(2, result.exitCode());
-      assertTrue(result.stdout().isEmpty());
-      assertTrue(result.stderr().contains("conflict") || result.stderr().contains("shift/reduce"));
+      assertTrue(result.stdout.isEmpty());
+      assertTrue(result.stderr.contains("conflict") || result.stderr.contains("shift/reduce"));
     }
   }
 
@@ -203,11 +203,8 @@ public class MainTest {
 
       var result = runProcess(tempDir, grammar);
       assertEquals(0, result.exitCode());
-      assertTrue(result.stderr().isEmpty());
-      assertEquals("""
-          E:
-          ○─[num]─►
-          """, result.stdout());
+      assertTrue(result.stderr.isEmpty());
+      assertTrue(result.stdout.isEmpty());
     }
 
     @Test
@@ -230,13 +227,8 @@ public class MainTest {
 
       var result = runProcess(tempDir, grammar);
       assertEquals(0, result.exitCode());
-      assertTrue(result.stderr().isEmpty());
-      assertEquals("""
-          E:
-          ○─┌─<E>──[+]──<E>─┐─►
-            ├─<E>──[*]──<E>─┤
-            └─[num]─────────┘
-          """, result.stdout());
+      assertTrue(result.stderr.isEmpty());
+      assertTrue(result.stdout.isEmpty());
     }
   }
 
@@ -259,7 +251,7 @@ public class MainTest {
 
       var result = runProcess(tempDir, grammar, input);
       assertEquals(1, result.exitCode());
-      assertTrue(result.stderr().contains("input"));
+      assertTrue(result.stderr.contains("input"));
     }
 
     @Test
@@ -278,7 +270,7 @@ public class MainTest {
 
       var result = runProcess(tempDir, grammar, dir);
       assertEquals(1, result.exitCode());
-      assertTrue(result.stderr().contains("input"));
+      assertTrue(result.stderr.contains("input"));
     }
   }
 
@@ -306,7 +298,7 @@ public class MainTest {
 
       var result = runProcess(tempDir, grammar, input);
       assertEquals(1, result.exitCode());
-      assertTrue(result.stderr().contains("input"));
+      assertTrue(result.stderr.contains("input"));
     }
 
     @Test
@@ -330,7 +322,7 @@ public class MainTest {
 
       var result = runProcess(tempDir, grammar, input);
       assertEquals(1, result.exitCode());
-      assertTrue(result.stderr().contains("input"));
+      assertTrue(result.stderr.contains("input"));
     }
   }
 
@@ -352,11 +344,11 @@ public class MainTest {
 
       var result = runProcess(tempDir, grammar, input);
       assertEquals(0, result.exitCode());
-      assertTrue(result.stderr().isEmpty());
+      assertTrue(result.stderr.isEmpty());
       assertEquals("""
           └── <E>
               └── [num=42]
-          """, result.stdout());
+          """, result.stdout);
     }
 
     @Test
@@ -380,7 +372,7 @@ public class MainTest {
 
       var result = runProcess(tempDir, grammar, input);
       assertEquals(0, result.exitCode());
-      assertTrue(result.stderr().isEmpty());
+      assertTrue(result.stderr.isEmpty());
       assertEquals("""
           └── <E>
               ├── <E>
@@ -388,7 +380,7 @@ public class MainTest {
               ├── [+]
               └── <E>
                   └── [num=2]
-          """, result.stdout());
+          """, result.stdout);
     }
 
     @Test
@@ -412,7 +404,7 @@ public class MainTest {
 
       var result = runProcess(tempDir, grammar, input);
       assertEquals(0, result.exitCode());
-      assertTrue(result.stderr().isEmpty());
+      assertTrue(result.stderr.isEmpty());
       assertEquals("""
           └── <E>
               ├── <E>
@@ -424,7 +416,7 @@ public class MainTest {
               ├── [+]
               └── <E>
                   └── [num=4]
-          """, result.stdout());
+          """, result.stdout);
     }
 
     @Test
@@ -448,7 +440,7 @@ public class MainTest {
 
       var result = runProcess(tempDir, grammar, input);
       assertEquals(0, result.exitCode());
-      assertTrue(result.stderr().isEmpty());
+      assertTrue(result.stderr.isEmpty());
       assertEquals("""
           └── <E>
               ├── <E>
@@ -460,7 +452,7 @@ public class MainTest {
                   ├── [^]
                   └── <E>
                       └── [num=4]
-          """, result.stdout());
+          """, result.stdout);
     }
   }
 
@@ -472,7 +464,7 @@ public class MainTest {
     public void generateWithNoGrammarFileShouldExit1(@TempDir Path tempDir) throws Exception {
       var result = runProcess(tempDir, "--generate");
       assertEquals(1, result.exitCode());
-      assertTrue(result.stderr().contains("lazylr"));
+      assertTrue(result.stderr.contains("lazylr"));
     }
 
     @Test
@@ -493,7 +485,7 @@ public class MainTest {
       var result = runProcess(tempDir,
           "--generate", grammar, input.toString());
       assertEquals(1, result.exitCode());
-      assertTrue(result.stderr().contains("lazylr"));
+      assertTrue(result.stderr.contains("lazylr"));
     }
 
     @Test
@@ -501,7 +493,7 @@ public class MainTest {
       var result = runProcess(tempDir,
           "--generate", tempDir.resolve("does_not_exist.txt").toString());
       assertEquals(1, result.exitCode());
-      assertTrue(result.stderr().contains("grammar"));
+      assertTrue(result.stderr.contains("grammar"));
     }
 
     @Test
@@ -518,7 +510,7 @@ public class MainTest {
 
       var result = runProcess(tempDir, "--generate", grammar);
       assertEquals(0, result.exitCode());
-      assertEquals("", result.stderr());
+      assertEquals("", result.stderr);
     }
 
     @Test
@@ -553,7 +545,7 @@ public class MainTest {
 
       var result = runProcess(tempDir, "--generate", grammar);
       assertEquals(0, result.exitCode());
-      assertEquals(JavaCodeGenerator.generate(MetaGrammar.load(grammarText)), result.stdout());
+      assertEquals(JavaCodeGenerator.generate(MetaGrammar.load(grammarText)), result.stdout);
     }
 
     @Test
@@ -576,7 +568,7 @@ public class MainTest {
 
       var result = runProcess(tempDir, "--generate", grammar);
       assertEquals(0, result.exitCode());
-      assertEquals(JavaCodeGenerator.generate(MetaGrammar.load(grammarText)), result.stdout());
+      assertEquals(JavaCodeGenerator.generate(MetaGrammar.load(grammarText)), result.stdout);
     }
 
     @Test
@@ -600,42 +592,24 @@ public class MainTest {
 
       var result = runProcess(tempDir, "--generate", grammar);
       assertEquals(0, result.exitCode());
-      assertEquals(JavaCodeGenerator.generate(MetaGrammar.load(grammarText)), result.stdout());
-    }
-
-    @Test
-    public void generateAndInlineTogetherShouldExit1(@TempDir Path tempDir) throws Exception {
-      // Combining --generate and --inline is not a defined mode and must be rejected.
-      var grammar = tempDir.resolve("grammar.txt");
-      Files.writeString(grammar, """
-          tokens {
-            num: /[0-9]+/
-          }
-          grammar {
-            E: num
-          }
-          """);
-
-      var result = runProcess(tempDir,
-          "--generate", "--inline", grammar);
-      assertEquals(1, result.exitCode());
+      assertEquals(JavaCodeGenerator.generate(MetaGrammar.load(grammarText)), result.stdout);
     }
   }
 
 
   @Nested
-  public class InlineOption {
+  public class PrintOption {
 
     @Test
     public void inlineWithNoGrammarFileShouldExit1(@TempDir Path tempDir) throws Exception {
-      var result = runProcess(tempDir, "--inline");
+      var result = runProcess(tempDir, "--print");
       assertEquals(1, result.exitCode());
-      assertTrue(result.stderr().contains("lazylr"));
+      assertTrue(result.stderr.contains("lazylr"));
     }
 
     @Test
-    public void inlineWithInputFileShouldExit1(@TempDir Path tempDir) throws Exception {
-      // --inline is incompatible with a second (input) path argument
+    public void printWithInputFileShouldExit1(@TempDir Path tempDir) throws Exception {
+      // --print is incompatible with a second (input) path argument
       var grammar = tempDir.resolve("grammar.txt");
       var input   = tempDir.resolve("input.txt");
       Files.writeString(grammar, """
@@ -649,22 +623,21 @@ public class MainTest {
       Files.writeString(input, "42");
 
       var result = runProcess(tempDir,
-          "--inline", grammar, input);
+          "--print", grammar, input);
       assertEquals(1, result.exitCode());
-      assertTrue(result.stderr().contains("lazylr"));
+      assertTrue(result.stderr.contains("lazylr"));
     }
 
     @Test
-    public void inlineWithMissingGrammarFileShouldExit1(@TempDir Path tempDir) throws Exception {
+    public void printWithMissingGrammarFileShouldExit1(@TempDir Path tempDir) throws Exception {
       var result = runProcess(tempDir,
-          "--inline", tempDir.resolve("does_not_exist.txt"));
+          "--print", tempDir.resolve("does_not_exist.txt"));
       assertEquals(1, result.exitCode());
-      assertTrue(result.stderr().contains("grammar"));
+      assertTrue(result.stderr.contains("grammar"));
     }
 
     @Test
-    public void inlineWithConflictShouldExit2(@TempDir Path tempDir) throws Exception {
-      // --inline still runs the LALR verifier; a conflicting grammar must exit 2.
+    public void printWithConflictShouldExit2(@TempDir Path tempDir) throws Exception {
       var grammar = tempDir.resolve("grammar.txt");
       Files.writeString(grammar, """
           tokens {
@@ -676,52 +649,125 @@ public class MainTest {
           }
           """);
 
-      var result = runProcess(tempDir, "--inline", grammar);
+      var result = runProcess(tempDir, "--print", grammar);
       assertEquals(2, result.exitCode());
-      assertEquals("", result.stdout());
-    }
-
-    @Test
-    public void inlineShouldProduceNoStderr(@TempDir Path tempDir) throws Exception {
-      var grammar = tempDir.resolve("grammar.txt");
-      Files.writeString(grammar, """
-          tokens {
-            num: /[0-9]+/
-          }
-          grammar {
-            E: num
-          }
-          """);
-
-      var result = runProcess(tempDir, "--inline", grammar);
-      assertEquals(0, result.exitCode());
-      assertEquals("", result.stderr());
-    }
-
-    @Test
-    public void inlineMinimalGrammar(@TempDir Path tempDir) throws Exception {
-      // Single production E → num: inlining cannot expand anything further,
-      // so the diagram is identical to the non-inline output.
-      var grammar = tempDir.resolve("grammar.txt");
-      Files.writeString(grammar, """
-          tokens {
-            num: /[0-9]+/
-          }
-          grammar {
-            E: num
-          }
-          """);
-
-      var result = runProcess(tempDir, "--inline", grammar);
-      assertEquals(0, result.exitCode());
       assertEquals("""
-          E:
-          ○─[num]─►
-          """, result.stdout());
+          Unresolved shift/reduce conflict in state 4 on terminal '+' between reduce E : E + E, shift, shift
+          """, result.stderr);
+      assertEquals("""
+          ── State 0 ─────────────────────────────────
+             E' :  • E
+             E :   • num
+             E :   • E + E
+            ······································
+             goto( num                  ) → 2
+             goto( E                    ) → 1
+          
+          ── State 1 ─────────────────────────────────
+             E' :  E •
+             E :   E • + E
+            ······································
+             goto( +                    ) → 3
+             accept()                     on [$]
+          
+          ── State 2 ─────────────────────────────────
+             E :  num •
+            ······································
+             reduce( E : num            ) on [$, +]
+          
+          ── State 3 ─────────────────────────────────
+             E :  • num
+             E :  E + • E
+             E :  • E + E
+            ······································
+             goto( num                  ) → 2
+             goto( E                    ) → 4
+          
+          ── State 4 ─────────────────────────────────
+             E :  E + E •
+             E :  E • + E
+            ······································
+             goto( +                    ) → 3 🔥
+             reduce( E : E + E          ) on [$, + 🔥]
+          
+          """, result.stdout);
     }
 
     @Test
-    public void inlineProducesDifferentOutputThanDefault(@TempDir Path tempDir) throws Exception {
+    public void printShouldProduceNoStderr(@TempDir Path tempDir) throws Exception {
+      var grammar = tempDir.resolve("grammar.txt");
+      Files.writeString(grammar, """
+          tokens {
+            num: /[0-9]+/
+          }
+          grammar {
+            E: num
+          }
+          """);
+
+      var result = runProcess(tempDir, "--print", grammar);
+      assertEquals(0, result.exitCode());
+      assertEquals("", result.stderr);
+      assertEquals("""
+          ── State 0 ─────────────────────────────────
+             E' :  • E
+             E :   • num
+            ······································
+             goto( num                  ) → 2
+             goto( E                    ) → 1
+          
+          ── State 1 ─────────────────────────────────
+             E' :  E •
+            ······································
+             accept()                     on [$]
+          
+          ── State 2 ─────────────────────────────────
+             E :  num •
+            ······································
+             reduce( E : num            ) on [$]
+          
+          """, result.stdout);
+    }
+
+    @Test
+    public void printMinimalGrammar(@TempDir Path tempDir) throws Exception {
+      // Single production E → num
+      var grammar = tempDir.resolve("grammar.txt");
+      Files.writeString(grammar, """
+          tokens {
+            num: /[0-9]+/
+          }
+          grammar {
+            E: num
+          }
+          """);
+
+      var result = runProcess(tempDir, "--print", grammar);
+      assertEquals(0, result.exitCode());
+      assertTrue(result.stderr.isEmpty());
+      assertEquals("""
+          ── State 0 ─────────────────────────────────
+             E' :  • E
+             E :   • num
+            ······································
+             goto( num                  ) → 2
+             goto( E                    ) → 1
+          
+          ── State 1 ─────────────────────────────────
+             E' :  E •
+            ······································
+             accept()                     on [$]
+          
+          ── State 2 ─────────────────────────────────
+             E :  num •
+            ······································
+             reduce( E : num            ) on [$]
+          
+          """, result.stdout);
+    }
+
+    @Test
+    public void printProducesDifferentOutputThanDefault(@TempDir Path tempDir) throws Exception {
       var grammar = tempDir.resolve("grammar.txt");
       Files.writeString(grammar, """
           tokens {
@@ -738,15 +784,15 @@ public class MainTest {
           """);
 
       var defaultResult = runProcess(tempDir,           grammar);
-      var inlineResult  = runProcess(tempDir, "--inline", grammar);
+      var inlineResult  = runProcess(tempDir, "--print", grammar);
 
       assertEquals(0, defaultResult.exitCode());
       assertEquals(0, inlineResult.exitCode());
-      assertNotEquals(defaultResult.stdout(), inlineResult.stdout());
+      assertNotEquals(defaultResult.stdout, inlineResult.stdout);
     }
 
     @Test
-    public void inlineAndGenerateTogetherShouldExit1(@TempDir Path tempDir) throws Exception {
+    public void printAndGenerateTogetherShouldExit1(@TempDir Path tempDir) throws Exception {
       var grammar = tempDir.resolve("grammar.txt");
       Files.writeString(grammar, """
           tokens {
@@ -758,7 +804,7 @@ public class MainTest {
           """);
 
       var result = runProcess(tempDir,
-          "--inline", "--generate", grammar);
+          "--print", "--generate", grammar);
       assertEquals(1, result.exitCode());
     }
   }
