@@ -123,6 +123,10 @@ final class LRAlgorithm {
   /// @param grammar The grammar to analyze.
   /// @return A mapping from each [Symbol] to its set of starting [Terminal]s.
   public static Map<Symbol, Set<Terminal>> computeFirstSets(Grammar grammar) {
+    // Design Note: this is the textbook algorithm for computing FIRST sets.
+    // Worst case complexity is O(n2) where n is the number of productions.
+    // Crude testing shows that it's good enough for our purposes.
+
     Objects.requireNonNull(grammar);
 
     // Initialize: FIRST(terminal) is {terminal}
