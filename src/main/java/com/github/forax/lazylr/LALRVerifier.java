@@ -13,12 +13,13 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.groupingBy;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toMap;
 import static java.util.stream.Collectors.toSet;
 
 /// Verifies whether a grammar is LALR(1), using a precedence map
@@ -68,10 +69,33 @@ public final class LALRVerifier {
   /// @param grammar       the grammar to verify.
   /// @param precedenceMap maps terminals and productions to their precedence;
   ///                      used to resolve shift/reduce conflicts.
-  /// @param errorReporter report conflicts error messages.
+  /// @param errorReporter called once per unresolved conflict with a human-readable
+  ///                      description of the conflict.
+  /// @return `true` if the grammar is LALR(1), `false` otherwise.
   /// @throws NullPointerException if `grammar`, `precedenceMap` or `errorReporter` is null.
-  public static void verify(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap,
+  public static boolean verify(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap,
                             Consumer<String> errorReporter) {
+    return verify(grammar, precedenceMap, null, false, errorReporter);
+  }
+
+  /// Verifies that the grammar is LALR(1) (possibly with precedence-based
+  /// conflict resolution), optionally printing the LALR state automaton.
+  ///
+  /// @param grammar       the grammar to verify.
+  /// @param precedenceMap maps terminals and productions to their precedence;
+  ///                      used to resolve shift/reduce conflicts.
+  /// @param out           the print stream to write the automaton to, or `null`
+  ///                      to disable printing.
+  /// @param alwaysPrint   if `true`, the automaton is printed unconditionally;
+  ///                      if `false`, it is printed only when conflicts are detected.
+  ///                      Ignored if `out` is `null`.
+  /// @param errorReporter called once per unresolved conflict with a human-readable
+  ///                      description of the conflict.
+  /// @return `true` if the grammar is LALR(1), `false` if conflicts remain after
+  ///         precedence-based resolution.
+  /// @throws NullPointerException if `grammar`, `precedenceMap` or `errorReporter` is null.
+  public static boolean verify(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap,
+                            /*nullable*/ PrintStream out, boolean alwaysPrint, Consumer<String> errorReporter) {
     Objects.requireNonNull(grammar);
     Objects.requireNonNull(precedenceMap);
     Objects.requireNonNull(errorReporter);
@@ -82,23 +106,11 @@ public final class LALRVerifier {
     var fullPrecedenceMap = Precedence.complete(grammar, precedenceMap);
     var actionTable =
         buildActionTable(lalrAutomaton.states, lalrAutomaton.gotoTable, fullPrecedenceMap, augmentedStart);
-    reportConflicts(actionTable, errorReporter);
-  }
-
-  /// Prints the LALR state graph to the terminal.
-  /// For each state, displays all LR items with aligned dots, followed by the goto table.
-  public static void printAutomaton(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap,
-                                    PrintStream out) {
-    Objects.requireNonNull(grammar);
-    Objects.requireNonNull(precedenceMap);
-    var augmentedStart = buildAugmentedProduction(grammar);
-    var firstSets = computeFirstSets(grammar);
-    var lr1Automaton = buildLR1Automaton(grammar, augmentedStart, firstSets);
-    var lalrAutomaton = mergeLR1States(lr1Automaton);
-    var fullPrecedenceMap = Precedence.complete(grammar, precedenceMap);
-    var actionTable =
-        buildActionTable(lalrAutomaton.states, lalrAutomaton.gotoTable, fullPrecedenceMap, augmentedStart);
-    printAutomaton(lalrAutomaton, augmentedStart, actionTable, out);
+    var conflicts = reportConflicts(actionTable, errorReporter);
+    if (out != null && (alwaysPrint || conflicts)) {
+      printAutomaton(lalrAutomaton, augmentedStart, actionTable, out);
+    }
+    return !conflicts;
   }
 
 
@@ -310,7 +322,7 @@ public final class LALRVerifier {
     for (var i = 0; i < states.size(); i++) {
       var core = states.get(i).stream()
           .map(item -> new Core(item.production(), item.dot()))
-          .collect(Collectors.toCollection(LinkedHashSet::new));
+          .collect(toCollection(LinkedHashSet::new));
       coresMap.computeIfAbsent(core, _ -> new ArrayList<>()).add(i);
     }
 
@@ -391,7 +403,7 @@ public final class LALRVerifier {
       }
 
       var resultMap = conflictMap.entrySet().stream()
-          .collect(Collectors.toMap(
+          .collect(toMap(
               Map.Entry::getKey,
               e -> resolveConflicts(e.getKey(), e.getValue(), precedenceMap)));
       actionTable.add(resultMap);
@@ -440,13 +452,15 @@ public final class LALRVerifier {
     return new Result(actions, theShift);
   }
 
-  private static void reportConflicts(List<Map<Terminal, Result>> actionTable, Consumer<String> errorReporter) {
+  private static boolean reportConflicts(List<Map<Terminal, Result>> actionTable, Consumer<String> errorReporter) {
+    boolean conflicts = false;
     for (var i = 0; i < actionTable.size(); i++) {
       var actionMap = actionTable.get(i);
       for (var entry : actionMap.entrySet()) {
         var lookahead = entry.getKey();
         var result = entry.getValue();
         if (result.winner() == null) {  // conflict
+          conflicts = true;
           var hasShift = result.actions.stream().anyMatch(a -> a instanceof Shift);
           var conflictName = hasShift ? "shift/reduce" : "reduce/reduce";
           errorReporter.accept(
@@ -458,10 +472,11 @@ public final class LALRVerifier {
                     case Reduce(Production production) -> "reduce " + production.name();
                     case Accept _ -> throw new AssertionError();
                   })
-                  .collect(Collectors.joining(", ")));
+                  .collect(joining(", ")));
         }
       }
     }
+    return conflicts;
   }
 
   private static Action resolveShiftReduceConflict(Action shiftAction, Action reduceAction,
@@ -485,13 +500,15 @@ public final class LALRVerifier {
 
 
 
-  private static void printAutomaton(Automaton automaton, Production augmentedStart, List<Map<Terminal, Result>> actionTable, PrintStream out) {
+  private static void printAutomaton(Automaton automaton, Production augmentedStart,
+                                     List<Map<Terminal, Result>> actionTable, PrintStream out) {
     var states = automaton.states();
     var gotoTable = automaton.gotoTable();
 
     for (var i = 0; i < states.size(); i++) {
       var state = states.get(i);
       var transitions = gotoTable.get(i);
+      var stateActions = actionTable.get(i);
 
       // -- State header
       out.println("── State " + i + " " + "─".repeat(Math.max(0, 40 - ("State " + i).length())));
@@ -541,8 +558,24 @@ public final class LALRVerifier {
           .sorted(Map.Entry.comparingByKey(
               Comparator.<Symbol>comparingInt(s -> s instanceof Terminal ? 0 : 1)
                   .thenComparing(Symbol::name)))
-          .forEach(e ->
-              out.printf("   goto( %-20s ) → %d%n", e.getKey().name(), e.getValue()));
+          .forEach(e -> {
+            var symbol = e.getKey();
+            var target = e.getValue();
+            switch (symbol) {
+              case Terminal terminal -> {
+                var result = stateActions.get(terminal);
+                var suffix = switch (result.winner) {
+                  case null -> " 🔥";      // unresolved conflict
+                  case Shift _ -> "";
+                  case Reduce _ -> " ❌";  // shift lost to reduce via precedence
+                  case Accept _ -> throw new AssertionError();
+                };
+                out.printf("   goto( %-20s ) → %d%s\n", terminal.name(), target, suffix);
+              }
+              case NonTerminal nonTerminal ->
+                out.printf("   goto( %-20s ) → %d\n", nonTerminal.name(), target);
+            }
+          });
 
       // -- Reduce / accept transitions
       // Group complete items by production, collecting their lookaheads
@@ -557,18 +590,30 @@ public final class LALRVerifier {
           .sorted(Map.Entry.comparingByKey(Comparator.comparing(k -> k.production().name())))
           .forEach(entry -> {
             var key = entry.getKey();
-            var lookaheads = entry.getValue().stream()
-                .map(Terminal::name)
-                .sorted()
-                .collect(joining(", "));
+            var terminals = entry.getValue();
             if (key.isAccept()) {
-              out.printf("   accept()                     on [%s]%n", lookaheads);
+              var lookaheads = terminals.stream()
+                  .map(Terminal::name)
+                  .sorted()
+                  .collect(joining(", "));
+              out.printf("   accept()                     on [%s]\n", lookaheads);
             } else {
               var prod = key.production();
-              var prodStr = prod.head().name() + " → "
-                  + (prod.body().isEmpty() ? "ε"
-                  : prod.body().stream().map(Symbol::name).collect(joining(" ")));
-              out.printf("   reduce( %-18s ) on [%s]%n", prodStr, lookaheads);
+              var annotatedLookaheads = terminals.stream()
+                  .sorted(Comparator.comparing(Terminal::name))
+                  .map(lookahead -> {
+                    var result = stateActions.get(lookahead);
+                    var suffix = switch (result.winner()) {
+                      case null -> " 🔥";      // unresolved conflict
+                      case Reduce(Production production) when production.equals(prod) -> "";
+                      case Reduce _ -> " ❌";  // reduce lost to shift via precedence
+                      case Shift _ -> "";
+                      case Accept _ -> throw new AssertionError();
+                    };
+                    return lookahead.name() + suffix;
+                  })
+                  .collect(joining(", "));
+              out.printf("   reduce( %-18s ) on [%s]\n", prod.name(), annotatedLookaheads);
             }
           });
 

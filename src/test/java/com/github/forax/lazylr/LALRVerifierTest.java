@@ -1,9 +1,9 @@
 package com.github.forax.lazylr;
 
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.util.List;
 import java.util.Map;
 import java.util.function.Consumer;
@@ -247,5 +247,322 @@ public final class LALRVerifierTest {
     ));
 
     LALRVerifier.verify(grammar, Map.of(), ERROR_REPORTER);
+  }
+
+
+
+  private static String verifyAndDump(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap) {
+    var buf = new ByteArrayOutputStream();
+    var out = new PrintStream(buf);
+    LALRVerifier.verify(grammar, precedenceMap, out, true, _ -> {});
+    return buf.toString();
+  }
+
+  @Test
+  public void verifyAndDumpSingleProduction() {
+    // E → num
+    var E   = new NonTerminal("E");
+    var NUM = new Terminal("num");
+
+    var pNum    = new Production(E, List.of(NUM));
+    var grammar = new Grammar(E, List.of(pNum));
+
+    var output = verifyAndDump(grammar, Map.of());
+
+    assertEquals("""
+        ── State 0 ─────────────────────────────────
+           E' :  • E
+           E :   • num
+          ······································
+           goto( num                  ) → 2
+           goto( E                    ) → 1
+        
+        ── State 1 ─────────────────────────────────
+           E' :  E •
+          ······································
+           accept()                     on [$]
+        
+        ── State 2 ─────────────────────────────────
+           E :  num •
+          ······································
+           reduce( E : num            ) on [$]
+        
+        """, output);
+  }
+
+  @Test
+  public void verifyAndDumpAdditionConflicts() {
+    // E → E '+' E
+    // E → num
+    var E    = new NonTerminal("E");
+    var NUM  = new Terminal("num");
+    var PLUS = new Terminal("+");
+
+    var pNum    = new Production(E, List.of(NUM));
+    var pAdd    = new Production(E, List.of(E, PLUS, E));
+    var grammar = new Grammar(E, List.of(pNum, pAdd));
+
+    var output = verifyAndDump(grammar, Map.of());
+
+    assertEquals("""
+        ── State 0 ─────────────────────────────────
+           E' :  • E
+           E :   • num
+           E :   • E + E
+          ······································
+           goto( num                  ) → 2
+           goto( E                    ) → 1
+        
+        ── State 1 ─────────────────────────────────
+           E' :  E •
+           E :   E • + E
+          ······································
+           goto( +                    ) → 3
+           accept()                     on [$]
+        
+        ── State 2 ─────────────────────────────────
+           E :  num •
+          ······································
+           reduce( E : num            ) on [$, +]
+        
+        ── State 3 ─────────────────────────────────
+           E :  • num
+           E :  E + • E
+           E :  • E + E
+          ······································
+           goto( num                  ) → 2
+           goto( E                    ) → 4
+        
+        ── State 4 ─────────────────────────────────
+           E :  E + E •
+           E :  E • + E
+          ······································
+           goto( +                    ) → 3 🔥
+           reduce( E : E + E          ) on [$, + 🔥]
+        
+        """, output);
+  }
+
+  @Test
+  public void verifyAndDumpAdditionWithPrecedence() {
+    // E → E '+' E
+    // E → num
+    var E    = new NonTerminal("E");
+    var NUM  = new Terminal("num");
+    var PLUS = new Terminal("+");
+
+    var pNum    = new Production(E, List.of(NUM));
+    var pAdd    = new Production(E, List.of(E, PLUS, E));
+    var grammar = new Grammar(E, List.of(pNum, pAdd));
+
+    var precLeft = new Precedence(1, Precedence.Associativity.LEFT);
+    var precedenceMap = Map.of(PLUS, precLeft, pAdd, precLeft);
+
+    var output = verifyAndDump(grammar, precedenceMap);
+
+    assertEquals("""
+        ── State 0 ─────────────────────────────────
+           E' :  • E
+           E :   • num
+           E :   • E + E
+          ······································
+           goto( num                  ) → 2
+           goto( E                    ) → 1
+        
+        ── State 1 ─────────────────────────────────
+           E' :  E •
+           E :   E • + E
+          ······································
+           goto( +                    ) → 3
+           accept()                     on [$]
+        
+        ── State 2 ─────────────────────────────────
+           E :  num •
+          ······································
+           reduce( E : num            ) on [$, +]
+        
+        ── State 3 ─────────────────────────────────
+           E :  • num
+           E :  E + • E
+           E :  • E + E
+          ······································
+           goto( num                  ) → 2
+           goto( E                    ) → 4
+        
+        ── State 4 ─────────────────────────────────
+           E :  E + E •
+           E :  E • + E
+          ······································
+           goto( +                    ) → 3 ❌
+           reduce( E : E + E          ) on [$, +]
+        
+        """, output);
+  }
+
+  @Test
+  public void verifyAndDumpMultiplicationConflicts() {
+    // E → E '+' E
+    // E → E '*' E
+    // E → num
+    var E    = new NonTerminal("E");
+    var NUM  = new Terminal("num");
+    var PLUS = new Terminal("+");
+    var MUL  = new Terminal("*");
+
+    var pNum    = new Production(E, List.of(NUM));
+    var pAdd    = new Production(E, List.of(E, PLUS, E));
+    var pMul    = new Production(E, List.of(E, MUL, E));
+    var grammar = new Grammar(E, List.of(pNum, pAdd, pMul));
+
+    var output = verifyAndDump(grammar, Map.of());
+
+    assertEquals("""
+        ── State 0 ─────────────────────────────────
+           E' :  • E
+           E :   • num
+           E :   • E + E
+           E :   • E * E
+          ······································
+           goto( num                  ) → 2
+           goto( E                    ) → 1
+        
+        ── State 1 ─────────────────────────────────
+           E' :  E •
+           E :   E • + E
+           E :   E • * E
+          ······································
+           goto( *                    ) → 4
+           goto( +                    ) → 3
+           accept()                     on [$]
+        
+        ── State 2 ─────────────────────────────────
+           E :  num •
+          ······································
+           reduce( E : num            ) on [$, *, +]
+        
+        ── State 3 ─────────────────────────────────
+           E :  • num
+           E :  E + • E
+           E :  • E + E
+           E :  • E * E
+          ······································
+           goto( num                  ) → 2
+           goto( E                    ) → 5
+        
+        ── State 4 ─────────────────────────────────
+           E :  • num
+           E :  E * • E
+           E :  • E + E
+           E :  • E * E
+          ······································
+           goto( num                  ) → 2
+           goto( E                    ) → 6
+        
+        ── State 5 ─────────────────────────────────
+           E :  E + E •
+           E :  E • + E
+           E :  E • * E
+          ······································
+           goto( *                    ) → 4 🔥
+           goto( +                    ) → 3 🔥
+           reduce( E : E + E          ) on [$, * 🔥, + 🔥]
+        
+        ── State 6 ─────────────────────────────────
+           E :  E * E •
+           E :  E • + E
+           E :  E • * E
+          ······································
+           goto( *                    ) → 4 🔥
+           goto( +                    ) → 3 🔥
+           reduce( E : E * E          ) on [$, * 🔥, + 🔥]
+        
+        """, output);
+  }
+
+  @Test
+  public void verifyAndDumpMultiplicationWithPrecedence() {
+    // E → E '+' E
+    // E → E '*' E
+    // E → num
+    var E    = new NonTerminal("E");
+    var NUM  = new Terminal("num");
+    var PLUS = new Terminal("+");
+    var MUL  = new Terminal("*");
+
+    var pNum    = new Production(E, List.of(NUM));
+    var pAdd    = new Production(E, List.of(E, PLUS, E));
+    var pMul    = new Production(E, List.of(E, MUL, E));
+    var grammar = new Grammar(E, List.of(pNum, pAdd, pMul));
+
+    var precPlus = new Precedence(1, Precedence.Associativity.LEFT);
+    var precMul  = new Precedence(2, Precedence.Associativity.LEFT);
+    var precedenceMap = Map.of(
+        PLUS, precPlus, pAdd, precPlus,
+        MUL,  precMul,  pMul, precMul
+    );
+
+    var output = verifyAndDump(grammar, precedenceMap);
+
+    assertEquals("""
+        ── State 0 ─────────────────────────────────
+           E' :  • E
+           E :   • num
+           E :   • E + E
+           E :   • E * E
+          ······································
+           goto( num                  ) → 2
+           goto( E                    ) → 1
+        
+        ── State 1 ─────────────────────────────────
+           E' :  E •
+           E :   E • + E
+           E :   E • * E
+          ······································
+           goto( *                    ) → 4
+           goto( +                    ) → 3
+           accept()                     on [$]
+        
+        ── State 2 ─────────────────────────────────
+           E :  num •
+          ······································
+           reduce( E : num            ) on [$, *, +]
+        
+        ── State 3 ─────────────────────────────────
+           E :  • num
+           E :  E + • E
+           E :  • E + E
+           E :  • E * E
+          ······································
+           goto( num                  ) → 2
+           goto( E                    ) → 5
+        
+        ── State 4 ─────────────────────────────────
+           E :  • num
+           E :  E * • E
+           E :  • E + E
+           E :  • E * E
+          ······································
+           goto( num                  ) → 2
+           goto( E                    ) → 6
+        
+        ── State 5 ─────────────────────────────────
+           E :  E + E •
+           E :  E • + E
+           E :  E • * E
+          ······································
+           goto( *                    ) → 4
+           goto( +                    ) → 3 ❌
+           reduce( E : E + E          ) on [$, *, +]
+        
+        ── State 6 ─────────────────────────────────
+           E :  E * E •
+           E :  E • + E
+           E :  E • * E
+          ······································
+           goto( *                    ) → 4 ❌
+           goto( +                    ) → 3 ❌
+           reduce( E : E * E          ) on [$, *, +]
+        
+        """, output);
   }
 }
