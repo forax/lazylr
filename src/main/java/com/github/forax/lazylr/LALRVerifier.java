@@ -1,7 +1,9 @@
 package com.github.forax.lazylr;
 
+import java.io.PrintStream;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
@@ -12,6 +14,12 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
+
+import static java.util.stream.Collectors.groupingBy;
+import static java.util.stream.Collectors.joining;
+import static java.util.stream.Collectors.mapping;
+import static java.util.stream.Collectors.toList;
+import static java.util.stream.Collectors.toSet;
 
 /// Verifies whether a grammar is LALR(1), using a precedence map
 /// to resolve shift/reduce conflicts.
@@ -67,12 +75,29 @@ public final class LALRVerifier {
     Objects.requireNonNull(grammar);
     Objects.requireNonNull(precedenceMap);
     Objects.requireNonNull(errorReporter);
-    var fullPrecedenceMap = Precedence.complete(grammar, precedenceMap);
     var augmentedStart = buildAugmentedProduction(grammar);
     var firstSets = computeFirstSets(grammar);
     var lr1Automaton = buildLR1Automaton(grammar, augmentedStart, firstSets);
     var lalrAutomaton = mergeLR1States(lr1Automaton);
-    buildActionTable(lalrAutomaton.states, lalrAutomaton.gotoTable, fullPrecedenceMap, augmentedStart, errorReporter);
+    var fullPrecedenceMap = Precedence.complete(grammar, precedenceMap);
+    var actionTable =
+        buildActionTable(lalrAutomaton.states, lalrAutomaton.gotoTable, fullPrecedenceMap, augmentedStart);
+    reportConflicts(actionTable, errorReporter);
+  }
+
+  /// Prints the LALR state graph to the terminal.
+  /// For each state, displays all LR items with aligned dots, followed by the goto table.
+  public static void printAutomaton(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap,
+                                    PrintStream out) {
+    Objects.requireNonNull(grammar);
+    Objects.requireNonNull(precedenceMap);
+    var augmentedStart = buildAugmentedProduction(grammar);
+    var firstSets = computeFirstSets(grammar);
+    var lr1Automaton = buildLR1Automaton(grammar, augmentedStart, firstSets);
+    var lalrAutomaton = mergeLR1States(lr1Automaton);
+    printAutomaton(lalrAutomaton, augmentedStart, out);
+    //var fullPrecedenceMap = Precedence.complete(grammar, precedenceMap);
+    //buildActionTable(lalrAutomaton.states, lalrAutomaton.gotoTable, fullPrecedenceMap, augmentedStart);
   }
 
   // -----------------------------------------------------------------------
@@ -125,7 +150,7 @@ public final class LALRVerifier {
   // -----------------------------------------------------------------------
 
   private static Production buildAugmentedProduction(Grammar grammar) {
-    var augmentedStartSymbol = new NonTerminal("__start__");
+    var augmentedStartSymbol = new NonTerminal(grammar.startSymbol().name() + "'");
     return new Production(augmentedStartSymbol, List.of(grammar.startSymbol()));
   }
 
@@ -328,89 +353,120 @@ public final class LALRVerifier {
   private record Reduce(Production production) implements Action {}
   private record Accept() implements Action {}
 
-  private static void buildActionTable(List<Set<Item>> states, List<Map<Symbol, Integer>> gotoTable,
-                                       Map<PrecedenceEntity, Precedence> precedenceMap,
-                                       Production augmentedStart,
-                                       Consumer<String> errorReporter) {
-    var actionTable = new ArrayList<Map<Terminal, Action>>();
-    for (var i = 0; i < states.size(); i++) {
-      actionTable.add(new HashMap<>());
-    }
+  private record Result(List<Action> actions, /*nullable*/ Action winner) {}
+
+  private static List<Map<Terminal, Result>> buildActionTable(List<Set<Item>> states,
+                                                              List<Map<Symbol, Integer>> gotoTable,
+                                                              Map<PrecedenceEntity, Precedence> precedenceMap,
+                                                              Production augmentedStart) {
+    var actionTable = new ArrayList<Map<Terminal, Result>>();
 
     for (var i = 0; i < states.size(); i++) {
       var state = states.get(i);
-      var actions = actionTable.get(i);
       var transitions = gotoTable.get(i);
 
+      var conflictMap = new HashMap<Terminal, List<Action>>();
       for (var item : state) {
         if (item.isComplete()) {
           if (item.production().equals(augmentedStart)) {
             // Accept on EOF, the augmented start item carries EOF as its lookahead
-            mergeAction(actions, precedenceMap, Terminal.EOF, new Accept(), i, errorReporter);
+            conflictMap.computeIfAbsent(Terminal.EOF, _ -> new ArrayList<>())
+                .add(new Accept());
           } else {
             // Reduce on this item's lookahead
-            mergeAction(actions, precedenceMap, item.lookahead, new Reduce(item.production()), i, errorReporter);
+            conflictMap.computeIfAbsent(item.lookahead, _ -> new ArrayList<>())
+                .add(new Reduce(item.production()));
           }
         } else {
           // Shift on terminal
           var sym = item.nextSymbol();
           if (sym instanceof Terminal t) {
             var target = transitions.get(t);
-            mergeAction(actions, precedenceMap, t, new Shift(target), i, errorReporter);
+            conflictMap.computeIfAbsent(t, _ -> new ArrayList<>())
+                .add(new Shift(target));
           }
+        }
+      }
+
+      var resultMap = conflictMap.entrySet().stream()
+          .collect(Collectors.toMap(
+              Map.Entry::getKey,
+              e -> resolveConflicts(e.getKey(), e.getValue(), precedenceMap)));
+      actionTable.add(resultMap);
+    }
+    return actionTable;
+  }
+
+  private static Result resolveConflicts(Terminal lookahead, List<Action> actions,
+                                         Map<PrecedenceEntity, Precedence> precedenceMap) {
+    var theShift = (Shift) null;
+    var reduces = new ArrayList<Reduce>();
+    for(var action : actions) {
+      switch (action) {
+        case Shift shift -> theShift = shift;
+        case Reduce reduce -> reduces.add(reduce);
+        case Accept accept -> {
+          return new Result(actions, accept);
+        }
+      }
+    }
+
+    if (theShift == null) {
+      if (reduces.size() == 1) {
+        return new Result(actions, reduces.getFirst());
+      }
+      return new Result(actions, null);  // reduce/reduce conflicts
+    }
+
+    if (reduces.isEmpty()) {
+      return new Result(actions, theShift);
+    }
+    var termPrec = precedenceMap.get(lookahead);
+    if (reduces.size() == 1) {
+      var reduce = reduces.getFirst();
+      var prodPrec = precedenceMap.get(reduce.production());
+      var action = resolveShiftReduceConflict(theShift, reduce, termPrec, prodPrec);
+      return new Result(actions, action);
+    }
+    for(var reduce : reduces) {
+      var prodPrec = precedenceMap.get(reduce.production());
+      var action = resolveShiftReduceConflict(theShift, reduce, termPrec, prodPrec);
+      if (!(action instanceof Shift)) {  // shift/reduce conflict
+        return new Result(actions, null);
+      }
+    }
+    return new Result(actions, theShift);
+  }
+
+  private static void reportConflicts(List<Map<Terminal, Result>> actionTable, Consumer<String> errorReporter) {
+    for (var i = 0; i < actionTable.size(); i++) {
+      var actionMap = actionTable.get(i);
+      for (var entry : actionMap.entrySet()) {
+        var lookahead = entry.getKey();
+        var result = entry.getValue();
+        if (result.winner() == null) {  // conflict
+          var hasShift = result.actions.stream().anyMatch(a -> a instanceof Shift);
+          var conflictName = hasShift ? "shift/reduce" : "reduce/reduce";
+          errorReporter.accept(
+              "Unresolved " + conflictName + " conflict in state " + i +
+                  " on terminal '" + lookahead.name() + "'" +
+                  " between " + result.actions.stream()
+                  .map(action -> switch (action) {
+                    case Shift _ -> "shift";
+                    case Reduce(Production production) -> "reduce " + production.name();
+                    case Accept _ -> throw new AssertionError();
+                  })
+                  .collect(Collectors.joining(", ")));
         }
       }
     }
   }
 
-  /// Merge a new action into the action table, resolving conflicts via precedence.
-  private static void mergeAction(Map<Terminal, Action> actions, Map<PrecedenceEntity, Precedence> precedenceMap,
-                                  Terminal lookahead, Action newAction, int stateIndex,
-                                  Consumer<String> errorReporter) {
-    var existing = actions.get(lookahead);
-    if (existing == null) {
-      actions.put(lookahead, newAction);
-      return;
-    }
-    if (existing.equals(newAction)) {
-      return;
-    }
-
-    // ---- Shift/Reduce conflict ----
-    Shift shiftAction = null;
-    Reduce reduceAction = null;
-    if (existing instanceof Reduce r && newAction instanceof Shift s) {
-      shiftAction = s;
-      reduceAction = r;
-    } else if (existing instanceof Shift s && newAction instanceof Reduce r) {
-      shiftAction = s;
-      reduceAction = r;
-    }
-
-    if (shiftAction != null) {
-      var termPrec = precedenceMap.get(lookahead);
-      var prodPrec = precedenceMap.get(reduceAction.production());
-      if (termPrec != null && prodPrec != null) {
-        var action = resolveShiftReduceConflict(shiftAction, reduceAction, termPrec, prodPrec);
-        actions.put(lookahead, action);
-        return;
-      }
-      errorReporter.accept(
-          "Unresolved shift/reduce conflict in state " + stateIndex +
-              " on terminal '" + lookahead.name() + "'" +
-              " between [" + existing + "] and [" + newAction + "]");
-      return;
-    }
-
-    // ---- Reduce/Reduce conflict ----
-    errorReporter.accept(
-        "Unresolved reduce/reduce conflict in state " + stateIndex +
-            " on terminal '" + lookahead.name() + "'" +
-            " between [" + existing + "] and [" + newAction + "]");
-  }
-
   private static Action resolveShiftReduceConflict(Action shiftAction, Action reduceAction,
                                                    Precedence termPrec, Precedence prodPrec) {
+    if (termPrec == null || prodPrec == null) {
+      return null;  // shift/reduce conflict
+    }
     // Resolve: higher level wins; on tie use associativity
     if (termPrec.level() > prodPrec.level()) {
       return shiftAction;
@@ -423,5 +479,98 @@ public final class LALRVerifier {
       return reduceAction;
     }
     return shiftAction;
+  }
+
+
+
+  private static void printAutomaton(Automaton automaton, Production augmentedStart, PrintStream out) {
+    var states = automaton.states();
+    var gotoTable = automaton.gotoTable();
+
+    for (var i = 0; i < states.size(); i++) {
+      var state = states.get(i);
+      var transitions = gotoTable.get(i);
+
+      // -- State header
+      out.println("── State " + i + " " + "─".repeat(Math.max(0, 40 - ("State " + i).length())));
+
+      // -- LR items
+      // Compute column width for "Head :" prefix to align all dots
+      var prefixWidth = state.stream()
+          .mapToInt(item -> item.production().head().name().length() + 3)
+          .max().orElse(0);
+
+      // Group items by production+dot (core), collecting lookaheads together
+      record CoreKey(Production production, int dot) {}
+      var coreKeys = state.stream()
+          .map(item -> new CoreKey(item.production(), item.dot()))
+          .collect(toSet());
+
+      for (var coreKey : coreKeys) {
+        var prod = coreKey.production();
+        var dot = coreKey.dot();
+        var body = prod.body();
+
+        // Build "Head :" left-padded to prefixWidth
+        var head = prod.head().name() + " :";
+        var builder = new StringBuilder("   ");
+        builder.append(head);
+        builder.repeat(" ", prefixWidth - head.length());
+
+        // Emit body symbols, inserting the dot at the right position
+        for (var j = 0; j < body.size(); j++) {
+          if (j == dot) {
+            builder.append(" •");
+          }
+          builder.append(" ").append(body.get(j).name());
+        }
+        if (dot == body.size()) {
+          builder.append(" •");
+        }
+
+        out.println(builder);
+      }
+
+      out.println("  " + "·".repeat(38));
+
+      // -- Goto / shift transitions
+      // Sort: terminals first, then non-terminals, each group alphabetically
+      transitions.entrySet().stream()
+          .sorted(Map.Entry.comparingByKey(
+              Comparator.<Symbol>comparingInt(s -> s instanceof Terminal ? 0 : 1)
+                  .thenComparing(Symbol::name)))
+          .forEach(e ->
+              out.printf("   goto( %-20s ) → %d%n", e.getKey().name(), e.getValue()));
+
+      // -- Reduce / accept transitions
+      // Group complete items by production, collecting their lookaheads
+      record ReduceKey(Production production, boolean isAccept) {}
+      var reduces = state.stream()
+          .filter(Item::isComplete)
+          .collect(groupingBy(
+              item -> new ReduceKey(item.production(), item.production().equals(augmentedStart)),
+              mapping(Item::lookahead, toList())));
+
+      reduces.entrySet().stream()
+          .sorted(Map.Entry.comparingByKey(Comparator.comparing(k -> k.production().name())))
+          .forEach(entry -> {
+            var key = entry.getKey();
+            var lookaheads = entry.getValue().stream()
+                .map(Terminal::name)
+                .sorted()
+                .collect(joining(", "));
+            if (key.isAccept()) {
+              out.printf("   accept()                     on [%s]%n", lookaheads);
+            } else {
+              var prod = key.production();
+              var prodStr = prod.head().name() + " → "
+                  + (prod.body().isEmpty() ? "ε"
+                  : prod.body().stream().map(Symbol::name).collect(joining(" ")));
+              out.printf("   reduce( %-18s ) on [%s]%n", prodStr, lookaheads);
+            }
+          });
+
+      out.println();
+    }
   }
 }
