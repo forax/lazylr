@@ -274,7 +274,7 @@ LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
 >    The `%prec` annotation is used to indicate the precedence of a production.
 >    The precedence map encodes this association.
 
-> **Note:** The annotation '%prec' is not strictly needed here, by default,  the precedence of
+> **Note:** The annotation '%prec' is not strictly needed here, by default, the precedence of
 >    a production is the precedence of its right-most terminal (here '+').
 
 ```java
