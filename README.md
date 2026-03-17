@@ -169,12 +169,12 @@ Download the latest release:
 ### Usage
 
 ```
-java -jar lazylr.jar [--generate|--inline] <grammar> [input]
+java -jar lazylr.jar [--generate|--print] <grammar> [input]
 ```
 
 ### Modes
 
-**Validate and show railroad diagram** (default)
+**Validate and show LALR automaton** (default)
 
 ```bash
 java -jar lazylr.jar [--print] grammar.txt
