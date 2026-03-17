@@ -3,7 +3,6 @@ package com.github.forax.lazylr;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 
@@ -13,7 +12,7 @@ import java.util.Objects;
 /// - With a grammar file and an input file: validates the grammar, parses the input,
 ///   and prints the **derivation tree**.
 ///
-/// - With `--print` and a grammar file: print the **automaton** inconditionnaly.
+/// - With `--print` and a grammar file: print the **automaton** unconditionally.
 /// - With `--generate` and a grammar file: generates Java source code for a
 ///   `createGrammar()` static method that reconstructs the grammar programmatically.
 ///
@@ -37,7 +36,7 @@ public final class Main {
       
       Options:
         --generate  generate Java source code for a createGrammar() static method
-        --print    inconditionnaly print the automaton
+        --print     unconditionally print the automaton
       
       Examples:
         lazylr grammar.txt              # validate grammar and print the automaton if there is a conflict
