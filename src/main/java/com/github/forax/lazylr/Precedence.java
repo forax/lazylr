@@ -43,8 +43,7 @@ public record Precedence(int level, Associativity associativity) {
   }
 
   /// Returns a copy of [precedenceMap] extended with an inferred [Precedence]
-  /// for each [Production] not already present, derived from its rightmost terminal
-  /// with known precedence.
+  /// for each [Production] not already present, derived from its rightmost terminal.
   static Map<PrecedenceEntity, Precedence> complete(Grammar grammar, Map<? extends PrecedenceEntity, ? extends Precedence> precedenceMap) {
     var newPrecedenceMap = new HashMap<PrecedenceEntity, Precedence>(precedenceMap);
     for (var production : grammar.productions()) {
@@ -54,17 +53,9 @@ public record Precedence(int level, Associativity associativity) {
   }
 
   private static Precedence computePrecedence(Production production, Map<PrecedenceEntity, Precedence> precedenceMap) {
-    loop:
     for (var symbol : production.body().reversed()) {
-      switch (symbol) {
-        case Terminal t -> {
-          var precedence = precedenceMap.get(t);
-          if (precedence != null) {
-            return precedence;
-          }
-          break loop;
-        }
-        case NonTerminal _ -> {}
+      if (symbol instanceof Terminal terminal) {
+        return precedenceMap.get(terminal);   // Terminal precedence or null
       }
     }
     return null;  // No precedence
