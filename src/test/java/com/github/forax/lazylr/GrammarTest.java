@@ -138,6 +138,16 @@ public final class GrammarTest {
   }
 
   @Test
+  public void nonTerminalDeclaredButNoProductionForIt() {
+    var A = new NonTerminal("A");
+    var B = new NonTerminal("B");
+
+    assertThrows(IllegalArgumentException.class, () ->
+        new Grammar(A, List.of(
+            new Production(A, List.of(B)))));
+  }
+
+  @Test
   public void toStringContainsStartSymbol() {
     var start = new NonTerminal("S");
     var grammar = new Grammar(start, List.of(new Production(start, List.of())));

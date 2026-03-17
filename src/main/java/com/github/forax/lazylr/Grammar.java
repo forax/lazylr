@@ -27,14 +27,15 @@ public final class Grammar {
   /// @param startSymbol The entry point of the grammar (e.g., `program` or `expr`).
   /// @param productions A list of all valid derivation rules in the grammar.
   /// @throws NullPointerException if `startSymbol` or `productions` is null.
-  /// @throws IllegalArgumentException if productions are duplicated or
-  ///         `startSymbol` is not defined by at least one production.
+  /// @throws IllegalArgumentException if productions are duplicated,
+  ///         if a non-terminal symbol has no defined productions, or
+  ///         if `startSymbol` is not defined by at least one production.
   public Grammar(NonTerminal startSymbol, List<Production> productions) {
     Objects.requireNonNull(startSymbol);
     productions = List.copyOf(productions);
     var productionMap = productions.stream()
         .collect(Collectors.groupingBy(Production::head, LinkedHashMap::new, Collectors.toUnmodifiableList()));
-    checkDuplication(productionMap);
+    checkDuplicationOrOrphanNonTerminals(productionMap);
     if (!productionMap.containsKey(startSymbol)) {
       throw new IllegalArgumentException("start symbol is not a non-terminal symbol");
     }
@@ -44,12 +45,20 @@ public final class Grammar {
     super();
   }
 
-  private static void checkDuplication(LinkedHashMap<NonTerminal, List<Production>> productionMap) {
+  private static void checkDuplicationOrOrphanNonTerminals(LinkedHashMap<NonTerminal, List<Production>> productionMap) {
     for(var productions : productionMap.values()) {
       var set = new HashSet<List<Symbol>>();
       for (var production : productions) {
         if (!set.add(production.body())) {
           throw new IllegalArgumentException("duplicate production " + production);
+        }
+        for(var symbol : production.body()) {
+          if (symbol instanceof NonTerminal nonTerminal) {
+            if (!productionMap.containsKey(nonTerminal)) {
+              throw new IllegalArgumentException("non-terminal " + nonTerminal.name() +
+                  " is used in production " + production + " but has no productions defined");
+            }
+          }
         }
       }
     }
