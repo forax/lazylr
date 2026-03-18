@@ -19,6 +19,13 @@ with the agility of a modern library.
 * **Built for Modern Java:**
   Designed to work seamlessly with records, sealed types, and pattern matching (Java 25+).
 
+## Tutorial
+
+[GUIDE.md](GUIDE.md) walks you through building grammars from scratch in steps,
+starting from a single-number parser and progressing through recursion,
+operator precedence, associativity, the dangling-else problem, and unary operators with `%prec`.
+The Runnable code is in
+[GuideTest.java](src/test/java/com/github/forax/lazylr/GuideTest.java).
 
 ## Getting Started
 
@@ -49,11 +56,12 @@ var mg = MetaGrammar.load("""
 
 The DSL has three sections:
 
-- **`tokens`** — named terminals (`name: /regex/`) matched by the lexer in declaration order;
+- **`tokens`**: named terminals (`name: /regex/`) matched by the lexer in declaration order;
   anonymous patterns (`/regex/`) are matched and silently discarded (e.g. whitespace or comments).
-- **`precedence`** — operator associativity and priority; later lines have **higher** precedence than earlier ones.
+- **`precedence`**: operator associativity and priority; later lines have **higher** precedence than earlier ones.
   Multiple terminals can share the same precedence level by separating them with commas.
-- **`grammar`** — BNF-style production rules; quoted literals like `'+'` are automatically registered as tokens and terminals.
+- **`grammar`**: BNF-style production rules; quoted literals like `'+'` are automatically registered
+  as tokens and terminals.
 
 Line comments (`// ...`) are also supported in grammar files.
 
