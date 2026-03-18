@@ -251,8 +251,8 @@ public class PosgreSQLGrammarTest {
           // ----- Operators -----
           op_typecast:      /::/
           op_concat:        /\\|\\|/
-          op_jsonarrow:     /->/
           op_jsonarrow2:    /->>/
+          op_jsonarrow:     /->/
           op_at_arrow:      /@>/
           op_arrow_at:      /<@/
           op_neq:           /<>|!=/

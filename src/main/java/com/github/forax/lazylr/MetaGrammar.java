@@ -382,6 +382,7 @@ public final class MetaGrammar {
         .flatMap(p -> p.symbols.stream())
         .filter(RawSymbol::quoted)
         .map(RawSymbol::name)
+        .sorted(Collections.reverseOrder())    // prefix should come last
         .distinct()
         .collect(Collectors.toMap(name -> name,
             Terminal::new,
