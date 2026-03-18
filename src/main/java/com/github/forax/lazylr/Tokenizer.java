@@ -1,6 +1,10 @@
 package com.github.forax.lazylr;
 
 import java.util.Iterator;
+import java.util.Set;
+import java.util.function.Predicate;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 /// An iterator over terminals that tracks position information for better error reporting.
 ///
@@ -92,10 +96,24 @@ interface Tokenizer extends Iterator<Terminal> {
           .append('^');
     }
 
+    /// Formats a set of expected terminals for display in error messages.
+    private static String expectedTerminals(Set<Terminal> expected) {
+      return Stream.concat(
+          expected.stream()
+              .filter(Predicate.not(Terminal.EOF::equals))
+              .map(terminal -> {
+                var name = terminal.name();
+                return Character.isJavaIdentifierPart(name.charAt(0)) ? name : "'" + name + "'";
+              })
+              .sorted(),
+             expected.contains(Terminal.EOF) ? Stream.of("<end of file>") : Stream.empty())
+          .collect(Collectors.joining(", "));
+    }
+
     /// Generates a detailed lexing error message with position information.
     ///
-    /// @param index The character index where the error occurred.
-    /// @param input The input character sequence being tokenized.
+    /// @param index    The character index where the error occurred.
+    /// @param input    The input character sequence being tokenized.
     /// @return A formatted error message.
     public static String lexingErrorMessage(int index, CharSequence input) {
       var lineColumn = lineColumn(index, input);
@@ -117,10 +135,11 @@ interface Tokenizer extends Iterator<Terminal> {
     /// Generates a detailed parsing error message with position information.
     ///
     /// @param terminal The unexpected terminal encountered.
-    /// @param index The character index where the error occurred.
-    /// @param input The input character sequence being parsed.
+    /// @param expected The set of expected terminals.
+    /// @param index    The character index where the error occurred.
+    /// @param input    The input character sequence being parsed.
     /// @return A formatted error message.
-    public static String parsingErrorMessage(Terminal terminal, int index, CharSequence input) {
+    public static String parsingErrorMessage(Terminal terminal, Set<Terminal> expected, int index, CharSequence input) {
       var lineColumn = lineColumn(index, input);
       var line = lineColumn.line();
       var column = lineColumn.column();
@@ -130,6 +149,7 @@ interface Tokenizer extends Iterator<Terminal> {
           .append("Parsing error at line ").append(line)
           .append(", column ").append(column)
           .append(": unexpected terminal '").append(terminal.name()).append("'")
+          .append(", expected ").append(expectedTerminals(expected))
           .append('\n');
       appendLineContentAndCaret(errorMessage, index, input);
       return errorMessage.toString();
@@ -138,9 +158,10 @@ interface Tokenizer extends Iterator<Terminal> {
     /// Generates a basic parsing error message without position information.
     ///
     /// @param terminal The unexpected terminal encountered.
+    /// @param expected The set of expected terminals.
     /// @return A formatted error message.
-    public static String parsingErrorMessage(Terminal terminal) {
-      return "Parsing error: unexpected terminal '" + terminal.name() + "'";
+    public static String parsingErrorMessage(Terminal terminal, Set<Terminal> expected) {
+      return "Parsing error: unexpected terminal '" + terminal.name() + "', expected " + expectedTerminals(expected);
     }
   }
 }

@@ -6,6 +6,7 @@ import com.github.forax.lazylr.LRTransitionEngine.State;
 import java.util.AbstractList;
 import java.util.ArrayDeque;
 import java.util.Arrays;
+import java.util.HashSet;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
@@ -243,7 +244,7 @@ public final class Parser {
 
       var action = engine.getAction(currentState, currentToken);
       if (action == null) {
-        throw new ParsingException(errorMessage(currentToken, input));
+        throw new ParsingException(errorMessage(currentToken, currentState, input));
       }
 
       switch (action) {
@@ -261,15 +262,32 @@ public final class Parser {
   }
 
   /// Generate an error message for parsing exceptions
-  private static String errorMessage(Terminal terminal, Iterator<Terminal> input) {
+  private static String errorMessage(Terminal terminal, State state, Iterator<Terminal> input) {
     if (input instanceof Tokenizer tokenizer) {
       if (terminal.equals(Terminal.ERROR)) {
         // lexical error
         return Tokenizer.ErrorHandler.lexingErrorMessage(tokenizer.index(), tokenizer.input());
       }
-      return Tokenizer.ErrorHandler.parsingErrorMessage(terminal, tokenizer.index(), tokenizer.input());
+      var expected = expectedTerminals(state);
+      return Tokenizer.ErrorHandler.parsingErrorMessage(terminal, expected, tokenizer.index(), tokenizer.input());
     }
-    return Tokenizer.ErrorHandler.parsingErrorMessage(terminal);
+    var expected = expectedTerminals(state);
+    return Tokenizer.ErrorHandler.parsingErrorMessage(terminal, expected);
+  }
+
+  private static Set<Terminal> expectedTerminals(State state) {
+    var expected = new HashSet<Terminal>();
+    for (var item : state.items()) {
+      if (item.isCompleted()) {
+        expected.add(item.lookahead());
+      } else {
+        var next = item.getNextSymbol();
+        if (next instanceof Terminal terminal) {
+          expected.add(terminal);
+        }
+      }
+    }
+    return expected;
   }
 
   /// Pushes the token's destination state onto the stack and

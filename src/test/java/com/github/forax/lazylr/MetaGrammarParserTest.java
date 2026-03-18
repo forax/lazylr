@@ -861,6 +861,7 @@ public final class MetaGrammarParserTest {
     var message = exception.getMessage();
     assertTrue(message.contains("Parsing error"));
     assertTrue(message.contains("'id'"));
+    assertTrue(message.contains("expected"));
   }
 
   @Test
@@ -947,6 +948,7 @@ public final class MetaGrammarParserTest {
     assertTrue(message.contains("column 6"));
     assertTrue(message.contains("id + +"));
     assertTrue(message.contains("^"));
+    assertTrue(message.contains("expected"));
   }
 
   @Test
@@ -993,6 +995,7 @@ public final class MetaGrammarParserTest {
     assertTrue(message.contains("column 4"));
     assertTrue(message.contains("id + +"));
     assertTrue(message.contains("^"));
+    assertTrue(message.contains("expected"));
   }
 
   @Test

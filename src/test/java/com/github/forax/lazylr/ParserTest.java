@@ -13,7 +13,7 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
 /// Those are the same tests as in [MetaGrammarParserTest] but using objects
-/// for terminals, non-terminals, productions, etc
+/// for terminals, non-terminals, productions, etc.
 /// Please update both files accordingly
 public final class ParserTest {
 
@@ -802,6 +802,7 @@ public final class ParserTest {
     var message = exception.getMessage();
     assertTrue(message.contains("Parsing error"));
     assertTrue(message.contains("'id'"));
+    assertTrue(message.contains("expected"));
   }
 
   @Test
@@ -886,6 +887,7 @@ public final class ParserTest {
     assertTrue(message.contains("column 6"));
     assertTrue(message.contains("id + +"));
     assertTrue(message.contains("^"));
+    assertTrue(message.contains("expected"));
   }
 
   @Test
@@ -931,6 +933,7 @@ public final class ParserTest {
     assertTrue(message.contains("column 4"));
     assertTrue(message.contains("id + +"));
     assertTrue(message.contains("^"));
+    assertTrue(message.contains("expected"));
   }
 
   @Test
