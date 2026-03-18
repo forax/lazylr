@@ -45,7 +45,7 @@ public final class Grammar {
     super();
   }
 
-  private static void checkDuplicationOrOrphanNonTerminals(LinkedHashMap<NonTerminal, List<Production>> productionMap) {
+  static void checkDuplicationOrOrphanNonTerminals(LinkedHashMap<NonTerminal, List<Production>> productionMap) {
     for(var productions : productionMap.values()) {
       var set = new HashSet<List<Symbol>>();
       for (var production : productions) {

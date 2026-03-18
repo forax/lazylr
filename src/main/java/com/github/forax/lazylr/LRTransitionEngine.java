@@ -1,6 +1,7 @@
 package com.github.forax.lazylr;
 
 import java.util.HashMap;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -70,8 +71,9 @@ final class LRTransitionEngine {
     /// This is a performance optimization, structural equality on productions
     /// is expensive.
     ///
-    /// The code of [Grammar] deduplicates productions (see Grammar#checkDuplication(LinkedHashMap))
-    /// at construction time. Items must never be constructed with productions from outside
+    /// The code of [Grammar] deduplicates productions at construction time,
+    /// see [Grammar#checkDuplicationOrOrphanNonTerminals(LinkedHashMap)].
+    /// Items must never be constructed with productions from outside
     /// a [Grammar] instance.
     @Override
     public boolean equals(Object o) {
