@@ -80,7 +80,7 @@ Reduce `E + E` to `E` using `E : E '+' E` : stack: `[E]` ✓
 
 The parser uses the next token (one token of look-ahead) to decide which action to take at each step.
 When it can’t decide, that’s a **conflict**, and you need to fix your grammar
-or indicate how to resolev the conflict.
+or indicate how to resolve the conflict.
 You’ll encounter your first conflict in Step 2.
 
 ---
@@ -119,7 +119,7 @@ LALRVerifier.verify(grammar, Map.of(), msg -> System.err.println("Conflict: " + 
 
 > 💡 `LALRVerifier.verify` checks that the grammar is conflict-free, that the parser will
 >     never face an ambiguous decision.
->     You need at least two productions to have a conflict, so with only one eproduction
+>     You need at least two productions to have a conflict, so with only one production
 >     there's nothing to conflict here.
 
 
@@ -211,14 +211,14 @@ The full runnable code for all steps lives in
 > **Scenario:** What happens when the grammar has two redundant ways to derive the same thing?
 
 ```java
-var E = new NonTerminal("E");
-var A = new NonTerminal("A");
-var B = new NonTerminal("B");
+var E   = new NonTerminal("E");
+var A   = new NonTerminal("A");
+var B   = new NonTerminal("B");
 var NUM = new Terminal("num");
 
-var pA = new Production(E, List.of(A));          // E : A
-var pB = new Production(E,  List.of(B));         // E : B
-var pNumViaA= new Production(A, List.of(NUM));   // A : num
+var pA       = new Production(E, List.of(A));    // E : A
+var pB       = new Production(E, List.of(B));    // E : B
+var pNumViaA = new Production(A, List.of(NUM));  // A : num
 var pNumViaB = new Production(B, List.of(NUM));  // B : num   ← same as A!
 
 var grammar = new Grammar(E, List.of(pA, pB, pNumViaA, pNumViaB));
@@ -590,7 +590,7 @@ LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
 
 > 💡 **What's the conflict?** When the parser sees `if E then E` on its stack and an `else` lookahead,
 >    it must choose: reduce (using `E: if E then E`) or shift the `else`.
->    By giving `else` higher precedence than `then`, we force a **shift**,
+>    By giving `else` higher precedence than `then`, we force a **shift**:
 >    the `else` always binds to the nearest (innermost) `if`.
 
 ```java
