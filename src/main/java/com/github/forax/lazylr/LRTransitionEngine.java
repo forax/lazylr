@@ -33,19 +33,19 @@ final class LRTransitionEngine {
   /// for [Production]s and a cached hash code.
   static final class Item {
     private final Production production;
-    private final int dotPosition;
+    private final int dot;
     private final Terminal lookahead;
     private final int hashCode;  // cached hashCode for perf reason
 
-    public Item(Production production, int dotPosition, Terminal lookahead) {
+    public Item(Production production, int dot, Terminal lookahead) {
       Objects.requireNonNull(production);
-      if (dotPosition < 0 || dotPosition > production.body().size()) {
+      if (dot < 0 || dot > production.body().size()) {
         throw new IllegalArgumentException("Dot position must be between 0 and body size");
       }
       Objects.requireNonNull(lookahead);
-      var hashCode = (System.identityHashCode(production) * 31 + dotPosition) * 31 + lookahead.hashCode();
+      var hashCode = (System.identityHashCode(production) * 31 + dot) * 31 + lookahead.hashCode();
       this.production = production;
-      this.dotPosition = dotPosition;
+      this.dot = dot;
       this.lookahead = lookahead;
       this.hashCode = hashCode;
       super();
@@ -53,10 +53,6 @@ final class LRTransitionEngine {
 
     public Production production() {
       return production;
-    }
-
-    public int dotPosition() {
-      return dotPosition;
     }
 
     public Terminal lookahead() {
@@ -81,29 +77,34 @@ final class LRTransitionEngine {
     public boolean equals(Object o) {
       return o instanceof Item item &&
           production == item.production &&    // productions are unique
-          dotPosition == item.dotPosition &&
+          dot == item.dot &&
           lookahead.equals(item.lookahead);
+    }
+
+    /// @return `true` if the dot is at the end of the production.
+    public boolean isCompleted() {
+      return dot == production.body().size();
     }
 
     /// @return The symbol immediately following the dot, or `null` if the rule is completed.
     public Symbol getNextSymbol() {
-      if (dotPosition < production.body().size()) {
-        return production.body().get(dotPosition);
+      if (dot < production.body().size()) {
+        return production.body().get(dot);
       }
       return null; // Dot is at the end (Reduce state)
     }
 
     /// @return The sequence of symbols following the symbol after the dot.
     public List<Symbol> getSymbolsAfterNext() {
-      if (dotPosition + 1 < production.body().size()) {
-        return production.body().subList(dotPosition + 1, production.body().size());
+      if (dot + 1 < production.body().size()) {
+        return production.body().subList(dot + 1, production.body().size());
       }
       return List.of();
     }
 
-    /// @return `true` if the dot is at the end of the production.
-    public boolean isCompleted() {
-      return dotPosition == production.body().size();
+    /// Move the dot forward.
+    private Item moveDotForward() {
+      return new Item(production, dot + 1, lookahead);
     }
 
     @Override
@@ -113,7 +114,7 @@ final class LRTransitionEngine {
           " {" + lookahead.name() + "}");
       var body = production.body();
       for (var i = 0; i < body.size(); i++) {
-        if (i == dotPosition) {
+        if (i == dot) {
           joiner.add(".");
         }
         joiner.add(body.get(i).name());
@@ -283,7 +284,7 @@ final class LRTransitionEngine {
     // Find all items where the dot is before the current symbol and advance it.
     var kernels = currentState.items().stream()
         .filter(item -> symbol.equals(item.getNextSymbol()))
-        .map(this::advanceItem)
+        .map(Item::moveDotForward)
         .collect(Collectors.toSet());
 
     // If no items can accept this symbol, there is no transition (error or accept)
@@ -306,13 +307,5 @@ final class LRTransitionEngine {
         .put(symbol, nextState);
 
     return nextState;
-  }
-
-  /**
-   * Helper to move the dot forward.
-   * In LR(1), lookaheads are carried forward exactly as they are.
-   */
-  private Item advanceItem(Item item) {
-    return new Item(item.production(), item.dotPosition() + 1, item.lookahead());
   }
 }

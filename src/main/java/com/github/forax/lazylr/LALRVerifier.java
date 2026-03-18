@@ -134,7 +134,7 @@ public final class LALRVerifier {
     }
 
     /// Advance the dot past the next symbol, keeping the same lookahead.
-    public Item advance() {
+    public Item moveDotForward() {
       return new Item(production, dot + 1, lookahead);
     }
 
@@ -288,7 +288,7 @@ public final class LALRVerifier {
       for (var item : state) {
         var sym = item.nextSymbol();
         if (sym != null) {
-          kernelsBySymbol.computeIfAbsent(sym, _ -> new LinkedHashSet<>()).add(item.advance());
+          kernelsBySymbol.computeIfAbsent(sym, _ -> new LinkedHashSet<>()).add(item.moveDotForward());
         }
       }
 
