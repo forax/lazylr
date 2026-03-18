@@ -214,8 +214,8 @@ public final class MetaGrammar {
       new Token("}",          "\\}"),
       new Token(":",          ":"),
       new Token(",",          ","),
-      new Token("regex",      "/[^/]+/"),
-      new Token("quoted",     "'[^']+'"),
+      new Token("regex",      "/(?:[^/\\\\\n]|\\\\.)+/"),
+      new Token("quoted",     "'(?:[^'\\\\\n]|\\\\.)*'"),
       new Token("ident",      "[A-Za-z_][A-Za-z0-9_]*"),
       new Token("eol",        "[\\r]?\\n"),
       new Token("\\/\\/[^\\n]*"),  // comment ignored
