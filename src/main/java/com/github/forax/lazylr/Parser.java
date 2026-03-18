@@ -90,20 +90,26 @@ public final class Parser {
   }
 
   private static Iterator<Terminal> wrapAndAppendEOF(Iterator<? extends Terminal> iterator) {
-    // if it's a Tokenized (Iterator + better error reporting) wrap to a Tokenizer
+    // Design Note: the two inner classes is code duplication, but it is intentional.
+    // For VM devirtualization, the Tokenizer (iterator + better error reporting) wrapper
+    // must capture and delegate to a Tokenizer, not an Iterator, so the VM can see the
+    // exact type at the call sites.
+    // The plain Iterator wrapper must not implement Tokenizer, because the instanceof check
+    // in errorMessage() is used to distinguish inputs where position information is available.
+
     if (iterator instanceof Tokenizer tokenizer) {
       return new Tokenizer() {
         private boolean eofSeen;
 
         @Override
         public boolean hasNext() {
-          return iterator.hasNext() || !eofSeen;
+          return tokenizer.hasNext() || !eofSeen;
         }
 
         @Override
         public Terminal next() {
-          if (iterator.hasNext()) {
-            return iterator.next();
+          if (tokenizer.hasNext()) {
+            return tokenizer.next();
           }
           if (eofSeen) {
             throw new NoSuchElementException();
