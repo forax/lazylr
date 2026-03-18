@@ -28,15 +28,13 @@ public final class GuideTest {
     var parser = Parser.createParser(grammar, Map.of());
 
     class IntEvaluator implements Evaluator<Integer> {
-      @Override
-      public Integer evaluate(Terminal terminal) {
-        System.out.println("seen terminal " + terminal.name());
-        return Integer.parseInt(terminal.value());
+      public Integer evaluate(Terminal t) {
+        System.out.println("seen terminal: " + t.name() + " = " + t.value());
+        return Integer.parseInt(t.value());
       }
-      @Override
-      public Integer evaluate(Production production, List<Integer> args) {
-        // args corresponds to the value of the symbols in the Production list (0-indexed).
-        System.out.println("seen production " + production.name() + " with " + args);
+
+      public Integer evaluate(Production p, List<Integer> args) {
+        System.out.println("seen production: " + p.name() + " with args " + args);
         return args.get(0);
       }
     }
