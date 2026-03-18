@@ -803,7 +803,6 @@ public final class MetaGrammarParserTest {
         }
         """);
 
-    var E     = new NonTerminal("E");
     var id    = new Terminal("id");
     var plus  = new Terminal("+");
     var minus = new Terminal("-");
@@ -851,12 +850,12 @@ public final class MetaGrammarParserTest {
     // Try to parse invalid input: "id id"
     var terminals = List.of(new Terminal("id"), new Terminal("id")).iterator();
 
-    var exception = assertThrows(ParsingException.class, () -> {
+    var exception = assertThrows(ParsingException.class, () ->
       parser.parse(terminals, new ParserListener() {
         @Override public void onShift(Terminal token) {}
         @Override public void onReduce(Production production) {}
-      });
-    });
+      })
+    );
 
     var message = exception.getMessage();
     assertTrue(message.contains("Parsing error"));
@@ -892,12 +891,12 @@ public final class MetaGrammarParserTest {
     var input = "id + 2";
     var terminals = lexer.tokenize(input);
 
-    var exception = assertThrows(ParsingException.class, () -> {
+    var exception = assertThrows(ParsingException.class, () ->
       parser.parse(terminals, new ParserListener() {
         @Override public void onShift(Terminal token) {}
         @Override public void onReduce(Production production) {}
-      });
-    });
+      })
+    );
 
     var message = exception.getMessage();
     assertTrue(message.contains("Lexing error"));
@@ -935,12 +934,12 @@ public final class MetaGrammarParserTest {
     var input = "id + +";
     var terminals = lexer.tokenize(input);
 
-    var exception = assertThrows(ParsingException.class, () -> {
+    var exception = assertThrows(ParsingException.class, () ->
       parser.parse(terminals, new ParserListener() {
         @Override public void onShift(Terminal token) {}
         @Override public void onReduce(Production production) {}
-      });
-    });
+      })
+    );
 
     var message = exception.getMessage();
     assertTrue(message.contains("Parsing error"));
@@ -982,12 +981,12 @@ public final class MetaGrammarParserTest {
         """;
     var terminals = lexer.tokenize(input);
 
-    var exception = assertThrows(ParsingException.class, () -> {
+    var exception = assertThrows(ParsingException.class, () ->
       parser.parse(terminals, new ParserListener() {
         @Override public void onShift(Terminal token) {}
         @Override public void onReduce(Production production) {}
-      });
-    });
+      })
+    );
 
     var message = exception.getMessage();
     assertTrue(message.contains("Parsing error"));
