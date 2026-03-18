@@ -93,8 +93,8 @@ LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), error -> {
 
 ### Transforming to an AST using an Evaluator
 
-Lazy LR uses an `Evaluator<T>` to transform the parse tree into your desired result, usually an AST,
-but you can also evaluate productions directly.
+Lazy LR uses an `Evaluator<T>` to transform the parse tree into your desired result,
+usually an AST (Abstract Syntax Tree), but you can also evaluate productions directly.
 
 Using Java Records makes for a concise AST:
 
@@ -121,11 +121,11 @@ class NodeEvaluator implements Evaluator<Node> {
   @Override
   public Node evaluate(Production prod, List<Node> args) {
     return switch (prod.name()) {
-      case "E : num" -> args.get(0);
+      case "E : num"   -> args.get(0);
       case "E : E + E" -> new BinaryOp("+", args.get(0), args.get(2));
       case "E : E - E" -> new BinaryOp("-", args.get(0), args.get(2));
       case "E : E * E" -> new BinaryOp("*", args.get(0), args.get(2));
-      case "E : - E" -> new UnaryOp("-", args.get(1));
+      case "E : - E"   -> new UnaryOp("-", args.get(1));
       default -> throw new AssertionError("Unknown: " + prod.name());
     };
   }
