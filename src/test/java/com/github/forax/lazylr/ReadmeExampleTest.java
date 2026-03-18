@@ -20,11 +20,11 @@ public final class ReadmeExampleTest {
           right: UNARY
         }
         grammar {
-          E: num
-          E: E '+' E
-          E: E '-' E
-          E: E '*' E
-          E: '-' E      %prec UNARY
+          E : num
+          E : E '+' E
+          E : E '-' E
+          E : E '*' E
+          E : '-' E      %prec UNARY
         }
         """);
 

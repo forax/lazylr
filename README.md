@@ -45,11 +45,11 @@ var mg = MetaGrammar.load("""
       right: UNARY
     }
     grammar {
-      E: num
-      E: E '+' E
-      E: E '-' E
-      E: E '*' E
-      E: '-' E      %prec UNARY
+      E : num
+      E : E '+' E
+      E : E '-' E
+      E : E '*' E
+      E : '-' E      %prec UNARY
     }
     """);
 ```
