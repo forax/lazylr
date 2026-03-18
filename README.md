@@ -12,7 +12,7 @@ with the agility of a modern library.
   Parser states are computed only as they are encountered in the terminal stream,
   ensuring fast startup times even for complex grammars.
 * **True LR(1) Power:**
-  Handles any grammars that can be handled by LL(1) or LALR(1) parsers.
+  More powerful than LL(1) and even LALR(1) parsers, handles a strictly larger class of grammars.
 * **Declarative Precedence:**
   Resolve shift/reduce conflicts (like the "dangling else" or operator precedence) using a simple `Precedence` map
   rather than complex grammar restructuring.
@@ -33,13 +33,16 @@ var mg = MetaGrammar.load("""
       /[ ]+/
     }
     precedence {
-      left: '+'
-      left: '*'
+      left:  '+', '-'
+      left:  '*'
+      right: UNARY
     }
     grammar {
-      expr : num
-      expr : expr '+' expr
-      expr : expr '*' expr
+      E: num
+      E: E '+' E
+      E: E '-' E
+      E: E '*' E
+      E: '-' E      %prec UNARY
     }
     """);
 ```
@@ -47,16 +50,28 @@ var mg = MetaGrammar.load("""
 The DSL has three sections:
 
 - **`tokens`** — named terminals (`name: /regex/`) matched by the lexer in declaration order;
-  anonymous patterns (`/regex/`) are matched and silently discarded (e.g. whitespace).
+  anonymous patterns (`/regex/`) are matched and silently discarded (e.g. whitespace or comments).
 - **`precedence`** — operator associativity and priority; later lines have **higher** precedence than earlier ones.
+  Multiple terminals can share the same precedence level by separating them with commas.
 - **`grammar`** — BNF-style production rules; quoted literals like `'+'` are automatically registered as tokens and terminals.
 
-You may have noticed that the grammar above is ambiguous — the parser needs to know:
+Line comments (`// ...`) are also supported in grammar files.
+
+You may have noticed that the grammar above is ambiguous.
+The parser needs to know:
 - for `2 + 3 * 4`, should it be `(2 + 3) * 4` or `2 + (3 * 4)`?
 - for `2 + 3 + 4`, should it be `(2 + 3) + 4` or `2 + (3 + 4)`?
 
 The `precedence` section resolves this: later lines have higher precedence (`'*'` binds more tightly than `'+'`),
 and `left` associativity means `1 + 2 + 3` groups as `(1 + 2) + 3`.
+
+By default, a production inherits the precedence of its rightmost terminal.
+Sometimes this is wrong, for example, a unary minus shares the `-` terminal with binary subtraction,
+but should bind more tightly than any binary operator.
+
+Here `UNARY` is a virtual token (never emitted by the lexer) declared at a higher level than `*`.
+The annotation `%prec UNARY` on `E: '-' E` makes the unary minus bind more tightly than multiplication,
+so `- 3 * 4` correctly parses as `(-3) * 4`.
 
 ### Check if your grammar is correct
 
@@ -78,6 +93,7 @@ Using Java Records makes for a concise AST:
 ```java
 sealed interface Node {}
 record NumLit(int value) implements Node {}
+record UnaryOp(String op, Node node) implements Node {}
 record BinaryOp(String op, Node left, Node right) implements Node {}
 ```
 
@@ -89,18 +105,20 @@ class NodeEvaluator implements Evaluator<Node> {
   @Override
   public Node evaluate(Terminal term) {
     return switch (term.name()) {
-        case "num" -> new NumLit(Integer.parseInt(term.value()));
-        default -> null;
+      case "num" -> new NumLit(Integer.parseInt(term.value()));
+      default -> null;
     };
   }
 
   @Override
   public Node evaluate(Production prod, List<Node> args) {
     return switch (prod.name()) {
-        case "expr : num" -> args.get(0);
-        case "expr : expr + expr" -> new BinaryOp("+", args.get(0), args.get(2));
-        case "expr : expr * expr" -> new BinaryOp("*", args.get(0), args.get(2));
-        default -> throw new AssertionError("Unknown: " + prod.name());
+      case "E : num" -> args.get(0);
+      case "E : E + E" -> new BinaryOp("+", args.get(0), args.get(2));
+      case "E : E - E" -> new BinaryOp("-", args.get(0), args.get(2));
+      case "E : E * E" -> new BinaryOp("*", args.get(0), args.get(2));
+      case "E : - E" -> new UnaryOp("-", args.get(1));
+      default -> throw new AssertionError("Unknown: " + prod.name());
     };
   }
 }
@@ -114,14 +132,14 @@ Tokenize the input, parse, and create the AST:
 Lexer lexer = Lexer.createLexer(mg.tokens());
 Parser parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
-String input = "2 + 3 * 4";
+String input = "2 + - 3 * 4";
 
 Iterator<Terminal> terminals = lexer.tokenize(input);
 Node ast = parser.parse(terminals, new NodeEvaluator());
 
 // Profit!
 System.out.println(ast);
-  // BinaryOp[op=+, left=NumLit[value=2], right=BinaryOp[op=*, left=NumLit[value=3], right=NumLit[value=4]]]
+// BinaryOp[op=+, left=NumLit[value=2], right=BinaryOp[op=*, left=UnaryOp[op=-, node=NumLit[value=3]], right=NumLit[value=4]]]
 ```
 
 If you want to know more about how to design your grammar,
@@ -136,25 +154,25 @@ First, add jitpack.io as a repository in the POM file:
 
 ```xml
 ...
-  <repositories>
-      <repository>
-          <id>jitpack.io</id>
-          <url>https://jitpack.io</url>
-      </repository>
-  </repositories>
+<repositories>
+  <repository>
+    <id>jitpack.io</id>
+    <url>https://jitpack.io</url>
+  </repository>
+</repositories>
 ```
 
 Then add Lazy LR as a dependency:
 
 ```xml
   <dependencies>
-      ...
-      <dependency>
-          <groupId>com.github.forax</groupId>
-          <artifactId>lazylr</artifactId>
-          <version>6.0.0</version>
-      </dependency>
-  </dependencies>
+  ...
+  <dependency>
+    <groupId>com.github.forax</groupId>
+    <artifactId>lazylr</artifactId>
+    <version>6.0.0</version>
+  </dependency>
+</dependencies>
 ```
 
 
