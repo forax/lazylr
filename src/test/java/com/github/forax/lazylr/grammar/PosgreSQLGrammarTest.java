@@ -246,8 +246,8 @@ public class PosgreSQLGrammarTest {
           // ----- Operators -----
           op_typecast:      /::/
           op_concat:        /\\|\\|/
-          op_jsonarrow2:    /->>/
           op_jsonarrow:     /->/
+          op_jsonarrow2:    /->>/
           op_at_arrow:      /@>/
           op_arrow_at:      /<@/
           op_neq:           /<>|!=/
@@ -1252,7 +1252,7 @@ public class PosgreSQLGrammarTest {
           """);
     }
 
-    @Test @Disabled
+    @Test
     public void update_returning() {
       parse("UPDATE employees SET salary = salary * 1.1 WHERE dept_id = 3 RETURNING id, salary;");
     }
@@ -1787,7 +1787,7 @@ public class PosgreSQLGrammarTest {
       parse("SELECT -salary FROM employees;");
     }
 
-    @Test @Disabled
+    @Test
     public void typecast() {
       parse("SELECT salary::NUMERIC(10,2) FROM employees;");
     }
@@ -1918,12 +1918,12 @@ public class PosgreSQLGrammarTest {
       parse("SELECT 2 ^ 10 FROM dual;");
     }
 
-    @Test @Disabled
+    @Test
     public void json_arrow() {
       parse("SELECT data -> 'name' FROM documents;");
     }
 
-    @Test @Disabled
+    @Test
     public void json_arrow2() {
       parse("SELECT data ->> 'name' FROM documents;");
     }
@@ -1953,7 +1953,7 @@ public class PosgreSQLGrammarTest {
       parse("SELECT 'hello', 'it''s', E'escaped';");
     }
 
-    @Test @Disabled
+    @Test
     public void numeric_literals() {
       parse("SELECT 42, 3.14, 1e10, 2.5e-3 FROM dual;");
     }
