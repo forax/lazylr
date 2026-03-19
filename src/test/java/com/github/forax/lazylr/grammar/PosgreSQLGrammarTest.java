@@ -7,20 +7,15 @@ import com.github.forax.lazylr.ParserListener;
 import com.github.forax.lazylr.ParsingException;
 import com.github.forax.lazylr.Production;
 import com.github.forax.lazylr.Terminal;
-import com.github.forax.lazylr.Token;
 import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
-
-import java.util.ArrayList;
-import java.util.Comparator;
-import java.util.stream.IntStream;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class PosgreSQLGrammarTest {
   private static MetaGrammar create() {
-    var mg = MetaGrammar.load("""
+    return MetaGrammar.load("""
         // ============================================================
         //  PostgreSQL SQL Grammar — MetaGrammar format
         //
@@ -915,17 +910,6 @@ public class PosgreSQLGrammarTest {
           OptArrayBounds:
         }
         """);
-
-    var tokens = new ArrayList<>(mg.tokens());
-    var keywordRange = IntStream.range(0, tokens.size())
-        .dropWhile( i -> !tokens.get(i).name().startsWith("kw"))
-        .takeWhile(i -> tokens.get(i).name().startsWith("kw"))
-        .boxed()
-        .toList();
-    tokens.subList(keywordRange.getFirst(), keywordRange.getLast())
-        .sort(Comparator.comparing(Token::name).reversed());
-    System.out.println(tokens);
-    return new MetaGrammar(tokens, mg.precedenceMap(), mg.grammar());
   }
 
   // -------------------------------------------------------
