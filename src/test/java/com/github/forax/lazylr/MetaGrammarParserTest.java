@@ -970,12 +970,12 @@ public final class MetaGrammarParserTest {
     var tokens = List.of(
         new Token("id", "[a-z]+"),
         new Token("+", "\\+"),
-        new Token("\\s+")
+        new Token("[\\s\n]+")
     );
     var lexer = Lexer.createLexer(tokens);
 
     var input = """
-        id
+        id +
         id + +
         id
         """;
@@ -991,7 +991,7 @@ public final class MetaGrammarParserTest {
     var message = exception.getMessage();
     assertTrue(message.contains("Parsing error"));
     assertTrue(message.contains("line 2"));
-    assertTrue(message.contains("column 4"));
+    assertTrue(message.contains("column 6"));
     assertTrue(message.contains("id + +"));
     assertTrue(message.contains("^"));
     assertTrue(message.contains("expected"));

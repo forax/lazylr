@@ -29,7 +29,7 @@ import java.util.regex.PatternSyntaxException;
 ///
 /// This class is immutable, thus thread-safe.
 public final class Token {
-  private static void checkPattern(String regex) {
+  private static Pattern asPattern(String regex) {
     Pattern pattern;
     try {
       pattern = Pattern.compile(regex);
@@ -40,14 +40,15 @@ public final class Token {
     if (matcher.groupCount() != 0) {
       throw new IllegalArgumentException("pattern " + regex + " should not use groups");
     }
+    return pattern;
   }
 
    private final String name;
-   private final String regex;
+   final Pattern pattern;
 
-   private Token(String name, String regex, boolean unused) {
+   private Token(String name, Pattern pattern, boolean unused) {
      this.name = name;
-     this.regex = regex;
+     this.pattern = pattern;
      super();
    }
 
@@ -61,8 +62,8 @@ public final class Token {
   public Token(String name, String regex) {
     Objects.requireNonNull(name);
     Objects.requireNonNull(regex);
-    checkPattern(regex);
-    this(name, regex, false);
+    var pattern = asPattern(regex);
+    this(name, pattern, false);
   }
 
   /// Creates an ignorable rule, with no name.
@@ -74,8 +75,8 @@ public final class Token {
   /// @throws IllegalArgumentException if the pattern is malformed or contains a group
   public Token(String regex) {
     Objects.requireNonNull(regex);
-    checkPattern(regex);
-    this(null, regex, false);
+    var pattern = asPattern(regex);
+    this(null, pattern, false);
   }
 
   /// Returns The identifier for the token type or `null` if the rule
@@ -90,7 +91,7 @@ public final class Token {
   ///
   /// @return The regular expression pattern.
   public String regex() {
-    return regex;
+    return pattern.pattern();
   }
 
   /// Returns whether this rule is considered ignorable.
@@ -103,21 +104,23 @@ public final class Token {
   /// @return A hash code derived from the rule's name and the rule's regex.
   @Override
   public int hashCode() {
-    return 31 * (31 + (name == null ? 0 : name.hashCode())) + regex.hashCode();
+    return 31 * (31 + (name == null ? 0 : name.hashCode())) + pattern.pattern().hashCode();
   }
 
   /// Compares this rule with another object for equality.
   @Override
   public boolean equals(Object o) {
-    return o instanceof Token token && regex.equals(token.regex) && Objects.equals(name, token.name);
+    return o instanceof Token token &&
+        pattern.pattern().equals(token.pattern.pattern()) &&
+        Objects.equals(name, token.name);
   }
 
   /// @return A string representation of the rule.
   @Override
   public String toString() {
     if (name == null) {
-      return "Token(" + regex + ")";
+      return "Token(" + pattern.pattern() + ")";
     }
-    return "Token(" + name + ", " + regex + ")";
+    return "Token(" + name + ", " + pattern.pattern() + ")";
   }
 }

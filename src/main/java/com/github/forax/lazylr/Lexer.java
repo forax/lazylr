@@ -4,8 +4,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
 import java.util.Objects;
-import java.util.regex.Pattern;
-import java.util.stream.Collectors;
+import java.util.regex.Matcher;
 
 /// A lexical analyzer that transforms a character sequence into a stream of [Terminal]s.
 ///
@@ -15,11 +14,9 @@ import java.util.stream.Collectors;
 ///
 /// This class is thread-safe and can be safely shared between multiple threads.
 public final class Lexer {
-  private final Pattern pattern;
   private final List<Token> tokens;
 
-  private Lexer(Pattern pattern, List<Token> tokens) {
-    this.pattern = pattern;
+  private Lexer(List<Token> tokens) {
     this.tokens = tokens;
     super();
   }
@@ -31,11 +28,7 @@ public final class Lexer {
   /// @throws NullPointerException if `tokens` is null.
   public static Lexer createLexer(List<Token> tokens) {
     tokens = List.copyOf(tokens);
-    var regex = tokens.stream()
-        .map(token -> "(" + token.regex() + ")")
-        .collect(Collectors.joining("|"));
-    var pattern = Pattern.compile(regex);
-    return new Lexer(pattern, tokens);
+    return new Lexer(tokens);
   }
 
   /// Returns an iterator that lazily tokenizes the provided input.
@@ -58,38 +51,53 @@ public final class Lexer {
   /// @throws NullPointerException if the input is null.
   public Iterator<Terminal> tokenize(CharSequence input) {
     Objects.requireNonNull(input);
-    var matcher = pattern.matcher(input);
+    var matchers = tokens.stream()
+        .map(token -> token.pattern.matcher(input))
+        .toArray(Matcher[]::new);
     return new Tokenizer() {
-      private int index;
+      private int matchIndex;
+      private int terminalIndex;
       private Terminal terminal = nextTerminal(0);
 
+      private record Match(Token token, String value) {}
+
+      private Match nextMatch(int index) {
+        if (index == input.length()) {
+          return null;
+        }
+        var longuest = (String) null;
+        var tokenIndex = 0;
+        for (var i = 0; i < matchers.length; i++) {
+          var matcher = matchers[i];
+          if (matcher.find(index) && matcher.start() == index) {
+            var group = matcher.group();
+            if (longuest == null || longuest.length() < group.length()) {
+              longuest = group;
+              tokenIndex = i;
+            }
+          }
+        }
+        return longuest == null ? null : new Match(tokens.get(tokenIndex), longuest);
+      }
+
       private Terminal nextTerminal(int index) {
-        loop: for(;;) {
-          if (!matcher.find(index)) {
-            if (index != input.length()) {
-              this.index = index;
-              return error(index, input);
+        for(;;) {
+          var match = nextMatch(index);
+          if (match == null) {
+            if (index == input.length()) {
+              return null;
             }
-            return null;
+            matchIndex = index;  // next match
+            return error(index, input);
           }
-          for (var i = 1; i <= matcher.groupCount(); i++) {
-            var start = matcher.start(i);
-            if (start != -1) {
-              if (start != index) {
-                matcher.reset();  // no current match
-                this.index = index;
-                return error(index, input);
-              }
-              var token = tokens.get(i - 1);
-              if (token.isIgnorable()) {
-                index = matcher.end();
-                continue loop;
-              }
-              this.index = index;
-              return new Terminal(token.name(), matcher.group(i));
-            }
+          var token = match.token;
+          var value = match.value;
+          if (token.isIgnorable()) {
+            index += value.length();
+            continue;
           }
-          throw new AssertionError();
+          matchIndex = index;  // next match
+          return new Terminal(token.name(), value);
         }
       }
 
@@ -100,7 +108,7 @@ public final class Lexer {
 
       @Override
       public int index() {
-        return index;
+        return terminalIndex;
       }
       @Override
       public CharSequence input() {
@@ -118,7 +126,13 @@ public final class Lexer {
           throw new NoSuchElementException();
         }
         var terminal = this.terminal;
-        this.terminal = matcher.hasMatch() ? nextTerminal(matcher.end()) : null;
+        terminalIndex = matchIndex;  // for error message
+        if (terminal.name().equals(Terminal.ERROR.name())) {
+          this.terminal = null;
+          return terminal;
+        }
+        matchIndex += terminal.value().length();
+        this.terminal = nextTerminal(matchIndex);
         return terminal;
       }
     };
