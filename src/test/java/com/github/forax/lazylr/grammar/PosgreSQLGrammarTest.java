@@ -29,8 +29,9 @@ public class PosgreSQLGrammarTest {
         //    • Transactions (BEGIN / COMMIT / ROLLBACK / SAVEPOINT)
         //
         //  This grammar is LALR(1)-oriented. To stay conflict-free, some
-        //  ambiguities present in PostgreSQL's bison grammar (gram.y) are
-        //  resolved the same way: via explicit precedence declarations and
+        //  ambiguities present in PostgreSQL's bison grammar
+        //  (https://github.com/postgres/postgres/blob/master/src/backend/parser/gram.y)
+        //  are resolved the same way: via explicit precedence declarations and
         //  careful left-factoring.
         // ============================================================
         
@@ -234,7 +235,7 @@ public class PosgreSQLGrammarTest {
           // ----- Literals -----
           int_literal:      /[0-9]+/
           float_literal:    /[0-9]+\\.[0-9]*(?:[eE][+-]?[0-9]+)?|[0-9]+[eE][+-]?[0-9]+/
-          string_literal:   /'(?:[^'\\\\]|\\\\.)*'/
+          string_literal:   /'(?:[^'\\\\]|''|\\\\.)*'/
           dollar_string:    /\\$[A-Za-z_]*\\$(?:[^\\$]|\\$[^A-Za-z_\\$])*\\$[A-Za-z_]*\\$/
           bit_string:       /[bB]'[01]*'/
           hex_string:       /[xX]'[0-9a-fA-F]*'/
