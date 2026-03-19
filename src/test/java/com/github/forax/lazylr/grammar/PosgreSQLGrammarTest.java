@@ -312,8 +312,6 @@ public class PosgreSQLGrammarTest {
           // ColId: any identifier, including non-reserved keywords usable as names
           ColId: ident
           ColId: quoted_ident
-          ColId: kw_text
-          ColId: kw_value
         
           // A qualified name: schema.table or just table, optionally ONLY
           QualifiedName: ColId
@@ -1337,7 +1335,7 @@ public class PosgreSQLGrammarTest {
   @Nested
   public class CreateTableTests {
 
-    @Test @Disabled
+    @Test
     public void create_simple_table() {
       parse("""
           CREATE TABLE employees (
@@ -1391,7 +1389,7 @@ public class PosgreSQLGrammarTest {
           """);
     }
 
-    @Test @Disabled
+    @Test
     public void create_table_with_unique_constraint() {
       parse("""
           CREATE TABLE users (
@@ -1447,7 +1445,7 @@ public class PosgreSQLGrammarTest {
           """);
     }
 
-    @Test @Disabled
+    @Test
     public void create_table_text_types() {
       parse("""
           CREATE TABLE text_types (
@@ -1486,7 +1484,7 @@ public class PosgreSQLGrammarTest {
           """);
     }
 
-    @Test @Disabled
+    @Test
     public void create_table_array_type() {
       parse("""
           CREATE TABLE arrays_test (
