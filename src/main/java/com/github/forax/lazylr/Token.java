@@ -10,22 +10,12 @@ import java.util.regex.PatternSyntaxException;
 /// During tokenization, the lexer attempts to match the input string against
 /// these patterns to produce [Terminal] tokens.
 ///
-/// ### Lexing Behavior
-/// * **Pattern Matching**: The [regex()] must follow standard Java
-///   [java.util.regex.Pattern] syntax.
-/// * **Token Creation**: When a match is found and the rule has a [name], a
-///   new [Terminal] is created using that name and the matched text.
-/// * **Ignorable Tokens**: If a rule has no name (is `null`), it is considered
-///   an "ignorable token." The matched text is consumed by the [Lexer] but
-///   no [Terminal] is produced for the output stream.
-/// * **Priority**: If multiple rules can match at the same position, the
-///   rule that appears **first** in the list provided to the lexer takes precedence.
-///
-/// ### Examples
-/// ```java
-/// new Rule("num", "[0-9]+"); // Produces a "num" terminal
-/// new Rule("[ ]+");          // Ignorable: matches spaces but produces no terminal
-/// ```
+/// The [regex()] must follow standard Java [java.util.regex.Pattern] syntax.
+/// During tokenization, the lexer attempts to match the input string against
+/// these patterns to produce [Terminal] tokens.
+/// When a match is found and the rule has a [name], a new [Terminal]
+/// is created using that name and the matched text as [value].
+/// If a rule has no name, it is considered an "ignorable token."
 ///
 /// This class is immutable, thus thread-safe.
 public final class Token {
@@ -52,7 +42,7 @@ public final class Token {
      super();
    }
 
-  /// Creates a new Rule.
+  /// Creates a new Rule with a name.
   ///
   /// @param name  The symbolic name of the token. If `null`, the rule is
   ///              treated as ignorable and its matches will be skipped by the lexer.

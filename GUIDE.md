@@ -127,7 +127,12 @@ LALRVerifier.verify(grammar, Map.of(), msg -> System.err.println("Conflict: " + 
 
 The lexer's job is to turn raw input text into a stream of named tokens.
 You define it by listing token patterns as Java regular expressions.
-Order matters: earlier patterns have higher priority.
+The lexer uses a **longest-match** rule: when multiple patterns match at the same
+position, the one that consumes the most characters wins. Ties are broken by
+declaration order, so if two patterns match the same length of input, the earlier
+one wins. This is why keywords like `sum` must be listed before
+the general `ident` pattern — they match exactly as many characters, so the
+keyword wins only because it is declared first.
 
 ```java
 var lexer = Lexer.createLexer(List.of(
@@ -555,7 +560,8 @@ In most languages (and in this grammar), the answer is: **the nearest `if`**.
 So `else 42` belongs to the inner `if 0`, giving `42` when the outer condition is true but the inner is false.
 
 Two things to keep in mind when adding keywords:
-1. Declare keyword tokens **before** more general patterns like `num`, so the lexer gives them priority.
+1. Declare keyword tokens **before** more general patterns like `ident`, because
+   when keywords match the same number of characters as identifiers, the declaration order is used.
 2. Use the precedence section to resolve the ambiguity: give `else` higher precedence than `then`,
    forcing the parser to always shift `else` rather than reduce early.
 

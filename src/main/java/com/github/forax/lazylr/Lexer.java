@@ -8,9 +8,15 @@ import java.util.regex.Matcher;
 
 /// A lexical analyzer that transforms a character sequence into a stream of [Terminal]s.
 ///
-/// ### Token Priority
-/// If multiple [Token]s can match the same substring, the token that appears **first**
-/// in the list passed to [createLexer(List)] takes precedence.
+/// ### Lexing Behavior
+/// * **Terminal Creation**: When a match is found and the rule has a [name], a
+///   new [Terminal] is created using that name and the matched text.
+/// * **Ignorable Tokens**: If a rule has no name (is `null`), it is considered
+///   an "ignorable token." The matched text is consumed by the [Lexer] but
+///   no [Terminal] is produced for the output stream.
+/// * **Priority**: If multiple rules match at the same position, the rule whose
+///   match is the longest wins. If two rules match the same number of characters,
+///   the rule that appears earlier in the list provided to the lexer wins.
 ///
 /// This class is thread-safe and can be safely shared between multiple threads.
 public final class Lexer {
@@ -37,12 +43,14 @@ public final class Lexer {
   /// provided to [#createLexer(List)].
   ///
   /// ### Match Outcomes:
-  /// * **Standard Match:** Returns a [Terminal] with the token's name and matched text.
+  /// * **Standard Match:** The lexer finds all tokens that match at the current
+  ///   position and selects the one with the longest match. Ties are broken
+  ///   by declaration order (earlier token wins).
   /// * **Ignorable Match:** If a token has no name ([Token#isIgnorable()] is `true`),
-  ///    the matched text is skipped, and the lexer immediately attempts to find
-  ///    the next match starting from the end of the skipped segment.
+  ///   the matched text is skipped, and the lexer immediately attempts to find
+  ///   the next match starting from the end of the skipped segment.
   /// * **No Match:** If no token matches at the current index, a [Terminal#ERROR]
-  ///    is returned with the first invalid character and the lexer stops.
+  ///   is returned with the first invalid character and the lexer stops.
   ///
   /// The process is lazy, the input is only scanned as [Iterator#next()] is called.
   ///
