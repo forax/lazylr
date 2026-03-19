@@ -55,7 +55,50 @@ public final class LexerTest {
   }
 
   @Test
-  public void tokenPriority() {
+  public void longestMatchWinsOverDeclarationOrder() {
+    var tokens = List.of(
+        new Token("KEYWORD", "if"),
+        new Token("ID", "[a-z]+")
+    );
+    var lexer = Lexer.createLexer(tokens);
+    var terminals = lexer.tokenize("iff");
+
+    var t = terminals.next();
+    assertEquals("ID", t.name());
+    assertEquals("iff", t.value());
+  }
+
+  @Test
+  public void longestMatchWithOperators() {
+    var tokens = List.of(
+        new Token("NEQ", "!="),
+        new Token("BANG", "!")
+    );
+    var lexer = Lexer.createLexer(tokens);
+    var terminals = lexer.tokenize("!=");
+
+    var t = terminals.next();
+    assertEquals("NEQ", t.name());
+    assertEquals("!=", t.value());
+    assertFalse(terminals.hasNext());
+  }
+
+  @Test
+  public void keywordNotMatchedWhenPartOfLongerIdentifier() {
+    var tokens = List.of(
+        new Token("IF", "if"),
+        new Token("ID", "[a-z]+")
+    );
+    var lexer = Lexer.createLexer(tokens);
+    var terminals = lexer.tokenize("iffy if");
+
+    var t1 = terminals.next();
+    assertEquals("ID", t1.name());
+    assertEquals("iffy", t1.value());
+  }
+
+  @Test
+  public void ifSameLengthUseOrderOfDeclaration() {
     // Both tokens match "if", but "KEYWORD" is first
     var tokens = List.of(
         new Token("KEYWORD", "if"),
@@ -68,6 +111,8 @@ public final class LexerTest {
     assertEquals("KEYWORD", t.name());
     assertEquals("if", t.value());
   }
+
+
 
   @Test
   public void ignorableTokens() {
