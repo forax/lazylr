@@ -398,8 +398,10 @@ public class PosgreSQLGrammarTest {
         
           // JOIN
           JoinedTable: TableRef kw_cross kw_join TableRef
-          JoinedTable: TableRef JoinType kw_join TableRef JoinQual
-          JoinedTable: TableRef kw_natural JoinType kw_join TableRef
+          JoinedTable: TableRef kw_join TableRef JoinQual            // bare JOIN (implicit INNER)
+          JoinedTable: TableRef JoinType kw_join TableRef JoinQual   // LEFT/RIGHT/FULL/INNER JOIN
+          JoinedTable: TableRef kw_natural kw_join TableRef          // NATURAL JOIN (no type = INNER)
+          JoinedTable: TableRef kw_natural JoinType kw_join TableRef // NATURAL LEFT/RIGHT/FULL JOIN
         
           JoinType: kw_inner
           JoinType: kw_left kw_outer
@@ -1035,7 +1037,7 @@ public class PosgreSQLGrammarTest {
           """);
     }
 
-    @Test @Disabled
+    @Test
     public void select_with_recursive_cte() {
       parse("""
           WITH RECURSIVE tree AS (
@@ -1064,7 +1066,7 @@ public class PosgreSQLGrammarTest {
   @Nested
   public class JoinTests {
 
-    @Test @Disabled
+    @Test
     public void inner_join() {
       parse("SELECT e.id, d.name FROM employees e JOIN departments d ON e.dept_id = d.id;");
     }
@@ -1094,17 +1096,17 @@ public class PosgreSQLGrammarTest {
       parse("SELECT a.id, b.id FROM a CROSS JOIN b;");
     }
 
-    @Test @Disabled
+    @Test
     public void natural_join() {
       parse("SELECT * FROM employees NATURAL JOIN departments;");
     }
 
-    @Test @Disabled
+    @Test
     public void join_using() {
       parse("SELECT * FROM employees JOIN departments USING (dept_id);");
     }
 
-    @Test @Disabled
+    @Test
     public void join_subquery() {
       parse("""
           SELECT e.id, sub.cnt
