@@ -52,7 +52,8 @@ public final class Parser {
   /// If the grammar contains shift/reduce conflicts resolvable by precedence,
   /// the `precedenceMap` is used to resolve them.
   ///
-  /// The returned [Parser] is not thread-safe.
+  /// The returned [Parser] is not thread-safe, see [ParserFactory] for a thread-safe
+  /// alternative.
   ///
   /// @param grammar       The context-free grammar to parse.
   /// @param precedenceMap A map defining the precedence and associativity of terminals
