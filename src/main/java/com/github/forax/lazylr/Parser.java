@@ -1,6 +1,5 @@
 package com.github.forax.lazylr;
 
-import com.github.forax.lazylr.LRTransitionEngine.Item;
 import com.github.forax.lazylr.LRTransitionEngine.State;
 
 import java.util.AbstractList;
@@ -25,12 +24,13 @@ import java.util.Set;
 ///    as they occur.
 ///
 /// This class is not thread-safe and should not be shared between multiple threads.
+/// Use [ParserFactory] instead to create multiple parser instances concurrently.
 public final class Parser {
   private final LRTransitionEngine engine;
   private final State initialState;
   private final Production startProduction;
 
-  private Parser(LRTransitionEngine engine, State initialState, Production startProduction) {
+  Parser(LRTransitionEngine engine, State initialState, Production startProduction) {
     this.engine = engine;
     this.initialState = initialState;
     this.startProduction = startProduction;
@@ -63,30 +63,8 @@ public final class Parser {
     Objects.requireNonNull(grammar);
     Objects.requireNonNull(precedenceMap);
 
-    // Complete the precedence map by computing the precedence of the production if necessary
-    var fullPrecedenceMap = Precedence.complete(grammar, precedenceMap);
-
-    // Compute FIRST sets
-    var firstSets = LRAlgorithm.computeFirstSets(grammar);
-
-    // Prepare the Initial State (S' -> . S $)
-    // We create an "Augmented" production to represent the entry point
-    var augmentedStart = new NonTerminal(grammar.startSymbol().name() + "'");
-    var startProd = new Production(augmentedStart, List.of(grammar.startSymbol()));
-
-    // Initial Item: [S' -> . S, { $ }]
-    var startItem = new Item(startProd, 0, Terminal.EOF);
-
-    // Initialize the LALR Builder and Transition Engine
-    var algorithm = new LRAlgorithm(grammar, firstSets);
-    var engine = new LRTransitionEngine(algorithm, fullPrecedenceMap);
-
-    // Compute the Closure of the initial item to create State 0
-    var initialItems = algorithm.computeClosure(Set.of(startItem));
-    var initialState = new State(initialItems);
-
-    // Create the Parser
-    return new Parser(engine, initialState, startProd);
+    var factory = ParserFactory.createFactory(grammar, precedenceMap);
+    return factory.createParser();
   }
 
   private static Iterator<Terminal> wrapAndAppendEOF(Iterator<? extends Terminal> iterator) {
