@@ -10,11 +10,11 @@ import java.util.regex.PatternSyntaxException;
 /// During tokenization, the lexer attempts to match the input string against
 /// these patterns to produce [Terminal] tokens.
 ///
-/// The [regex()] must follow standard Java [java.util.regex.Pattern] syntax.
+/// The [regex()] must follow standard Java [Pattern] syntax.
 /// During tokenization, the lexer attempts to match the input string against
 /// these patterns to produce [Terminal] tokens.
 /// When a match is found and the rule has a [name], a new [Terminal]
-/// is created using that name and the matched text as [value].
+/// is created using that name and the matched text as 'value'.
 /// If a rule has no name, it is considered an "ignorable token."
 ///
 /// This class is immutable, thus thread-safe.
