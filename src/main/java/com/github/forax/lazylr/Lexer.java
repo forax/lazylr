@@ -9,12 +9,12 @@ import java.util.regex.Matcher;
 /// A lexical analyzer that transforms a character sequence into a stream of [Terminal]s.
 ///
 /// ### Lexing Behavior
-/// * **Terminal Creation**: When a match is found and the rule has a [name], a
+/// - **Terminal Creation**: When a match is found and the rule has a 'name', a
 ///   new [Terminal] is created using that name and the matched text.
-/// * **Ignorable Tokens**: If a rule has no name (is `null`), it is considered
+/// - **Ignorable Tokens**: If a rule has no name (is `null`), it is considered
 ///   an "ignorable token." The matched text is consumed by the [Lexer] but
 ///   no [Terminal] is produced for the output stream.
-/// * **Priority**: If multiple rules match at the same position, the rule whose
+/// - **Priority**: If multiple rules match at the same position, the rule whose
 ///   match is the longest wins. If two rules match the same number of characters,
 ///   the rule that appears earlier in the list provided to the lexer wins.
 ///
