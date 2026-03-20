@@ -1,5 +1,7 @@
 package com.github.forax.lazylr;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -24,7 +26,7 @@ public final class Production implements PrecedenceEntity {
   private final NonTerminal head;
   private final List<Symbol> body;
   private final int hashCode;
-  private String name;   // lazily initialized
+  private @Nullable String name;   // lazily initialized
 
   /// Creates an immutable production rule.
   ///
