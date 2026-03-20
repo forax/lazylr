@@ -38,27 +38,14 @@ public final class TokenTest {
 
   @Test
   public void constructorIgnorablePatternWithGroup() {
-    assertThrows(IllegalArgumentException.class, () ->
+    assertDoesNotThrow(() ->
         new Token("(foo)"));
   }
 
   @Test
   public void constructorNamedPatternWithGroup() {
-    assertThrows(IllegalArgumentException.class, () ->
+    assertDoesNotThrow(() ->
         new Token("id", "(foo)"));
-  }
-
-  @Test
-  public void constructorPatternWithNestedGroup() {
-    // nested groups still count as groups
-    assertThrows(IllegalArgumentException.class, () ->
-        new Token("id", "([0-9]+)"));
-  }
-
-  @Test
-  public void constructorPatternWithMultipleGroups() {
-    assertThrows(IllegalArgumentException.class, () ->
-        new Token("id", "([a-z])([0-9])"));
   }
 
   @Test

@@ -20,17 +20,11 @@ import java.util.regex.PatternSyntaxException;
 /// This class is immutable, thus thread-safe.
 public final class Token {
   private static Pattern asPattern(String regex) {
-    Pattern pattern;
     try {
-      pattern = Pattern.compile(regex);
+      return Pattern.compile(regex);
     } catch(PatternSyntaxException e) {
       throw new IllegalArgumentException("invalid pattern " + regex, e);
     }
-    var matcher = pattern.matcher("");
-    if (matcher.groupCount() != 0) {
-      throw new IllegalArgumentException("pattern " + regex + " should not use groups");
-    }
-    return pattern;
   }
 
    private final String name;
@@ -48,7 +42,7 @@ public final class Token {
   ///              treated as ignorable and its matches will be skipped by the lexer.
   /// @param regex The regular expression pattern to match.
   /// @throws NullPointerException if name or regex is null.
-  /// @throws IllegalArgumentException if the pattern is malformed or contains a group
+  /// @throws IllegalArgumentException if the pattern is malformed.
   public Token(String name, String regex) {
     Objects.requireNonNull(name);
     Objects.requireNonNull(regex);
@@ -62,7 +56,7 @@ public final class Token {
   /// produce a [Terminal] in the terminal stream.
   ///
   /// @param regex The regular expression pattern to match and skip.
-  /// @throws IllegalArgumentException if the pattern is malformed or contains a group
+  /// @throws IllegalArgumentException if the pattern is malformed.
   public Token(String regex) {
     Objects.requireNonNull(regex);
     var pattern = asPattern(regex);
