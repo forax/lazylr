@@ -72,6 +72,6 @@ public final class ParserFactory {
     var initialState = new LRTransitionEngine.State(initialItems);
 
     // Create the Parser
-    return new Parser(engine, initialState, startProd);
+    return new Parser(Thread.currentThread(), engine, initialState, startProd);
   }
 }

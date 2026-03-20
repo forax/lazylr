@@ -24,13 +24,15 @@ import java.util.Set;
 ///    as they occur.
 ///
 /// This class is not thread-safe and should not be shared between multiple threads.
-/// Use [ParserFactory] instead to create multiple parser instances concurrently.
+/// Use [ParserFactory] instead to create multiple parser instances.
 public final class Parser {
+  private final Thread ownerThread;
   private final LRTransitionEngine engine;
   private final State initialState;
   private final Production startProduction;
 
-  Parser(LRTransitionEngine engine, State initialState, Production startProduction) {
+  Parser(Thread ownerThread, LRTransitionEngine engine, State initialState, Production startProduction) {
+    this.ownerThread = ownerThread;
     this.engine = engine;
     this.initialState = initialState;
     this.startProduction = startProduction;
@@ -140,7 +142,9 @@ public final class Parser {
   /// @param input     An iterator of tokens, typically provided by a [Lexer].
   /// @param evaluator The strategy for building results from tokens and rules.
   /// @return The final evaluated result of the start production.
-  /// @throws ParsingException if a syntax error occurs during parsing
+  /// @throws ParsingException if a syntax error occurs during parsing.
+  /// @throws WrongThreadException if the method is called from a different thread
+  ///         than the one the parser was created on.
   public <V> V parse(Iterator<Terminal> input, Evaluator<V> evaluator) throws ParsingException {
     Objects.requireNonNull(input);
     Objects.requireNonNull(evaluator);
@@ -205,6 +209,12 @@ public final class Parser {
     return listener.stack[listener.size - 1];
   }
 
+  private void checkOwnerThread() {
+    if (Thread.currentThread() != ownerThread) {
+      throw new WrongThreadException("Parser can only be used from the thread it was created on");
+    }
+  }
+
   /// Parses a stream of tokens and notifies a listener of every transition.
   ///
   /// This is a low-level method that allows for custom handling of shift and
@@ -213,9 +223,12 @@ public final class Parser {
   /// @param input    An iterator of tokens.
   /// @param listener The listener to receive parser events.
   /// @throws ParsingException if a syntax error occurs during parsing
+  /// @throws WrongThreadException if the method is called from a different thread
+  ///         than the one the parser was created on.
   public void parse(Iterator<Terminal> input, ParserListener listener) throws ParsingException {
     Objects.requireNonNull(input);
     Objects.requireNonNull(listener);
+    checkOwnerThread();
 
     // We add the EOF marker to the input
     var tokens = wrapAndAppendEOF(input);
