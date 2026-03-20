@@ -4,11 +4,14 @@ import com.github.forax.lazylr.Evaluator;
 import com.github.forax.lazylr.Lexer;
 import com.github.forax.lazylr.MetaGrammar;
 import com.github.forax.lazylr.Parser;
+import com.github.forax.lazylr.ParserFactory;
 import com.github.forax.lazylr.ParsingException;
 import com.github.forax.lazylr.Production;
 import com.github.forax.lazylr.Terminal;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.parallel.Execution;
+import org.junit.jupiter.api.parallel.ExecutionMode;
 
 import java.util.AbstractMap;
 import java.util.ArrayList;
@@ -31,6 +34,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 /// Array    : '[' ']' | '[' Elements ']'
 /// Elements : Value | Elements ',' Value
 /// ```
+@Execution(ExecutionMode.CONCURRENT)
 public final class JSONGrammarTest {
 
   /// Grammar
@@ -161,13 +165,15 @@ public final class JSONGrammarTest {
     }
   };
 
+  private static final MetaGrammar META_GRAMMAR = buildMetaGrammar();
+  private static final ParserFactory PARSER_FACTORY = ParserFactory.createFactory(
+      META_GRAMMAR.grammar(), Map.of());
+  private static final Lexer LEXER = Lexer.createLexer(META_GRAMMAR.tokens());
 
-  /// Parses a raw JSON string and returns the root {@link JSONValue}.
+  /// Tests are run in parallel, so parse() had to be thread-safe
   private static JSONValue parse(String input) {
-    var mg = buildMetaGrammar();
-    var lexer = Lexer.createLexer(mg.tokens());
-    var parser = Parser.createParser(mg.grammar(), Map.of());
-    return (JSONValue) parser.parse(lexer.tokenize(input), EVALUATOR);
+    var parser = PARSER_FACTORY.createParser();
+    return (JSONValue) parser.parse(LEXER.tokenize(input), EVALUATOR);
   }
 
 
