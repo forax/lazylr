@@ -1,19 +1,26 @@
 package com.github.forax.lazylr;
 
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 
-/// A factory that amortizes the cost of grammar analysis across multiple [Parser] instances.
+/// A factory that amortizes the cost of grammar analysis across
+/// multiple [Parser] instances.
 ///
-/// [Parser#createParser(Grammar, Map)] performs upfront analysis work on every call.
-/// When many parsers are needed for the same grammar (e.g., one per thread in a
-/// concurrent application), creating a {@code ParserFactory} once and calling
-/// [#createParser()] repeatedly avoids that repeated work.
+/// This class is **immutable and thread-safe**: the factory can be shared freely
+/// across threads. Each [Parser] returned by [#createParser()] is independent and
+/// bound to the thread that called [#createParser()].
 ///
-/// This class is immutable and thread-safe. Each [Parser] returned by [#createParser()]
-/// is independent and not thread-safe.
+/// ```java
+/// // Shared across threads — create once
+/// private static final FACTORY = ParserFactory.createFactory(GRAMMAR, PRECEDENCE_MAP);
+///
+/// // Per-thread — call createParser() on the thread that will parse the input
+/// var parser = FACTORY.createParser();
+/// var result = parser.parse(input, EVALUATOR);
+/// ```
 public final class ParserFactory {
   private final Grammar grammar;
   private final Map<PrecedenceEntity, Precedence> fullPrecedenceMap;
@@ -48,12 +55,27 @@ public final class ParserFactory {
     return new ParserFactory(grammar, fullPrecedenceMap, firstSets);
   }
 
-  /// Creates a new [Parser] instance for this factory's grammar.
+  /// Creates a lazy LR(1) parser for the given grammar.
   ///
-  /// Each call returns an independent parser that is not thread-safe
-  /// and must not be shared between threads.
+  /// The returned parser computes states on demand as input is processed,
+  /// rather than building the full parse table upfront.
+  /// This means the cost of [#createParser] is low and not proportional
+  /// to the full grammar.
   ///
-  /// @return a new parser instance.
+  /// The grammar is augmented with a start production `S' -> S`,
+  /// which means [ParserListener#onReduce] will fire once for that production
+  /// at the end of a successful parse. Users of [Evaluator] do not need to
+  /// handle this production, as it is handled automatically.
+  ///
+  /// If the grammar contains shift/reduce conflicts resolvable by precedence,
+  /// the `precedenceMap` is used to resolve them.
+  ///
+  /// ### Thread ownership
+  /// The returned parser is bound to the calling thread. Both this method and
+  /// all later calls to [Parser#parse(Iterator, Evaluator)] must be invoked
+  /// from the same thread.
+  ///
+  /// @return a new parser instance bound to the calling thread.
   public Parser createParser() {
     // Prepare the Initial State (S' -> . S $)
     // We create an "Augmented" production to represent the entry point

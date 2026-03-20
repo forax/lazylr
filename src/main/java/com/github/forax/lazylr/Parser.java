@@ -23,8 +23,10 @@ import java.util.Set;
 /// 2. **Event-driven**: Using [#parse(Iterator, ParserListener)] to observe transitions
 ///    as they occur.
 ///
-/// This class is not thread-safe and should not be shared between multiple threads.
-/// Use [ParserFactory] instead to create multiple parser instances.
+/// This class is not thread-safe. Each instance is permanently bound to the thread
+/// that created it (via [#createParser] or [ParserFactory#createParser]).
+/// Calling [#parse] from any other thread will throw [WrongThreadException].
+/// To parse concurrently, create one [Parser] per thread using a shared [ParserFactory].
 public final class Parser {
   private final Thread ownerThread;
   private final LRTransitionEngine engine;
@@ -47,20 +49,23 @@ public final class Parser {
   /// to the full grammar.
   ///
   /// The grammar is augmented with a start production `S' -> S`,
-  /// which means [ParserListener#onReduce] will fire once for that production
-  /// at the end of a successful parse. Users of [Evaluator] do not need to
-  /// handle this production, as it is handled automatically.
+  /// which means [ParserListener#onReduce(Production)] will fire once for
+  /// that production at the end of a successful parse.
+  /// Users of [Evaluator] do not need to handle this production,
+  /// as it is handled automatically.
   ///
   /// If the grammar contains shift/reduce conflicts resolvable by precedence,
   /// the `precedenceMap` is used to resolve them.
   ///
-  /// The returned [Parser] is not thread-safe, see [ParserFactory] for a thread-safe
-  /// alternative.
+  /// ### Thread ownership
+  /// The returned parser is bound to the calling thread. Both this method and
+  /// all later calls to [#parse(Iterator, Evaluator)] must be invoked from
+  /// the same thread.
   ///
   /// @param grammar       The context-free grammar to parse.
   /// @param precedenceMap A map defining the precedence and associativity of terminals
   ///                      (e.g., operators) and productions.
-  /// @return A parser ready to process token streams.
+  /// @return A new parser bound to the calling thread, ready to process token streams.
   /// @throws NullPointerException if grammar or precedenceMap is null.
   public static Parser createParser(Grammar grammar, Map<? extends PrecedenceEntity, ? extends Precedence> precedenceMap) {
     Objects.requireNonNull(grammar);
