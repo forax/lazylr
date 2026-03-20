@@ -2,6 +2,7 @@ package com.github.forax.lazylr;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.NoSuchElementException;
 import java.util.Objects;
 
 /// Represents a terminal symbol (token) in the grammar.
@@ -48,7 +49,7 @@ public final class Terminal implements Symbol, PrecedenceEntity {
   /// @param name The unique identifier for the terminal.
   /// @param value The actual text fragment matched in the source.
   /// @throws NullPointerException if `name` is null or `value` is null.
-  public Terminal(String name, @Nullable String value) {
+  public Terminal(String name, String value) {
     Objects.requireNonNull(name);
     Objects.requireNonNull(value);
     this(name, value, false);
@@ -76,11 +77,15 @@ public final class Terminal implements Symbol, PrecedenceEntity {
     return name;
   }
 
-  /// The actual text fragment matched in the source, or `null` if this
-  /// is a grammar's terminal.
+  /// The actual text fragment matched in the source, or
+  /// throw [NoSuchElementException] if the terminal is a grammar's terminal.
   ///
-  /// @return The terminal's matched value, or `null`.
-  public @Nullable String value() {
+  /// @return The terminal's matched valuel`.
+  /// @throws java.util.NoSuchElementException if the terminal has no value.
+  public String value() {
+    if (value == null) {
+      throw new NoSuchElementException("terminal has no value");
+    }
     return value;
   }
 

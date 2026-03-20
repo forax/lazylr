@@ -2,6 +2,8 @@ package com.github.forax.lazylr;
 
 import org.junit.jupiter.api.Test;
 
+import java.util.NoSuchElementException;
+
 import static org.junit.jupiter.api.Assertions.*;
 
 public final class TerminalTest {
@@ -31,9 +33,9 @@ public final class TerminalTest {
   }
 
   @Test
-  public void nameOnlyConstructorHasNullValue() {
+  public void nameOnlyConstructorHasNoValue() {
     var t = new Terminal("num");
-    assertNull(t.value());
+    assertThrows(NoSuchElementException.class, t::value);
   }
 
   @Test
