@@ -347,7 +347,6 @@ public final class PosgreSQLGrammarTest {
           TargetList: TargetEl
 
           TargetEl: Expr kw_as ColId
-          TargetEl: Expr ColId
           TargetEl: Expr
           TargetEl: '*'
           TargetEl: ColId '.' '*'
