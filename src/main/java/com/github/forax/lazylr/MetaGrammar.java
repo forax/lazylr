@@ -256,7 +256,6 @@ public final class MetaGrammar {
 
       @Override
       public Object evaluate(Terminal t) {
-        assert t.value() != null;
         return t.value();
       }
 

@@ -88,7 +88,6 @@ public final class JSONGrammarTest {
 
     @Override
     public @Nullable Object evaluate(Terminal terminal) {
-      assert terminal.value() != null;
       return switch (terminal.name()) {
         case "string"  -> new JSONString(stripQuotes(terminal.value()));
         case "number"  -> new JSONNumber(Double.parseDouble(terminal.value()));
