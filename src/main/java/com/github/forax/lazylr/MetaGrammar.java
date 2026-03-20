@@ -467,7 +467,11 @@ public final class MetaGrammar {
     Grammar grammar;
     if (!productions.isEmpty()) {
       var startSymbol = nonTerminalMap.values().iterator().next();
-      grammar = new Grammar(startSymbol, productions);
+      try {
+        grammar = new Grammar(startSymbol, productions);
+      } catch (IllegalArgumentException e) {
+        throw new ParsingException("Invalid grammar: " + e.getMessage(), e);
+      }
     } else {
       grammar = null;
     }
