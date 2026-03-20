@@ -1,5 +1,7 @@
 package com.github.forax.lazylr;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -89,7 +91,7 @@ final class LRTransitionEngine {
     }
 
     /// @return The symbol immediately following the dot, or `null` if the rule is completed.
-    public Symbol getNextSymbol() {
+    public @Nullable Symbol getNextSymbol() {
       if (dot < production.body().size()) {
         return production.body().get(dot);
       }
@@ -195,7 +197,7 @@ final class LRTransitionEngine {
   ///
   /// If the action has not been encountered before, it is calculated via
   /// [#resolveAction] and cached in the [actionTable].
-  public Action getAction(State currentState, Terminal lookahead) {
+  public @Nullable Action getAction(State currentState, Terminal lookahead) {
     var stateActions = actionTable.get(currentState);
     if (stateActions != null) {
       var cached = stateActions.get(lookahead);
@@ -213,7 +215,7 @@ final class LRTransitionEngine {
     return action;
   }
 
-  private Action resolveAction(State currentState, Terminal lookahead) {
+  private @Nullable Action resolveAction(State currentState, Terminal lookahead) {
     // Find a possible Reduction
     var reduceItem = (Item) null;
     for(var item : currentState.items()) {
@@ -272,7 +274,7 @@ final class LRTransitionEngine {
   /// This method calculates the next state when transitioning from [currentState]
   /// via [symbol]. It computes the kernel, expands it via [LRAlgorithm#computeClosure],
   /// and retrieves the canonical [State] from the cache.
-  public State move(State currentState, Symbol symbol) {
+  public @Nullable State move(State currentState, Symbol symbol) {
     // 1. Check if the transition is already cached
     var stateMap = transitionTable.get(currentState);
     if (stateMap != null) {

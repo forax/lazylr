@@ -1,5 +1,7 @@
 package com.github.forax.lazylr;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
@@ -27,10 +29,10 @@ public final class Token {
     }
   }
 
-   private final String name;
+   private final @Nullable String name;
    final Pattern pattern;
 
-   private Token(String name, Pattern pattern, boolean unused) {
+   private Token(@Nullable String name, Pattern pattern, boolean unused) {
      this.name = name;
      this.pattern = pattern;
      super();
@@ -67,7 +69,7 @@ public final class Token {
   /// is treated as ignorable.
   ///
   /// @return The symbolic name of the token or `null`.
-  public String name() {
+  public @Nullable String name() {
     return name;
   }
 

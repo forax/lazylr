@@ -8,6 +8,7 @@ import com.github.forax.lazylr.ParserFactory;
 import com.github.forax.lazylr.ParsingException;
 import com.github.forax.lazylr.Production;
 import com.github.forax.lazylr.Terminal;
+import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.parallel.Execution;
@@ -83,10 +84,11 @@ public final class JSONGrammarTest {
   ///   Pair     -> Map.Entry<String, JSONValue>
   ///   Members  -> ArrayList<Map.Entry<String, JSONValue>>;
   ///   Elements -> ArrayList<JSONValue>
-  private static final Evaluator<Object> EVALUATOR = new Evaluator<>() {
+  private static final Evaluator<@Nullable Object> EVALUATOR = new Evaluator<@Nullable Object>() {
 
     @Override
-    public Object evaluate(Terminal terminal) {
+    public @Nullable Object evaluate(Terminal terminal) {
+      assert terminal.value() != null;
       return switch (terminal.name()) {
         case "string"  -> new JSONString(stripQuotes(terminal.value()));
         case "number"  -> new JSONNumber(Double.parseDouble(terminal.value()));
@@ -99,7 +101,7 @@ public final class JSONGrammarTest {
 
     @Override
     @SuppressWarnings("unchecked")
-    public Object evaluate(Production production, List<Object> args) {
+    public Object evaluate(Production production, @SuppressWarnings("NullableProblems") List<Object> args) {
       return switch (production.name()) {
 
         // Value — simple passthrough
@@ -173,7 +175,9 @@ public final class JSONGrammarTest {
   /// Tests are run in parallel, so parse() had to be thread-safe
   private static JSONValue parse(String input) {
     var parser = PARSER_FACTORY.createParser();
-    return (JSONValue) parser.parse(LEXER.tokenize(input), EVALUATOR);
+    var value = (JSONValue) parser.parse(LEXER.tokenize(input), EVALUATOR);
+    assert value != null;
+    return value;
   }
 
 

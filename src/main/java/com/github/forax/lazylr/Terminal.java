@@ -1,5 +1,7 @@
 package com.github.forax.lazylr;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.Objects;
 
 /// Represents a terminal symbol (token) in the grammar.
@@ -33,9 +35,9 @@ public final class Terminal implements Symbol, PrecedenceEntity {
   public static final Terminal ERROR = new Terminal("error");
 
   private final String name;
-  private final String value;
+  private final @Nullable String value;
 
-  private Terminal(String name, String value, boolean unused) {
+  private Terminal(String name, @Nullable String value, boolean unused) {
     this.name = name;
     this.value = value;
     super();
@@ -46,7 +48,7 @@ public final class Terminal implements Symbol, PrecedenceEntity {
   /// @param name The unique identifier for the terminal.
   /// @param value The actual text fragment matched in the source.
   /// @throws NullPointerException if `name` is null or `value` is null.
-  public Terminal(String name, String value) {
+  public Terminal(String name, @Nullable String value) {
     Objects.requireNonNull(name);
     Objects.requireNonNull(value);
     this(name, value, false);
@@ -78,7 +80,7 @@ public final class Terminal implements Symbol, PrecedenceEntity {
   /// is a grammar's terminal.
   ///
   /// @return The terminal's matched value, or `null`.
-  public String value() {
+  public @Nullable String value() {
     return value;
   }
 

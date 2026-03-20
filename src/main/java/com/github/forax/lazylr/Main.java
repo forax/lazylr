@@ -1,5 +1,8 @@
 package com.github.forax.lazylr;
 
+import org.jspecify.annotations.NonNull;
+import org.jspecify.annotations.Nullable;
+
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -86,10 +89,10 @@ public final class Main {
       boolean generate,
       boolean print,
       Path grammarPath,
-      Path inputPath) {
+      @Nullable Path inputPath) {
   }
 
-  private static CmdLineArgument parse(String[] args) {
+  private static @Nullable CmdLineArgument parse(String[] args) {
     var generate = false;
     var print = false;
     var grammarPath = (Path) null;

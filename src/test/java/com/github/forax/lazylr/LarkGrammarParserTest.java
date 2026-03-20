@@ -1,5 +1,6 @@
 package com.github.forax.lazylr;
 
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -150,13 +151,13 @@ public final class LarkGrammarParserTest {
 
     parser.parse(input.iterator(), new ParserListener() {
       @Override
-      public void onShift(Terminal token) {
+      public void onShift(@NonNull Terminal token) {
         //IO.println("Shift " + token.name());
         result.append("Shift ").append(token.name()).append('\n');
       }
 
       @Override
-      public void onReduce(Production production) {
+      public void onReduce(@NonNull Production production) {
         //IO.println("Reduce " + production.name());
         result.append("Reduce ").append(production.name()).append('\n');
       }

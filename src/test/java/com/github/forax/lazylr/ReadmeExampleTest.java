@@ -1,5 +1,6 @@
 package com.github.forax.lazylr;
 
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
 import java.util.Iterator;
@@ -41,7 +42,7 @@ public final class ReadmeExampleTest {
 
     class NodeEvaluator implements Evaluator<Node> {
       @Override
-      public Node evaluate(Terminal term) {
+      public Node evaluate(@NonNull Terminal term) {
         return switch (term.name()) {
           case "num" -> new NumLit(Integer.parseInt(term.value()));
           default -> null;
@@ -49,7 +50,7 @@ public final class ReadmeExampleTest {
       }
 
       @Override
-      public Node evaluate(Production prod, List<Node> args) {
+      public Node evaluate(@NonNull Production prod, @NonNull List<Node> args) {
         return switch (prod.name()) {
           case "E : num" -> args.get(0);
           case "E : E + E" -> new BinaryOp("+", args.get(0), args.get(2));

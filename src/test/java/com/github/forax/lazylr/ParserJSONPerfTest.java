@@ -1,5 +1,6 @@
 package com.github.forax.lazylr;
 
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayDeque;
@@ -125,10 +126,10 @@ public final class ParserJSONPerfTest {
 
     parser.parse(input.iterator(), new ParserListener() {
       @Override
-      public void onShift(Terminal token) {
+      public void onShift(@NonNull Terminal token) {
         // empty
       }
-      @Override public void onReduce(Production production) {
+      @Override public void onReduce(@NonNull Production production) {
         // empty
       }
     });

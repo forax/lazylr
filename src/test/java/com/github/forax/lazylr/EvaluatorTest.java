@@ -1,5 +1,6 @@
 package com.github.forax.lazylr;
 
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -51,7 +52,7 @@ public class EvaluatorTest {
 
     class IntEvaluator implements Evaluator<Integer> {
       @Override
-      public Integer evaluate(Terminal terminal) {
+      public Integer evaluate(@NonNull Terminal terminal) {
         return switch (terminal.name()) {
           case "num" -> Integer.parseInt(terminal.value());
           default    -> 0;
@@ -59,7 +60,7 @@ public class EvaluatorTest {
       }
 
       @Override
-      public Integer evaluate(Production production, List<Integer> arguments) {
+      public Integer evaluate(@NonNull Production production, @NonNull List<Integer> arguments) {
         return switch (production.name()) {
           case "E : E + E" -> arguments.get(0) + arguments.get(2);
           case "E : E * E" -> arguments.get(0) * arguments.get(2);
@@ -99,7 +100,7 @@ public class EvaluatorTest {
 
     class ExprEvaluator implements Evaluator<Expr> {
       @Override
-      public Expr evaluate(Terminal terminal) {
+      public Expr evaluate(@NonNull Terminal terminal) {
         return switch (terminal.name()) {
           case "num" -> new Literal(Integer.parseInt(terminal.value()));
           default    -> null;
@@ -107,7 +108,7 @@ public class EvaluatorTest {
       }
 
       @Override
-      public Expr evaluate(Production production, List<Expr> arguments) {
+      public Expr evaluate(@NonNull Production production, @NonNull List<Expr> arguments) {
         return switch (production.name()) {
           case "E : E + E" -> new Binary(arguments.get(0), Binary.Op.ADD, arguments.get(2));
           case "E : E * E" -> new Binary(arguments.get(0), Binary.Op.MUL, arguments.get(2));

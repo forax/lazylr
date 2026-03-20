@@ -1,5 +1,6 @@
 package com.github.forax.lazylr;
 
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -224,7 +225,7 @@ public final class ParserCTest {
 
   private static class NodeEvaluator implements Evaluator<Node> {
     @Override
-    public Node evaluate(Terminal terminal) {
+    public Node evaluate(@NonNull Terminal terminal) {
       return switch (terminal.name()) {
         case "num" -> new NumLit(Integer.parseInt(terminal.value()));
         case "id"  -> new IdRef(terminal.value());
@@ -236,7 +237,7 @@ public final class ParserCTest {
     }
 
     @Override
-    public Node evaluate(Production production, List<Node> args) {
+    public Node evaluate(@NonNull Production production, @NonNull List<Node> args) {
       return switch (production.name()) {
 
         // -- typeSpec

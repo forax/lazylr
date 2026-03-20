@@ -1,5 +1,7 @@
 package com.github.forax.lazylr;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -65,11 +67,11 @@ public final class Lexer {
     return new Tokenizer() {
       private int matchIndex;
       private int terminalIndex;
-      private Terminal terminal = nextTerminal(0);
+      private @Nullable Terminal terminal = nextTerminal(0);
 
       private record Match(Token token, String value) {}
 
-      private Match nextMatch(int index) {
+      private @Nullable Match nextMatch(int index) {
         if (index == input.length()) {
           return null;
         }
@@ -88,7 +90,7 @@ public final class Lexer {
         return longuest == null ? null : new Match(tokens.get(tokenIndex), longuest);
       }
 
-      private Terminal nextTerminal(int index) {
+      private @Nullable Terminal nextTerminal(int index) {
         for(;;) {
           var match = nextMatch(index);
           if (match == null) {
@@ -100,7 +102,7 @@ public final class Lexer {
           }
           var token = match.token;
           var value = match.value;
-          if (token.isIgnorable()) {
+          if (token.name() == null) {
             index += value.length();
             continue;
           }

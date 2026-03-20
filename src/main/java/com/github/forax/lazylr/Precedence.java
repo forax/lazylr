@@ -1,5 +1,7 @@
 package com.github.forax.lazylr;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
@@ -52,7 +54,7 @@ public record Precedence(int level, Associativity associativity) {
     return newPrecedenceMap;
   }
 
-  private static Precedence computePrecedence(Production production, Map<PrecedenceEntity, Precedence> precedenceMap) {
+  private static @Nullable Precedence computePrecedence(Production production, Map<PrecedenceEntity, Precedence> precedenceMap) {
     for (var symbol : production.body().reversed()) {
       if (symbol instanceof Terminal terminal) {
         return precedenceMap.get(terminal);   // Terminal precedence or null

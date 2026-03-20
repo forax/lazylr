@@ -2,6 +2,7 @@ package com.github.forax.lazylr;
 
 import module java.base;
 
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -28,12 +29,12 @@ public final class GuideTest {
     var parser = Parser.createParser(grammar, Map.of());
 
     class IntEvaluator implements Evaluator<Integer> {
-      public Integer evaluate(Terminal t) {
+      public Integer evaluate(@NonNull Terminal t) {
         System.out.println("seen terminal: " + t.name() + " = " + t.value());
         return Integer.parseInt(t.value());
       }
 
-      public Integer evaluate(Production p, List<Integer> args) {
+      public Integer evaluate(@NonNull Production p, @NonNull List<Integer> args) {
         System.out.println("seen production: " + p.name() + " with args " + args);
         return args.get(0);
       }
@@ -96,14 +97,14 @@ public final class GuideTest {
 
     class IntEvaluator implements Evaluator<Integer> {
       @Override
-      public Integer evaluate(Terminal terminal) {
+      public Integer evaluate(@NonNull Terminal terminal) {
         return switch (terminal.name()) {
           case "num" -> Integer.parseInt(terminal.value());
           default    -> 0;
         };
       }
       @Override
-      public Integer evaluate(Production production, List<Integer> args) {
+      public Integer evaluate(@NonNull Production production, @NonNull List<Integer> args) {
         return switch (production.name()) {
           case "E : num"          -> args.get(0);
           case "ARGS : E"         -> args.get(0);
@@ -147,7 +148,7 @@ public final class GuideTest {
 
     class IntEvaluator implements Evaluator<Integer> {
       @Override
-      public Integer evaluate(Terminal terminal) {
+      public Integer evaluate(@NonNull Terminal terminal) {
         return switch (terminal.name()) {
           case "num" -> Integer.parseInt(terminal.value());
           default    -> 0;
@@ -155,7 +156,7 @@ public final class GuideTest {
       }
 
       @Override
-      public Integer evaluate(Production production, List<Integer> args) {
+      public Integer evaluate(@NonNull Production production, @NonNull List<Integer> args) {
         return switch (production.name()) {
           case "E : num"   -> args.get(0);
           case "E : E + E" -> args.get(0) + args.get(2);
@@ -198,14 +199,14 @@ public final class GuideTest {
 
     class IntEvaluator implements Evaluator<Integer> {
       @Override
-      public Integer evaluate(Terminal terminal) {
+      public Integer evaluate(@NonNull Terminal terminal) {
         return switch (terminal.name()) {
           case "num" -> Integer.parseInt(terminal.value());
           default    -> 0;
         };
       }
       @Override
-      public Integer evaluate(Production production, List<Integer> args) {
+      public Integer evaluate(@NonNull Production production, @NonNull List<Integer> args) {
         return switch (production.name()) {
           case "E : num"   -> args.get(0);
           case "E : E + E" -> args.get(0) + args.get(2);
@@ -251,14 +252,14 @@ public final class GuideTest {
 
     class IntEvaluator implements Evaluator<Integer> {
       @Override
-      public Integer evaluate(Terminal terminal) {
+      public Integer evaluate(@NonNull Terminal terminal) {
         return switch (terminal.name()) {
           case "num" -> Integer.parseInt(terminal.value());
           default    -> 0;
         };
       }
       @Override
-      public Integer evaluate(Production production, List<Integer> args) {
+      public Integer evaluate(@NonNull Production production, @NonNull List<Integer> args) {
         return switch (production.name()) {
           case "E : num"   -> args.get(0);
           case "E : E + E" -> args.get(0) + args.get(2);
@@ -312,14 +313,14 @@ public final class GuideTest {
 
     class IntEvaluator implements Evaluator<Integer> {
       @Override
-      public Integer evaluate(Terminal terminal) {
+      public Integer evaluate(@NonNull Terminal terminal) {
         return switch (terminal.name()) {
           case "num" -> Integer.parseInt(terminal.value());
           default    -> 0;
         };
       }
       @Override
-      public Integer evaluate(Production production, List<Integer> args) {
+      public Integer evaluate(@NonNull Production production, @NonNull List<Integer> args) {
         return switch (production.name()) {
           case "E : num"                -> args.get(0);
           case "E : E + E"              -> args.get(0) + args.get(2);
@@ -351,14 +352,14 @@ public final class GuideTest {
 
     class NodeEvaluator implements Evaluator<Node> {
       @Override
-      public Node evaluate(Terminal terminal) {
+      public Node evaluate(@NonNull Terminal terminal) {
         return switch (terminal.name()) {
           case "num" -> new Num();
           default -> null;
         };
       }
       @Override
-      public Node evaluate(Production production, List<Node> args) {
+      public Node evaluate(@NonNull Production production, @NonNull List<Node> args) {
         return switch (production.name()) {
           case "E : num" -> args.getFirst();
           case "E : E - E" -> new Sub(args.get(0), args.get(2));

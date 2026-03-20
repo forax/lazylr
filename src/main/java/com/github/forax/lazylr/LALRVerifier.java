@@ -1,5 +1,7 @@
 package com.github.forax.lazylr;
 
+import org.jspecify.annotations.Nullable;
+
 import java.io.PrintStream;
 import java.util.ArrayDeque;
 import java.util.ArrayList;
@@ -95,7 +97,7 @@ public final class LALRVerifier {
   ///         precedence-based resolution.
   /// @throws NullPointerException if `grammar`, `precedenceMap` or `errorReporter` is null.
   public static boolean verify(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap,
-                            /*nullable*/ PrintStream out, boolean alwaysPrint, Consumer<String> errorReporter) {
+                               @Nullable PrintStream out, boolean alwaysPrint, Consumer<String> errorReporter) {
     Objects.requireNonNull(grammar);
     Objects.requireNonNull(precedenceMap);
     Objects.requireNonNull(errorReporter);
@@ -126,7 +128,7 @@ public final class LALRVerifier {
     }
 
     /// The symbol after the dot, or null if the item is complete.
-    public Symbol nextSymbol() {
+    public @Nullable Symbol nextSymbol() {
       if (isComplete()) {
         return null;
       }
@@ -349,7 +351,7 @@ public final class LALRVerifier {
     }
     var oldGoto = lr1.gotoTable();
     for (var stateIndices : coresMap.values()) {
-      var representative = stateIndices.getFirst();
+      var representative = (int) stateIndices.getFirst();
       for (var entry : oldGoto.get(representative).entrySet()) {
         newGoto.get(remap[representative]).put(entry.getKey(), remap[entry.getValue()]);
       }
@@ -367,7 +369,7 @@ public final class LALRVerifier {
   private record Reduce(Production production) implements Action {}
   private record Accept() implements Action {}
 
-  private record Result(List<Action> actions, /*nullable*/ Action winner) {}
+  private record Result(List<Action> actions, @Nullable Action winner) {}
 
   private static List<Map<Terminal, Result>> buildActionTable(List<Set<Item>> states,
                                                               List<Map<Symbol, Integer>> gotoTable,
@@ -479,8 +481,8 @@ public final class LALRVerifier {
     return conflicts;
   }
 
-  private static Action resolveShiftReduceConflict(Action shiftAction, Action reduceAction,
-                                                   Precedence termPrec, Precedence prodPrec) {
+  private static @Nullable Action resolveShiftReduceConflict(
+      Action shiftAction, Action reduceAction, @Nullable Precedence termPrec, @Nullable Precedence prodPrec) {
     if (termPrec == null || prodPrec == null) {
       return null;  // shift/reduce conflict
     }

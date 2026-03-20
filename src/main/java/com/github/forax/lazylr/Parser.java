@@ -1,6 +1,7 @@
 package com.github.forax.lazylr;
 
 import com.github.forax.lazylr.LRTransitionEngine.State;
+import org.jspecify.annotations.Nullable;
 
 import java.util.AbstractList;
 import java.util.ArrayDeque;
@@ -150,7 +151,7 @@ public final class Parser {
   /// @throws ParsingException if a syntax error occurs during parsing.
   /// @throws WrongThreadException if the method is called from a different thread
   ///         than the one the parser was created on.
-  public <V> V parse(Iterator<Terminal> input, Evaluator<V> evaluator) throws ParsingException {
+  public <V extends @Nullable Object> V parse(Iterator<Terminal> input, Evaluator<V> evaluator) throws ParsingException {
     Objects.requireNonNull(input);
     Objects.requireNonNull(evaluator);
 
@@ -244,6 +245,7 @@ public final class Parser {
     var currentToken = tokens.next();
     for (;;) {
       var currentState = stack.peek();
+      assert currentState != null;
 
       var action = engine.getAction(currentState, currentToken);
       if (action == null) {
@@ -314,6 +316,7 @@ public final class Parser {
 
     // 2. Look at the state now on top of the stack
     var topState = stack.peek();
+    assert topState != null;
 
     // 3. Find the GOTO transition for the NonTerminal we just "created"
     // After reducing tokens to an 'Expression', where do we go from here?

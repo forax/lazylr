@@ -1,5 +1,7 @@
 package com.github.forax.lazylr;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -56,12 +58,12 @@ import java.util.stream.Stream;
 /// This class is immutable, thus thread-safe.
 public final class MetaGrammar {
   private final List<Token> tokens;
-  private final Grammar grammar;
+  private final @Nullable Grammar grammar;
   private final Map<PrecedenceEntity, Precedence> precedenceMap;
 
   // Parameter order is intentionally different from the public constructor,
   // allowing overload resolution to distinguish them without a dummy parameter.
-  private MetaGrammar(List<Token> tokens, Grammar grammar, Map<PrecedenceEntity, Precedence> precedenceMap) {
+  private MetaGrammar(List<Token> tokens, @Nullable Grammar grammar, Map<PrecedenceEntity, Precedence> precedenceMap) {
     this.tokens = tokens;
     this.grammar = grammar;
     this.precedenceMap = precedenceMap;
@@ -224,9 +226,9 @@ public final class MetaGrammar {
 
   private static final Grammar GRAMMAR = createGrammar();
 
-  private record RawToken(String name, String regex) {}
+  private record RawToken(@Nullable String name, String regex) {}
   private record RawSymbol(String name, boolean quoted) {}
-  private record RawProduction(String head, List<RawSymbol> symbols, /*nullable*/ RawSymbol precSymbol) {}
+  private record RawProduction(String head, List<RawSymbol> symbols, @Nullable RawSymbol precSymbol) {}
   private record RawPrecedence(Precedence.Associativity associativity, List<RawSymbol> symbols) {}
 
   /// Parses a grammar specification.
@@ -254,11 +256,12 @@ public final class MetaGrammar {
 
       @Override
       public Object evaluate(Terminal t) {
+        assert t.value() != null;
         return t.value();
       }
 
       @Override
-      public Object evaluate(Production p, List<Object> args) {
+      public @Nullable Object evaluate(Production p, @SuppressWarnings("NullableProblems") List<Object> args) {
         return switch (p.name()) {
 
           // -- Name
