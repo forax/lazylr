@@ -1,30 +1,20 @@
 /// # Lazy LR — A Lightweight Runtime LR(1) Parser Library
 ///
-/// This package provides all the building blocks needed to define
-/// a context-free grammar, tokenize raw text, and parse token
-/// streamsinto structured results, all at runtime, without a separate
-/// code-generation step.
+/// This package provides all the building blocks to define a context-free grammar,
+/// tokenize raw text, and parse token streams into structured results at runtime,
+/// without a separate code-generation step.
 ///
 /// ## Core Concepts
 ///
-/// ### Symbols
-/// A grammar is built from two kinds of [Symbol]s:
-/// - [com.github.forax.lazylr.Terminal]: a concrete token produced
-///   by the lexer (e.g. `"+"` or `"num"`).
+/// A [com.github.forax.lazylr.Grammar] is a validated set of
+/// [com.github.forax.lazylr.Production] rules plus a
+/// start [com.github.forax.lazylr.NonTerminal].
+/// Productions are built from two kinds of [com.github.forax.lazylr.Symbol]s:
+/// [com.github.forax.lazylr.Terminal] (a concrete token, e.g. `"+"` or `"num"`)
+///  and [com.github.forax.lazylr.NonTerminal] (an abstract construct, e.g. `"E"`).
 ///
-/// - [com.github.forax.lazylr.NonTerminal]: an abstract grammatical
-///   construct (e.g. `"E"`, `"Stmt"`) that appears as the head of
-///   one or more productions.
-///
-/// ### Grammar
-/// A [com.github.forax.lazylr.Grammar] is a validated
-/// set of [com.github.forax.lazylr.Production] rules plus
-/// a designated start [com.github.forax.lazylr.NonTerminal].
-///
-/// ### MetaGrammar
-/// [com.github.forax.lazylr.MetaGrammar] lets you describe tokens,
-/// precedence, and productions in a compact text DSL instead of
-/// building Java objects by hand:
+/// [com.github.forax.lazylr.MetaGrammar] lets you describe tokens, precedence,
+/// and productions in a compact text DSL instead of building Java objects by hand:
 ///
 /// ```java
 /// var mg = MetaGrammar.load("""
@@ -41,7 +31,7 @@
 ///       E: num
 ///       E: E '+' E
 ///       E: E '*' E
-///       E: E '^' E
+///       E: E '^' E   %prec '^'
 ///     }
 ///     """);
 /// ```
@@ -51,9 +41,9 @@
 ///   skip patterns (`/regex/`).
 /// - **`precedence`**: `left:` or `right:` lines, lowest first,
 ///   multiple terminals per line share the same level.
-/// - **`grammar`**: BNF-style rules; quoted literals like `'+'`
-///   are auto-registered as terminals.
-///   Lines with no right-hand side are epsilon productions;
+/// - **`grammar`**: BNF-style rules; quoted literals like `'+'` are
+///   auto-registered as terminals.
+///   Lines with no right-hand side are epsilon productions,
 ///   `%prec TOKEN` overrides a production's default precedence.
 ///
 /// ## Typical Usage
@@ -73,57 +63,28 @@
 /// var result = parser.parse(lexer.tokenize(input), new MyEvaluator());
 /// ```
 ///
-/// ## Lexer
-/// [Lexer] converts a `CharSequence` into a lazy `Iterator<Terminal>`.
-/// Token matching uses a longest-match rule; ties are broken
-/// by declaration order. Anonymous tokens (no name) are silently skipped.
-/// On an unrecognized character the lexer emits
-/// [com.github.forax.lazylr.Terminal#ERROR] and stops.
+/// ## Key Classes
+/// [com.github.forax.lazylr.LALRVerifier] performs a full offline LALR(1)
+/// analysis and can print the complete state automaton with conflict markers.
 ///
-/// ## Parser
+/// [com.github.forax.lazylr.Lexer] converts a `CharSequence` into
+/// a lazy `Iterator<Terminal>` using a longest-match rule, ties
+/// broken by declaration order.
+///
 /// [com.github.forax.lazylr.Parser] implements a lazy LR(1) algorithm:
-/// states are computed on demand rather than all upfront, so
-/// `createParser` is cheap and proportional only to the portion of
-/// the grammar actually exercised by the input.
+/// states are computed on demand.
+/// Shift/reduce conflicts are resolved via a [com.github.forax.lazylr.Precedence] map;
+/// unresolved conflicts cause a [com.github.forax.lazylr.ParsingException]
+/// during parsing.
 ///
-/// Shift/reduce conflicts are resolved via a [Precedence] map supplied
-/// at construction time; unresolved conflicts cause a [ParsingException]
-/// during the parsing.
-///
-/// ## Evaluator
-/// [com.github.forax.lazylr.Evaluator] is the functional interface
-/// that maps parse events to a result of type `T`:
-/// - `evaluate(Terminal)` — called on every shift; typically extracts
-///    the terminal value.
-/// - `evaluate(Production, List<T>)` — called on every reduction,
-///    receives the already-evaluated values of each body symbol, in order.
-///
-/// For event-driven use (no result needed), [ParserListener] exposes
-/// the same two events as `onShift()` and `onReduce()` callbacks.
-///
-/// ## Conflict Verification
-/// [LALRVerifier] performs a full offline LALR(1) analysis of the grammar.
-/// It can optionally print the complete state automaton (with conflict markers)
-/// to a  [java.io.PrintStream], making it a useful development tool.
-/// The parser itself is LR(1), so it can correctly handle grammars that are LR(1)
-/// or LALR(1).
-/// The verifier reports only the conflicts that cannot be resolved with
-/// the supplied precedence map.
-///
-/// ## Precedence and Associativity
-/// [Precedence] pairs a non-negative integer level with a
-/// [com.github.forax.lazylr.Precedence.Associativity] (`LEFT` or `RIGHT`).
-/// The [com.github.forax.lazylr.Precedence] map passed to the parser and
-/// verifier can contain entries for both [com.github.forax.lazylr.Terminal]s
-/// and [com.github.forax.lazylr.Production]s (the `%prec` override).
-/// Both implement [com.github.forax.lazylr.PrecedenceEntity].
-/// Missing production entries are automatically inferred from
-/// the production's rightmost terminal.
+/// [com.github.forax.lazylr.Evaluator] maps parse events to a result
+/// of type `T`: `evaluate(Terminal)` is called on every shift,
+/// `evaluate(Production, List<T>)` on every reduction.
+/// For event-driven use without a result, prefer [com.github.forax.lazylr.ParserListener].
 ///
 /// ## Thread Safety
-/// All classes in this package are immutable and thread-safe except [Parser].
-/// Each `Parser` instance is bound to the thread that created it; calling
-/// `parse()` from another thread throws [java.lang.WrongThreadException].
+/// All classes are immutable and thread-safe except [com.github.forax.lazylr.Parser],
+///  which is bound to the thread that created it.
 /// For concurrent workloads, share a [com.github.forax.lazylr.ParserFactory]
 /// and call [com.github.forax.lazylr.ParserFactory#createParser()]
 /// once per thread.
