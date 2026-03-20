@@ -13,30 +13,23 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public class PosgreSQLGrammarTest {
-  private static MetaGrammar create() {
+public final class PosgreSQLGrammarTest {
+
+  // -------------------------------------------------------
+  //  Grammar construction — package-visible so additional
+  //  test files can share the same MetaGrammar instance.
+  // -------------------------------------------------------
+  static MetaGrammar create() {
     return MetaGrammar.load("""
         // ============================================================
-        //  PostgreSQL SQL Grammar — MetaGrammar format
+        //  PostgreSQL SQL like Grammar — MetaGrammar format
         //
-        //  Covers the core SQL constructs of PostgreSQL:
-        //    • SELECT (with subqueries, CTEs, joins, aggregates, window functions)
-        //    • INSERT / UPDATE / DELETE / MERGE
-        //    • CREATE TABLE / INDEX / VIEW / SEQUENCE
-        //    • DROP / ALTER TABLE
-        //    • Expressions (arithmetic, logical, comparison, CASE, CAST, function calls)
-        //    • Data types
-        //    • Transactions (BEGIN / COMMIT / ROLLBACK / SAVEPOINT)
-        //
-        //  This grammar is LALR(1)-oriented. To stay conflict-free, some
-        //  ambiguities present in PostgreSQL's bison grammar
+        // Loosely based on
         //  (https://github.com/postgres/postgres/blob/master/src/backend/parser/gram.y)
-        //  are resolved the same way: via explicit precedence declarations and
-        //  careful left-factoring.
         // ============================================================
-        
+
         tokens {
-          // ----- Keywords (must come before ident so they shadow it) -----
+          // ----- Keywords -----
           kw_all:           /ALL/
           kw_and:           /AND/
           kw_any:           /ANY/
@@ -141,7 +134,7 @@ public class PosgreSQLGrammarTest {
           kw_window:        /WINDOW/
           kw_with:          /WITH/
           kw_within:        /WITHIN/
-        
+
           // ----- Type keywords -----
           kw_bigint:        /BIGINT/
           kw_boolean:       /BOOLEAN/
@@ -176,7 +169,7 @@ public class PosgreSQLGrammarTest {
           kw_without:       /WITHOUT/
           kw_year:          /YEAR/
           kw_zone:          /ZONE/
-        
+
           // ----- Constraint / table keywords -----
           kw_action:        /ACTION/
           kw_add:           /ADD/
@@ -197,7 +190,7 @@ public class PosgreSQLGrammarTest {
           kw_restrict:      /RESTRICT/
           kw_simple:        /SIMPLE/
           kw_work:          /WORK/
-        
+
           // ----- Set-op / window keywords -----
           kw_cache:         /CACHE/
           kw_committed:     /COMMITTED/
@@ -224,14 +217,14 @@ public class PosgreSQLGrammarTest {
           kw_unbounded:     /UNBOUNDED/
           kw_uncommitted:   /UNCOMMITTED/
           kw_write:         /WRITE/
-        
-          // ----- WITH ORDINALITY / TABLESAMPLE (extensions) -----
+
+          // ----- WITH ORDINALITY / TABLESAMPLE -----
           kw_ordinality:    /ORDINALITY/
           kw_tablesample:   /TABLESAMPLE/
           kw_repeatable:    /REPEATABLE/
           kw_system:        /SYSTEM/
           kw_bernoulli:     /BERNOULLI/
-        
+
           // ----- Literals -----
           int_literal:      /[0-9]+/
           float_literal:    /[0-9]+\\.[0-9]*(?:[eE][+-]?[0-9]+)?|[0-9]+[eE][+-]?[0-9]+/
@@ -239,11 +232,11 @@ public class PosgreSQLGrammarTest {
           dollar_string:    /\\$[A-Za-z_]*\\$(?:[^\\$]|\\$[^A-Za-z_\\$])*\\$[A-Za-z_]*\\$/
           bit_string:       /[bB]'[01]*'/
           hex_string:       /[xX]'[0-9a-fA-F]*'/
-        
+
           // ----- Identifiers -----
           quoted_ident:     /"(?:[^"\\\\]|\\\\.)*"/
           ident:            /[A-Za-z_][A-Za-z0-9_$]*/
-        
+
           // ----- Operators -----
           op_typecast:      /::/
           op_concat:        /\\|\\|/
@@ -257,13 +250,13 @@ public class PosgreSQLGrammarTest {
           op_shl:           /<</
           op_shr:           /">>/
           op_exp:           /\\^/
-        
+
           // ----- Whitespace and comments (ignored) -----
           /[ \\t\\r\\n]+/
           /--[^\\n]*/
           /\\/\\*(?:[^*]|\\*[^\\/])*\\*\\//
         }
-        
+
         // ============================================================
         //  Precedence — lowest to highest
         // ============================================================
@@ -281,19 +274,19 @@ public class PosgreSQLGrammarTest {
           left:  op_typecast
           left:  '['
         }
-        
+
         // ============================================================
         //  Grammar
         // ============================================================
         grammar {
-        
+
           // -------------------------------------------------------
-          //  Top-level: a SQL script is a sequence of statements
+          //  Top-level
           // -------------------------------------------------------
           SqlScript: StmtList
           StmtList: StmtList Stmt ';'
           StmtList: Stmt ';'
-        
+
           Stmt: SelectStmt
           Stmt: InsertStmt
           Stmt: UpdateStmt
@@ -306,102 +299,96 @@ public class PosgreSQLGrammarTest {
           Stmt: AlterTableStmt
           Stmt: DropStmt
           Stmt: TransactionStmt
-        
+
           // -------------------------------------------------------
           //  Identifiers and names
           // -------------------------------------------------------
-          // ColId: any identifier, including non-reserved keywords usable as names
           ColId: ident
           ColId: quoted_ident
-        
-          // A qualified name: schema.table or just table, optionally ONLY
+
           QualifiedName: ColId
           QualifiedName: ColId '.' ColId
           QualifiedName: ColId '.' ColId '.' ColId
-        
+
           RelationExpr: QualifiedName
           RelationExpr: kw_only QualifiedName
           RelationExpr: kw_only '(' QualifiedName ')'
           RelationExpr: QualifiedName '*'
-        
+
           // -------------------------------------------------------
           //  SELECT statement
           // -------------------------------------------------------
           SelectStmt: WithClause SelectCore
           SelectStmt: SelectCore
-        
-          // CTE
+
           WithClause: kw_with CteList
           WithClause: kw_with kw_recursive CteList
           CteList: CteList ',' Cte
           CteList: Cte
           Cte: ColId kw_as '(' SelectStmt ')'
           Cte: ColId '(' ColIdList ')' kw_as '(' SelectStmt ')'
-        
+
           SelectCore: SelectClause
           SelectCore: SelectCore kw_union     AllOrDistinct SelectClause
           SelectCore: SelectCore kw_intersect AllOrDistinct SelectClause
           SelectCore: SelectCore kw_except    AllOrDistinct SelectClause
-        
+
           AllOrDistinct: kw_all
           AllOrDistinct: kw_distinct
           AllOrDistinct:
-        
+
           SelectClause: kw_select OptDistinct TargetList FromClause WhereClause GroupClause HavingClause WindowClause OrderClause LimitClause
-        
+
           OptDistinct: kw_all
           OptDistinct: kw_distinct
           OptDistinct: kw_distinct kw_on '(' ExprList ')'
           OptDistinct:
-        
-          // Target list
+
           TargetList: TargetList ',' TargetEl
           TargetList: TargetEl
-        
+
           TargetEl: Expr kw_as ColId
           TargetEl: Expr ColId
           TargetEl: Expr
           TargetEl: '*'
           TargetEl: ColId '.' '*'
-        
-          // FROM clause
+
           FromClause: kw_from FromList
           FromClause:
-        
+
           FromList: FromList ',' TableRef
           FromList: TableRef
-        
+
           TableRef: SimpleTableRef
           TableRef: '(' SelectStmt ')' OptAlias
           TableRef: '(' JoinedTable ')' OptAlias
           TableRef: kw_lateral '(' SelectStmt ')' OptAlias
           TableRef: FunctionTableRef
           TableRef: JoinedTable
-        
+
           SimpleTableRef: RelationExpr OptAlias
           SimpleTableRef: RelationExpr TablesampleClause OptAlias
-        
+
           TablesampleClause: kw_tablesample ColId '(' ExprList ')' RepeatableClause
           RepeatableClause: kw_repeatable '(' Expr ')'
           RepeatableClause:
-        
+
           FunctionTableRef: FunctionCall OptOrdinality OptAlias
           FunctionTableRef: kw_lateral FunctionCall OptOrdinality OptAlias
           OptOrdinality: kw_with kw_ordinality
           OptOrdinality:
-        
+
           OptAlias: kw_as ColId
           OptAlias: ColId
           OptAlias: kw_as ColId '(' ColIdList ')'
           OptAlias:
-        
-          // JOIN
+
           JoinedTable: TableRef kw_cross kw_join TableRef
-          JoinedTable: TableRef kw_join TableRef JoinQual            // bare JOIN (implicit INNER)
-          JoinedTable: TableRef JoinType kw_join TableRef JoinQual   // LEFT/RIGHT/FULL/INNER JOIN
-          JoinedTable: TableRef kw_natural kw_join TableRef          // NATURAL JOIN (no type = INNER)
-          JoinedTable: TableRef kw_natural JoinType kw_join TableRef // NATURAL LEFT/RIGHT/FULL JOIN
-        
+          JoinedTable: TableRef kw_join TableRef JoinQual
+          JoinedTable: TableRef JoinType kw_join TableRef JoinQual
+          JoinedTable: TableRef kw_natural kw_join TableRef
+          JoinedTable: TableRef kw_natural JoinType kw_join TableRef
+
           JoinType: kw_inner
           JoinType: kw_left kw_outer
           JoinType: kw_left
@@ -409,39 +396,35 @@ public class PosgreSQLGrammarTest {
           JoinType: kw_right
           JoinType: kw_full kw_outer
           JoinType: kw_full
-        
+
           JoinQual: kw_on Expr
           JoinQual: kw_using '(' ColIdList ')'
-        
-          // WHERE clause
+
           WhereClause: kw_where Expr
           WhereClause:
-        
-          // GROUP BY clause
+
           GroupClause: kw_group kw_by GroupByList
           GroupClause:
-        
+
           GroupByList: GroupByList ',' GroupByEl
           GroupByList: GroupByEl
-        
+
           GroupByEl: Expr
           GroupByEl: '(' ')'
-        
-          // HAVING clause
+
           HavingClause: kw_having Expr
           HavingClause:
-        
-          // WINDOW clause
+
           WindowClause: kw_window WindowDefList
           WindowClause:
           WindowDefList: WindowDefList ',' WindowDef
           WindowDefList: WindowDef
           WindowDef: ColId kw_as '(' WindowSpec ')'
-        
+
           WindowSpec: OptPartitionClause OptOrderClause OptFrameClause
           OptPartitionClause: kw_partition kw_by ExprList
           OptPartitionClause:
-        
+
           OptFrameClause: FrameMode FrameExtent ExcludeClause
           OptFrameClause:
           FrameMode: kw_range
@@ -459,13 +442,12 @@ public class PosgreSQLGrammarTest {
           ExcludeClause: kw_exclude kw_ties
           ExcludeClause: kw_exclude kw_no kw_others
           ExcludeClause:
-        
-          // ORDER BY clause
+
           OrderClause: kw_order kw_by SortList
           OrderClause:
           OptOrderClause: kw_order kw_by SortList
           OptOrderClause:
-        
+
           SortList: SortList ',' SortItem
           SortList: SortItem
           SortItem: Expr AscDesc NullsOrder
@@ -475,8 +457,7 @@ public class PosgreSQLGrammarTest {
           NullsOrder: kw_nulls kw_first
           NullsOrder: kw_nulls kw_last
           NullsOrder:
-        
-          // LIMIT / OFFSET clause
+
           LimitClause: kw_limit Expr kw_offset Expr
           LimitClause: kw_limit Expr
           LimitClause: kw_offset Expr kw_limit Expr
@@ -484,17 +465,17 @@ public class PosgreSQLGrammarTest {
           LimitClause: kw_fetch kw_first Expr kw_row kw_only
           LimitClause: kw_fetch kw_next Expr kw_row kw_only
           LimitClause:
-        
+
           // -------------------------------------------------------
           //  INSERT statement
           // -------------------------------------------------------
           InsertStmt: kw_insert kw_into QualifiedName OptAlias InsertCols InsertValues OnConflictClause ReturningClause
-        
+
           InsertCols: '(' ColIdList ')'
           InsertCols:
           ColIdList: ColIdList ',' ColId
           ColIdList: ColId
-        
+
           InsertValues: kw_values ValuesRowList
           InsertValues: SelectStmt
           InsertValues: kw_default kw_values
@@ -505,7 +486,7 @@ public class PosgreSQLGrammarTest {
           InsertExprList: InsertExpr
           InsertExpr: kw_default
           InsertExpr: Expr
-        
+
           OnConflictClause: kw_on kw_conflict ConflictTarget kw_do ConflictAction
           OnConflictClause:
           ConflictTarget: '(' IndexElems ')' WhereClause
@@ -516,34 +497,34 @@ public class PosgreSQLGrammarTest {
           IndexElems: IndexElems ',' IndexElem
           IndexElems: IndexElem
           IndexElem: ColId AscDesc NullsOrder
-        
+
           ReturningClause: kw_returning TargetList
           ReturningClause:
-        
+
           // -------------------------------------------------------
           //  UPDATE statement
           // -------------------------------------------------------
           UpdateStmt: kw_update RelationExpr OptAlias kw_set SetClauseList FromClause WhereClause ReturningClause
-        
+
           SetClauseList: SetClauseList ',' SetClause
           SetClauseList: SetClause
           SetClause: ColId '=' Expr
           SetClause: '(' ColIdList ')' '=' Expr
           SetClause: ColId '=' kw_default
-        
+
           // -------------------------------------------------------
           //  DELETE statement
           // -------------------------------------------------------
           DeleteStmt: kw_delete kw_from RelationExpr OptAlias UsingClause WhereClause ReturningClause
-        
+
           UsingClause: kw_using FromList
           UsingClause:
-        
+
           // -------------------------------------------------------
           //  MERGE statement
           // -------------------------------------------------------
           MergeStmt: kw_merge kw_into RelationExpr OptAlias kw_using TableRef kw_on Expr MergeWhenList
-        
+
           MergeWhenList: MergeWhenList MergeWhen
           MergeWhenList: MergeWhen
           MergeWhen: kw_when kw_matched OptMergeCondition kw_then MergeAction
@@ -554,28 +535,28 @@ public class PosgreSQLGrammarTest {
           MergeAction: kw_delete
           MergeAction: kw_insert InsertCols kw_values ValuesRow
           MergeAction: kw_do kw_nothing
-        
+
           // -------------------------------------------------------
           //  CREATE TABLE
           // -------------------------------------------------------
           CreateTableStmt: kw_create kw_table OptIfNotExists QualifiedName '(' TableElementList ')' TableInherits
-        
+
           OptIfNotExists: kw_if kw_not kw_exists
           OptIfNotExists:
           TableInherits: kw_inherits '(' QualifiedNameList ')'
           TableInherits:
           QualifiedNameList: QualifiedNameList ',' QualifiedName
           QualifiedNameList: QualifiedName
-        
+
           TableElementList: TableElementList ',' TableElement
           TableElementList: TableElement
           TableElement: ColumnDef
           TableElement: TableConstraint
-        
+
           ColumnDef: ColId TypeName ColDefaultList
           ColDefaultList: ColDefaultList ColConstraint
           ColDefaultList:
-        
+
           ColConstraint: kw_not kw_null
           ColConstraint: kw_null
           ColConstraint: kw_unique
@@ -585,15 +566,15 @@ public class PosgreSQLGrammarTest {
           ColConstraint: kw_references QualifiedName RefColumns RefActions
           ColConstraint: kw_constraint ColId ColConstraint
           ColConstraint: DeferrableClause
-        
+
           TableConstraint: kw_constraint ColId TableConstraintBody
           TableConstraint: TableConstraintBody
-        
+
           TableConstraintBody: kw_primary kw_key '(' ColIdList ')'
           TableConstraintBody: kw_unique '(' ColIdList ')'
           TableConstraintBody: kw_check '(' Expr ')'
           TableConstraintBody: kw_foreign kw_key '(' ColIdList ')' kw_references QualifiedName RefColumns RefActions
-        
+
           RefColumns: '(' ColIdList ')'
           RefColumns:
           RefActions: RefMatchClause RefDeleteAction RefUpdateAction
@@ -615,27 +596,27 @@ public class PosgreSQLGrammarTest {
           InitiallyClause: kw_initially kw_deferred
           InitiallyClause: kw_initially kw_immediate
           InitiallyClause:
-        
+
           // -------------------------------------------------------
           //  CREATE INDEX
           // -------------------------------------------------------
           CreateIndexStmt: kw_create UniqueOpt kw_index OptIfNotExists ColId kw_on RelationExpr UsingOpt '(' IndexElems ')' WhereClause
-        
+
           UniqueOpt: kw_unique
           UniqueOpt:
           UsingOpt: kw_using ColId
           UsingOpt:
-        
+
           // -------------------------------------------------------
           //  CREATE VIEW
           // -------------------------------------------------------
           CreateViewStmt: kw_create kw_view QualifiedName kw_as SelectStmt
-        
+
           // -------------------------------------------------------
           //  CREATE SEQUENCE
           // -------------------------------------------------------
           CreateSequenceStmt: kw_create kw_sequence OptIfNotExists QualifiedName SeqOptionList
-        
+
           SeqOptionList: SeqOptionList SeqOption
           SeqOptionList:
           SeqOption: kw_increment kw_by int_literal
@@ -645,18 +626,18 @@ public class PosgreSQLGrammarTest {
           SeqOption: kw_cache int_literal
           SeqOption: kw_cycle
           SeqOption: kw_no kw_cycle
-        
+
           // -------------------------------------------------------
           //  ALTER TABLE
           // -------------------------------------------------------
           AlterTableStmt: kw_alter kw_table OptIfExists RelationExpr AlterTableCmdList
-        
+
           OptIfExists: kw_if kw_exists
           OptIfExists:
-        
+
           AlterTableCmdList: AlterTableCmdList ',' AlterTableCmd
           AlterTableCmdList: AlterTableCmd
-        
+
           AlterTableCmd: kw_add kw_column ColId TypeName ColDefaultList
           AlterTableCmd: kw_add TableConstraint
           AlterTableCmd: kw_drop kw_column OptIfExists ColId DropBehavior
@@ -666,11 +647,11 @@ public class PosgreSQLGrammarTest {
           AlterTableCmd: kw_alter kw_column ColId kw_drop kw_not kw_null
           AlterTableCmd: kw_rename kw_column ColId kw_to ColId
           AlterTableCmd: kw_rename kw_to ColId
-        
+
           DropBehavior: kw_cascade
           DropBehavior: kw_restrict
           DropBehavior:
-        
+
           // -------------------------------------------------------
           //  DROP
           // -------------------------------------------------------
@@ -678,7 +659,7 @@ public class PosgreSQLGrammarTest {
           DropStmt: kw_drop kw_index  OptIfExists QualifiedNameList DropBehavior
           DropStmt: kw_drop kw_view   OptIfExists QualifiedNameList DropBehavior
           DropStmt: kw_drop kw_sequence OptIfExists QualifiedNameList DropBehavior
-        
+
           // -------------------------------------------------------
           //  Transaction statements
           // -------------------------------------------------------
@@ -689,7 +670,7 @@ public class PosgreSQLGrammarTest {
           TransactionStmt: kw_savepoint ColId
           TransactionStmt: kw_rollback kw_to kw_savepoint ColId
           TransactionStmt: kw_release kw_savepoint ColId
-        
+
           OptWork: kw_work
           OptWork: kw_transaction
           OptWork:
@@ -701,13 +682,13 @@ public class PosgreSQLGrammarTest {
           IsolationLevel: kw_repeatable kw_read
           IsolationLevel: kw_read kw_committed
           IsolationLevel: kw_read kw_uncommitted
-        
+
           // -------------------------------------------------------
           //  Expressions
           // -------------------------------------------------------
           ExprList: ExprList ',' Expr
           ExprList: Expr
-        
+
           Expr: Expr kw_or Expr
           Expr: Expr kw_and Expr
           Expr: kw_not Expr
@@ -732,8 +713,7 @@ public class PosgreSQLGrammarTest {
           Expr: Expr op_typecast TypeName
           Expr: Expr '[' Expr ']'
           Expr: Expr '[' Expr ':' Expr ']'
-        
-          // IS tests
+
           Expr: Expr kw_is kw_null
           Expr: Expr kw_is kw_not kw_null
           Expr: Expr kw_isnull
@@ -746,14 +726,12 @@ public class PosgreSQLGrammarTest {
           Expr: Expr kw_is kw_not kw_unknown
           Expr: Expr kw_is kw_distinct kw_from Expr
           Expr: Expr kw_is kw_not kw_distinct kw_from Expr
-        
-          // BETWEEN
+
           Expr: Expr kw_between Expr kw_and Expr
           Expr: Expr kw_not kw_between Expr kw_and Expr
           Expr: Expr kw_between kw_symmetric Expr kw_and Expr
           Expr: Expr kw_not kw_between kw_symmetric Expr kw_and Expr
-        
-          // LIKE / ILIKE / SIMILAR TO
+
           Expr: Expr kw_like Expr
           Expr: Expr kw_not kw_like Expr
           Expr: Expr kw_ilike Expr
@@ -762,14 +740,12 @@ public class PosgreSQLGrammarTest {
           Expr: Expr kw_not kw_similar kw_to Expr
           Expr: Expr kw_like Expr kw_escape Expr
           Expr: Expr kw_not kw_like Expr kw_escape Expr
-        
-          // IN
+
           Expr: Expr kw_in '(' ExprList ')'
           Expr: Expr kw_not kw_in '(' ExprList ')'
           Expr: Expr kw_in '(' SelectStmt ')'
           Expr: Expr kw_not kw_in '(' SelectStmt ')'
-        
-          // ANY / ALL / SOME subquery
+
           Expr: Expr '=' kw_any '(' SelectStmt ')'
           Expr: Expr '=' kw_all '(' SelectStmt ')'
           Expr: Expr '=' kw_some '(' SelectStmt ')'
@@ -779,13 +755,11 @@ public class PosgreSQLGrammarTest {
           Expr: Expr '<' kw_all '(' SelectStmt ')'
           Expr: Expr '>' kw_any '(' SelectStmt ')'
           Expr: Expr '>' kw_all '(' SelectStmt ')'
-        
-          // EXISTS
+
           Expr: kw_exists '(' SelectStmt ')'
-        
-          // CASE expression
+
           Expr: CaseExpr
-        
+
           CaseExpr: kw_case WhenClauses ElseClause kw_end
           CaseExpr: kw_case Expr WhenClauses ElseClause kw_end
           WhenClauses: WhenClauses WhenClause
@@ -793,20 +767,16 @@ public class PosgreSQLGrammarTest {
           WhenClause: kw_when Expr kw_then Expr
           ElseClause: kw_else Expr
           ElseClause:
-        
-          // CAST
+
           Expr: kw_cast '(' Expr kw_as TypeName ')'
-        
-          // ROW constructor
+
           Expr: kw_row '(' ExprList ')'
           Expr: '(' ExprList ',' Expr ')'
-        
-          // Subquery scalar
+
           Expr: '(' SelectStmt ')'
-        
-          // Function calls
+
           Expr: FunctionCall
-        
+
           FunctionCall: QualifiedName '(' ')'                          FunctionSuffix
           FunctionCall: QualifiedName '(' kw_all ExprList ')'          FunctionSuffix
           FunctionCall: QualifiedName '(' kw_distinct ExprList ')'     FunctionSuffix
@@ -815,19 +785,16 @@ public class PosgreSQLGrammarTest {
           FunctionCall: QualifiedName '(' ExprList OrderClause ')'     FunctionSuffix
           FunctionCall: QualifiedName '(' kw_all ExprList OrderClause ')' FunctionSuffix
           FunctionCall: QualifiedName '(' kw_distinct ExprList OrderClause ')' FunctionSuffix
-        
-          // WITHIN GROUP (ordered-set aggregate)
+
           FunctionCall: QualifiedName '(' ExprList ')' kw_within kw_group '(' OrderClause ')'
-        
-          // FILTER clause on aggregate
+
           FunctionSuffix: FilterClause OverClause
           FilterClause: kw_filter '(' kw_where Expr ')'
           FilterClause:
           OverClause: kw_over ColId
           OverClause: kw_over '(' WindowSpec ')'
           OverClause:
-        
-          // Atoms
+
           Expr: ColRef
           Expr: Literal
           Expr: kw_null
@@ -837,19 +804,19 @@ public class PosgreSQLGrammarTest {
           Expr: kw_current_time
           Expr: kw_current_timestamp
           Expr: '(' Expr ')'
-        
+
           ColRef: ColId
           ColRef: ColId '.' ColId
           ColRef: ColId '.' ColId '.' ColId
           ColRef: ColId '.' '*'
-        
+
           Literal: int_literal
           Literal: float_literal
           Literal: string_literal
           Literal: dollar_string
           Literal: bit_string
           Literal: hex_string
-        
+
           // -------------------------------------------------------
           //  Data Types
           // -------------------------------------------------------
@@ -870,7 +837,7 @@ public class PosgreSQLGrammarTest {
           TypeName: kw_decimal                                  OptArrayBounds
           TypeName: kw_float '(' int_literal ')'                OptArrayBounds
           TypeName: kw_float                                    OptArrayBounds
-        
+
           SimpleType: kw_bigint
           SimpleType: kw_boolean
           SimpleType: kw_date
@@ -886,11 +853,11 @@ public class PosgreSQLGrammarTest {
           SimpleType: kw_timetz
           SimpleType: kw_uuid
           SimpleType: QualifiedName
-        
+
           OptTimezone: kw_with kw_time kw_zone
           OptTimezone: kw_without kw_time kw_zone
           OptTimezone:
-        
+
           IntervalFields: kw_year
           IntervalFields: kw_month
           IntervalFields: kw_day
@@ -905,7 +872,7 @@ public class PosgreSQLGrammarTest {
           IntervalFields: kw_hour kw_to kw_second
           IntervalFields: kw_minute kw_to kw_second
           IntervalFields:
-        
+
           OptArrayBounds: OptArrayBounds '[' ']'
           OptArrayBounds: OptArrayBounds '[' int_literal ']'
           OptArrayBounds:
@@ -917,18 +884,61 @@ public class PosgreSQLGrammarTest {
   //  Infrastructure
   // -------------------------------------------------------
   private static final MetaGrammar MG = create();
-  private static final Lexer   LEXER  = Lexer.createLexer(MG.tokens());
-  private static final Parser  PARSER = Parser.createParser(MG.grammar(), MG.precedenceMap());
+  private static final Lexer LEXER  = Lexer.createLexer(MG.tokens());
+  private static final Parser PARSER = Parser.createParser(MG.grammar(), MG.precedenceMap());
 
   private static final ParserListener NOOP = new ParserListener() {
     @Override public void onShift(Terminal token) {}
     @Override public void onReduce(Production production) {}
   };
 
-  /** Parses a full SQL script (one or more statements, each terminated by ';'). */
   private static void parse(String sql) {
     PARSER.parse(LEXER.tokenize(sql), NOOP);
   }
+
+
+  // -------------------------------------------------------
+  //  QualifiedName / RelationExpr / TargetEl / ColRef
+  // -------------------------------------------------------
+
+  @Nested
+  public class QualifiedNameTests {
+
+    @Test
+    public void three_part_qualified_name_in_from() {
+       parse("SELECT * FROM catalog.public.employees;");
+    }
+  }
+
+  @Nested
+  public class RelationExprTests {
+
+    @Test
+    public void only_table_in_select() {
+      parse("SELECT * FROM ONLY employees;");
+    }
+
+    @Test
+    public void only_parenthesised_table() {
+      parse("SELECT * FROM ONLY (employees);");
+    }
+
+    @Test
+    public void star_table_in_select() {
+      parse("SELECT * FROM employees *;");
+    }
+
+    @Test
+    public void only_in_update() {
+      parse("UPDATE ONLY employees SET salary = 1 WHERE id = 1;");
+    }
+
+    @Test
+    public void only_in_delete() {
+      parse("DELETE FROM ONLY employees WHERE id = 1;");
+    }
+  }
+
 
   // -------------------------------------------------------
   //  SELECT
@@ -982,6 +992,11 @@ public class PosgreSQLGrammarTest {
     }
 
     @Test
+    public void select_all() {
+      parse("SELECT ALL id, name FROM employees;");
+    }
+
+    @Test
     public void select_distinct_on() {
       parse("SELECT DISTINCT ON (dept_id) id, dept_id FROM employees;");
     }
@@ -997,13 +1012,33 @@ public class PosgreSQLGrammarTest {
     }
 
     @Test
+    public void select_union_distinct() {
+      parse("SELECT id FROM a UNION DISTINCT SELECT id FROM b;");
+    }
+
+    @Test
     public void select_intersect() {
       parse("SELECT id FROM a INTERSECT SELECT id FROM b;");
     }
 
     @Test
+    public void select_intersect_all() {
+      parse("SELECT id FROM a INTERSECT ALL SELECT id FROM b;");
+    }
+
+    @Test
     public void select_except() {
       parse("SELECT id FROM a EXCEPT SELECT id FROM b;");
+    }
+
+    @Test
+    public void select_except_all() {
+      parse("SELECT id FROM a EXCEPT ALL SELECT id FROM b;");
+    }
+
+    @Test
+    public void select_three_way_set_operation() {
+      parse("SELECT id FROM a UNION SELECT id FROM b EXCEPT SELECT id FROM c;");
     }
 
     @Test
@@ -1025,6 +1060,42 @@ public class PosgreSQLGrammarTest {
     public void select_exists_subquery() {
       parse("SELECT * FROM departments d WHERE EXISTS (SELECT 1 FROM employees e WHERE e.dept_id = d.id);");
     }
+
+    // --- GROUP BY ---
+
+    @Test
+    public void select_empty_grouping_set() {
+      parse("SELECT COUNT(*) FROM employees GROUP BY ();");
+    }
+
+    @Test
+    public void select_mixed_grouping_sets() {
+      parse("SELECT dept_id, COUNT(*) FROM employees GROUP BY dept_id, ();");
+    }
+
+    // --- LIMIT / OFFSET ---
+
+    @Test
+    public void select_offset_then_limit() {
+      parse("SELECT * FROM employees OFFSET 5 LIMIT 10;");
+    }
+
+    @Test
+    public void select_offset_only() {
+      parse("SELECT * FROM employees ORDER BY id OFFSET 20;");
+    }
+
+    @Test
+    public void select_fetch_first() {
+      parse("SELECT * FROM employees ORDER BY salary DESC FETCH FIRST 5 ROW ONLY;");
+    }
+
+    @Test
+    public void select_fetch_next() {
+      parse("SELECT * FROM employees ORDER BY id FETCH NEXT 10 ROW ONLY;");
+    }
+
+    // --- CTEs ---
 
     @Test
     public void select_with_cte() {
@@ -1048,6 +1119,14 @@ public class PosgreSQLGrammarTest {
           """);
     }
 
+    @Test
+    public void select_multiple_ctes() {
+      parse("""
+          WITH a AS (SELECT 1 AS x), b AS (SELECT 2 AS y)
+          SELECT a.x, b.y FROM a, b;
+          """);
+    }
+
     @Test @Disabled
     public void select_with_cte_column_list() {
       parse("""
@@ -1059,6 +1138,7 @@ public class PosgreSQLGrammarTest {
     }
   }
 
+
   // -------------------------------------------------------
   //  JOINs
   // -------------------------------------------------------
@@ -1068,6 +1148,11 @@ public class PosgreSQLGrammarTest {
     @Test
     public void inner_join() {
       parse("SELECT e.id, d.name FROM employees e JOIN departments d ON e.dept_id = d.id;");
+    }
+
+    @Test
+    public void inner_join_explicit_keyword() {
+      parse("SELECT * FROM a INNER JOIN b ON a.id = b.id;");
     }
 
     @Test
@@ -1086,6 +1171,11 @@ public class PosgreSQLGrammarTest {
     }
 
     @Test
+    public void right_outer_join() {
+      parse("SELECT * FROM a RIGHT OUTER JOIN b ON a.id = b.id;");
+    }
+
+    @Test
     public void full_outer_join() {
       parse("SELECT e.id FROM employees e FULL OUTER JOIN departments d ON e.dept_id = d.id;");
     }
@@ -1098,6 +1188,36 @@ public class PosgreSQLGrammarTest {
     @Test
     public void natural_join() {
       parse("SELECT * FROM employees NATURAL JOIN departments;");
+    }
+
+    @Test
+    public void natural_left_join() {
+      parse("SELECT * FROM a NATURAL LEFT JOIN b;");
+    }
+
+    @Test
+    public void natural_left_outer_join() {
+      parse("SELECT * FROM a NATURAL LEFT OUTER JOIN b;");
+    }
+
+    @Test
+    public void natural_right_join() {
+      parse("SELECT * FROM a NATURAL RIGHT JOIN b;");
+    }
+
+    @Test
+    public void natural_right_outer_join() {
+      parse("SELECT * FROM a NATURAL RIGHT OUTER JOIN b;");
+    }
+
+    @Test
+    public void natural_full_join() {
+      parse("SELECT * FROM a NATURAL FULL JOIN b;");
+    }
+
+    @Test
+    public void natural_full_outer_join() {
+      parse("SELECT * FROM a NATURAL FULL OUTER JOIN b;");
     }
 
     @Test
@@ -1116,6 +1236,7 @@ public class PosgreSQLGrammarTest {
     }
   }
 
+
   // -------------------------------------------------------
   //  Window functions
   // -------------------------------------------------------
@@ -1127,8 +1248,14 @@ public class PosgreSQLGrammarTest {
       parse("SELECT id, RANK() OVER (PARTITION BY dept_id ORDER BY salary DESC) FROM employees;");
     }
 
+    @Test
+    public void window_function_over_partition_order() {
+      parse("SELECT ROW_NUMBER() OVER (PARTITION BY dept_id ORDER BY salary DESC) FROM employees;");
+    }
+
     @Test @Disabled
     public void window_named_window() {
+
       parse("""
           SELECT id, SUM(salary) OVER w
           FROM employees
@@ -1138,6 +1265,7 @@ public class PosgreSQLGrammarTest {
 
     @Test @Disabled
     public void window_rows_frame() {
+
       parse("""
           SELECT id, SUM(salary) OVER (ORDER BY id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
           FROM employees;
@@ -1146,6 +1274,7 @@ public class PosgreSQLGrammarTest {
 
     @Test @Disabled
     public void window_range_frame() {
+
       parse("""
           SELECT id, AVG(salary) OVER (PARTITION BY dept_id RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
           FROM employees;
@@ -1157,11 +1286,32 @@ public class PosgreSQLGrammarTest {
       parse("SELECT dept_id, COUNT(*) FILTER (WHERE active = TRUE) FROM employees GROUP BY dept_id;");
     }
 
+    @Test
+    public void aggregate_filter_no_over() {
+      parse("SELECT count(*) FILTER (WHERE active = TRUE) FROM employees;");
+    }
+
+    @Test
+    public void aggregate_all_with_order() {
+      parse("SELECT string_agg(ALL name, ', ' ORDER BY name) FROM employees;");
+    }
+
+    @Test
+    public void aggregate_distinct_with_order() {
+      parse("SELECT string_agg(DISTINCT name, ', ' ORDER BY name) FROM employees;");
+    }
+
+    @Test
+    public void function_with_multiple_args_and_order() {
+      parse("SELECT string_agg(name, ', ' ORDER BY name ASC) FROM employees;");
+    }
+
     @Test @Disabled
     public void ordered_set_aggregate() {
       parse("SELECT dept_id, percentile_cont(0.5) WITHIN GROUP (ORDER BY salary) FROM employees GROUP BY dept_id;");
     }
   }
+
 
   // -------------------------------------------------------
   //  INSERT
@@ -1195,6 +1345,16 @@ public class PosgreSQLGrammarTest {
     }
 
     @Test
+    public void insert_returning_multiple_columns() {
+      parse("INSERT INTO employees (name) VALUES ('Dave') RETURNING id, name, created_at;");
+    }
+
+    @Test
+    public void insert_returning_star() {
+      parse("INSERT INTO employees (name) VALUES ('Eve') RETURNING *;");
+    }
+
+    @Test
     public void insert_on_conflict_do_nothing() {
       parse("INSERT INTO employees (id, name) VALUES (1, 'Alice') ON CONFLICT DO NOTHING;");
     }
@@ -1217,10 +1377,47 @@ public class PosgreSQLGrammarTest {
     }
 
     @Test
+    public void insert_on_conflict_index_where() {
+      parse("""
+          INSERT INTO employees (id, name, active)
+          VALUES (1, 'Alice', TRUE)
+          ON CONFLICT (id) WHERE active = TRUE DO NOTHING;
+          """);
+    }
+
+    @Test
+    public void insert_on_conflict_multi_column_index() {
+      parse("""
+          INSERT INTO memberships (user_id, group_id)
+          VALUES (1, 2)
+          ON CONFLICT (user_id, group_id) DO NOTHING;
+          """);
+    }
+
+    @Test
+    public void insert_on_conflict_index_with_sort_order() {
+      parse("""
+          INSERT INTO t (a, b) VALUES (1, 2)
+          ON CONFLICT (a ASC NULLS FIRST) DO NOTHING;
+          """);
+    }
+
+    @Test
+    public void insert_default_in_values_list() {
+      parse("INSERT INTO employees (id, name, created_at) VALUES (1, 'Alice', DEFAULT);");
+    }
+
+    @Test
+    public void insert_multiple_rows_with_defaults() {
+      parse("INSERT INTO employees (id, name, salary) VALUES (1, 'Alice', DEFAULT), (2, 'Bob', 80000);");
+    }
+
+    @Test
     public void insert_with_default_expr() {
       parse("INSERT INTO employees (id, name, created_at) VALUES (1, 'Alice', DEFAULT);");
     }
   }
+
 
   // -------------------------------------------------------
   //  UPDATE
@@ -1244,6 +1441,16 @@ public class PosgreSQLGrammarTest {
     }
 
     @Test
+    public void update_set_tuple_assignment() {
+      parse("UPDATE t SET (a, b) = ROW(1, 2) WHERE id = 3;");
+    }
+
+    @Test
+    public void update_set_tuple_from_subquery() {
+      parse("UPDATE employees SET (salary, bonus) = (SELECT base, extra FROM pay_scale WHERE grade = 'A') WHERE id = 1;");
+    }
+
+    @Test
     public void update_with_from() {
       parse("""
           UPDATE employees e
@@ -1259,10 +1466,16 @@ public class PosgreSQLGrammarTest {
     }
 
     @Test
+    public void update_returning_star() {
+      parse("UPDATE employees SET active = FALSE WHERE id = 1 RETURNING *;");
+    }
+
+    @Test
     public void update_set_default() {
       parse("UPDATE employees SET bonus = DEFAULT WHERE id = 5;");
     }
   }
+
 
   // -------------------------------------------------------
   //  DELETE
@@ -1294,6 +1507,7 @@ public class PosgreSQLGrammarTest {
       parse("DELETE FROM temp_log;");
     }
   }
+
 
   // -------------------------------------------------------
   //  MERGE
@@ -1328,7 +1542,36 @@ public class PosgreSQLGrammarTest {
           WHEN NOT MATCHED THEN DO NOTHING;
           """);
     }
+
+    @Test
+    public void merge_insert_action_with_cols() {
+      parse("""
+          MERGE INTO employees AS target
+          USING staging AS source ON target.id = source.id
+          WHEN NOT MATCHED THEN INSERT (id, name, salary) VALUES (source.id, source.name, 50000);
+          """);
+    }
+
+    @Test
+    public void merge_insert_action_without_cols() {
+      parse("""
+          MERGE INTO employees AS target
+          USING staging AS source ON target.id = source.id
+          WHEN NOT MATCHED THEN INSERT VALUES (source.id, source.name, 50000);
+          """);
+    }
+
+    @Test
+    public void merge_with_condition_on_matched() {
+      parse("""
+          MERGE INTO employees AS target
+          USING staging AS source ON target.id = source.id
+          WHEN MATCHED AND source.salary > 0 THEN UPDATE SET salary = source.salary
+          WHEN NOT MATCHED AND source.active = TRUE THEN DO NOTHING;
+          """);
+    }
   }
+
 
   // -------------------------------------------------------
   //  CREATE TABLE
@@ -1494,7 +1737,174 @@ public class PosgreSQLGrammarTest {
           );
           """);
     }
+
+    // --- Column constraint variants ---
+
+    @Test
+    public void create_table_named_column_constraint() {
+      parse("""
+          CREATE TABLE t (
+              id INTEGER CONSTRAINT pk_t_id PRIMARY KEY,
+              name TEXT CONSTRAINT nn_t_name NOT NULL
+          );
+          """);
+    }
+
+    @Test
+    public void create_table_not_deferrable() {
+      parse("""
+          CREATE TABLE t (
+              id INTEGER REFERENCES other(id) NOT DEFERRABLE
+          );
+          """);
+    }
+
+    @Test
+    public void create_table_deferrable_initially_immediate() {
+      parse("""
+          CREATE TABLE t (
+              id INTEGER REFERENCES other(id) DEFERRABLE INITIALLY IMMEDIATE
+          );
+          """);
+    }
+
+    @Test
+    public void create_table_deferrable_no_initially() {
+      parse("""
+          CREATE TABLE t (
+              id INTEGER REFERENCES other(id) DEFERRABLE
+          );
+          """);
+    }
+
+    @Test
+    public void create_table_ref_match_full() {
+      parse("""
+          CREATE TABLE t (
+              dept_id INTEGER REFERENCES departments(id) MATCH FULL
+          );
+          """);
+    }
+
+    @Test
+    public void create_table_ref_match_partial() {
+      parse("""
+          CREATE TABLE t (
+              dept_id INTEGER REFERENCES departments(id) MATCH PARTIAL
+          );
+          """);
+    }
+
+    @Test
+    public void create_table_ref_match_simple() {
+      parse("""
+          CREATE TABLE t (
+              dept_id INTEGER REFERENCES departments(id) MATCH SIMPLE
+          );
+          """);
+    }
+
+    // --- Table-level constraints ---
+
+    @Test
+    public void create_table_check_no_name() {
+      parse("""
+          CREATE TABLE products (
+              id INTEGER PRIMARY KEY,
+              price NUMERIC,
+              CHECK (price > 0)
+          );
+          """);
+    }
+
+    // --- TypeName variants ---
+
+    @Test
+    public void create_table_character_varying() {
+      parse("CREATE TABLE t (col CHARACTER VARYING(200));");
+    }
+
+    @Test
+    public void create_table_char_with_length() {
+      parse("CREATE TABLE t (code CHAR(5));");
+    }
+
+    @Test
+    public void create_table_character_with_length() {
+      parse("CREATE TABLE t (code CHARACTER(10));");
+    }
+
+    @Test
+    public void create_table_timestamp_with_timezone() {
+      parse("CREATE TABLE t (ts TIMESTAMP WITH TIME ZONE);");
+    }
+
+    @Test
+    public void create_table_timestamp_without_timezone() {
+      parse("CREATE TABLE t (ts TIMESTAMP WITHOUT TIME ZONE);");
+    }
+
+    @Test
+    public void create_table_time_with_timezone() {
+      parse("CREATE TABLE t (t TIME WITH TIME ZONE);");
+    }
+
+    @Test
+    public void create_table_time_without_timezone() {
+      parse("CREATE TABLE t (t TIME WITHOUT TIME ZONE);");
+    }
+
+    @Test
+    public void create_table_double_precision() {
+      parse("CREATE TABLE t (val DOUBLE PRECISION);");
+    }
+
+    @Test
+    public void create_table_float_with_precision() {
+      parse("CREATE TABLE t (val FLOAT(24));");
+    }
+
+    @Test
+    public void create_table_interval_year() {
+      parse("CREATE TABLE t (period INTERVAL YEAR);");
+    }
+
+    @Test
+    public void create_table_interval_day_to_second() {
+      parse("CREATE TABLE t (period INTERVAL DAY TO SECOND);");
+    }
+
+    @Test
+    public void create_table_interval_hour_to_minute() {
+      parse("CREATE TABLE t (period INTERVAL HOUR TO MINUTE);");
+    }
+
+    @Test
+    public void create_table_interval_no_fields() {
+      parse("CREATE TABLE t (period INTERVAL);");
+    }
+
+    @Test
+    public void create_table_array_with_explicit_bound() {
+      parse("CREATE TABLE t (matrix INTEGER[3]);");
+    }
+
+    @Test
+    public void create_table_array_multidimensional_with_bounds() {
+      parse("CREATE TABLE t (cube FLOAT[3][3]);");
+    }
+
+    @Test
+    public void create_table_numeric_with_precision_only() {
+      parse("CREATE TABLE t (n NUMERIC(10));");
+    }
+
+    @Test
+    public void create_table_decimal_with_precision_and_scale() {
+      parse("CREATE TABLE t (n DECIMAL(10, 4));");
+    }
   }
+
 
   // -------------------------------------------------------
   //  CREATE INDEX
@@ -1531,7 +1941,18 @@ public class PosgreSQLGrammarTest {
     public void create_index_multi_column() {
       parse("CREATE INDEX idx_multi ON employees (dept_id ASC NULLS FIRST, salary DESC);");
     }
+
+    @Test
+    public void create_index_using_and_where() {
+      parse("CREATE INDEX idx_active_name ON employees USING btree (name) WHERE active = TRUE;");
+    }
+
+    @Test
+    public void create_unique_index_if_not_exists_using() {
+      parse("CREATE UNIQUE INDEX IF NOT EXISTS idx_email ON users USING hash (email);");
+    }
   }
+
 
   // -------------------------------------------------------
   //  CREATE VIEW
@@ -1553,6 +1974,7 @@ public class PosgreSQLGrammarTest {
           """);
     }
   }
+
 
   // -------------------------------------------------------
   //  CREATE SEQUENCE
@@ -1579,7 +2001,33 @@ public class PosgreSQLGrammarTest {
     public void create_sequence_no_cycle() {
       parse("CREATE SEQUENCE nocycle_seq NO CYCLE;");
     }
+
+    @Test
+    public void create_sequence_increment_only() {
+      parse("CREATE SEQUENCE s INCREMENT BY 5;");
+    }
+
+    @Test
+    public void create_sequence_start_with_only() {
+      parse("CREATE SEQUENCE s START WITH 100;");
+    }
+
+    @Test
+    public void create_sequence_minvalue_only() {
+      parse("CREATE SEQUENCE s MINVALUE 1;");
+    }
+
+    @Test
+    public void create_sequence_maxvalue_only() {
+      parse("CREATE SEQUENCE s MAXVALUE 999999;");
+    }
+
+    @Test
+    public void create_sequence_cache_only() {
+      parse("CREATE SEQUENCE s CACHE 20;");
+    }
   }
+
 
   // -------------------------------------------------------
   //  ALTER TABLE
@@ -1593,6 +2041,16 @@ public class PosgreSQLGrammarTest {
     }
 
     @Test
+    public void alter_add_table_constraint() {
+      parse("ALTER TABLE employees ADD FOREIGN KEY (dept_id) REFERENCES departments(id);");
+    }
+
+    @Test
+    public void alter_add_named_unique_constraint() {
+      parse("ALTER TABLE employees ADD CONSTRAINT uq_email UNIQUE (email);");
+    }
+
+    @Test
     public void alter_drop_column() {
       parse("ALTER TABLE employees DROP COLUMN bonus;");
     }
@@ -1600,6 +2058,11 @@ public class PosgreSQLGrammarTest {
     @Test
     public void alter_drop_column_if_exists_cascade() {
       parse("ALTER TABLE employees DROP COLUMN IF EXISTS bonus CASCADE;");
+    }
+
+    @Test
+    public void alter_drop_column_restrict() {
+      parse("ALTER TABLE employees DROP COLUMN bonus RESTRICT;");
     }
 
     @Test
@@ -1648,6 +2111,7 @@ public class PosgreSQLGrammarTest {
     }
   }
 
+
   // -------------------------------------------------------
   //  DROP
   // -------------------------------------------------------
@@ -1680,8 +2144,28 @@ public class PosgreSQLGrammarTest {
     }
 
     @Test
+    public void drop_index_if_exists() {
+      parse("DROP INDEX IF EXISTS idx_salary;");
+    }
+
+    @Test
+    public void drop_index_cascade() {
+      parse("DROP INDEX idx_salary CASCADE;");
+    }
+
+    @Test
     public void drop_view() {
       parse("DROP VIEW active_employees;");
+    }
+
+    @Test
+    public void drop_view_if_exists() {
+      parse("DROP VIEW IF EXISTS active_employees;");
+    }
+
+    @Test
+    public void drop_view_restrict() {
+      parse("DROP VIEW active_employees RESTRICT;");
     }
 
     @Test
@@ -1690,10 +2174,21 @@ public class PosgreSQLGrammarTest {
     }
 
     @Test
+    public void drop_sequence_if_exists() {
+      parse("DROP SEQUENCE IF EXISTS employee_id_seq;");
+    }
+
+    @Test
     public void drop_multiple_tables() {
       parse("DROP TABLE a, b, c;");
     }
+
+    @Test
+    public void drop_multiple_sequences() {
+      parse("DROP SEQUENCE seq_a, seq_b, seq_c;");
+    }
   }
+
 
   // -------------------------------------------------------
   //  Transactions
@@ -1712,6 +2207,11 @@ public class PosgreSQLGrammarTest {
     }
 
     @Test
+    public void begin_read_write() {
+      parse("BEGIN READ WRITE;");
+    }
+
+    @Test
     public void begin_isolation_serializable() {
       parse("BEGIN ISOLATION LEVEL SERIALIZABLE;");
     }
@@ -1722,8 +2222,28 @@ public class PosgreSQLGrammarTest {
     }
 
     @Test
+    public void begin_isolation_read_committed() {
+      parse("BEGIN ISOLATION LEVEL READ COMMITTED;");
+    }
+
+    @Test
+    public void begin_isolation_read_uncommitted() {
+      parse("BEGIN ISOLATION LEVEL READ UNCOMMITTED;");
+    }
+
+    @Test
     public void start_transaction() {
       parse("START TRANSACTION READ WRITE;");
+    }
+
+    @Test
+    public void start_transaction_read_only() {
+      parse("START TRANSACTION READ ONLY;");
+    }
+
+    @Test
+    public void start_transaction_isolation() {
+      parse("START TRANSACTION ISOLATION LEVEL SERIALIZABLE;");
     }
 
     @Test
@@ -1762,6 +2282,7 @@ public class PosgreSQLGrammarTest {
     }
   }
 
+
   // -------------------------------------------------------
   //  Expressions
   // -------------------------------------------------------
@@ -1786,6 +2307,26 @@ public class PosgreSQLGrammarTest {
     @Test
     public void unary_minus() {
       parse("SELECT -salary FROM employees;");
+    }
+
+    @Test
+    public void typecast_operator() {
+      parse("SELECT salary::BIGINT, created_at::DATE FROM employees;");
+    }
+
+    @Test
+    public void typecast_chain() {
+      parse("SELECT '42'::TEXT::INTEGER FROM dual;");
+    }
+
+    @Test
+    public void typecast_to_double_precision() {
+      parse("SELECT CAST(val AS DOUBLE PRECISION) FROM t;");
+    }
+
+    @Test
+    public void typecast_to_timestamp_with_tz() {
+      parse("SELECT CAST('2024-01-01' AS TIMESTAMP WITH TIME ZONE);");
     }
 
     @Test
@@ -1814,6 +2355,36 @@ public class PosgreSQLGrammarTest {
     }
 
     @Test
+    public void is_true() {
+      parse("SELECT * FROM t WHERE flag IS TRUE;");
+    }
+
+    @Test
+    public void is_not_true() {
+      parse("SELECT * FROM t WHERE flag IS NOT TRUE;");
+    }
+
+    @Test
+    public void is_false() {
+      parse("SELECT * FROM t WHERE flag IS FALSE;");
+    }
+
+    @Test
+    public void is_not_false() {
+      parse("SELECT * FROM t WHERE flag IS NOT FALSE;");
+    }
+
+    @Test
+    public void is_unknown() {
+      parse("SELECT * FROM t WHERE result IS UNKNOWN;");
+    }
+
+    @Test
+    public void is_not_unknown() {
+      parse("SELECT * FROM t WHERE result IS NOT UNKNOWN;");
+    }
+
+    @Test
     public void is_true_false_unknown() {
       parse("SELECT * FROM t WHERE a IS TRUE AND b IS NOT FALSE AND c IS UNKNOWN;");
     }
@@ -1835,12 +2406,17 @@ public class PosgreSQLGrammarTest {
 
     @Test
     public void not_between() {
-      parse("SELECT * FROM employees WHERE salary NOT BETWEEN 40000 AND 80000;");
+      parse("SELECT * FROM t WHERE salary NOT BETWEEN 40000 AND 60000;");
     }
 
     @Test
     public void between_symmetric() {
       parse("SELECT * FROM t WHERE a BETWEEN SYMMETRIC 10 AND 5;");
+    }
+
+    @Test
+    public void not_between_symmetric() {
+      parse("SELECT * FROM t WHERE a NOT BETWEEN SYMMETRIC 10 AND 5;");
     }
 
     @Test
@@ -1858,6 +2434,11 @@ public class PosgreSQLGrammarTest {
       parse("SELECT * FROM employees WHERE name ILIKE 'alice%';");
     }
 
+    @Test
+    public void not_ilike() {
+      parse("SELECT * FROM employees WHERE name NOT ILIKE 'admin%';");
+    }
+
     @Test @Disabled
     public void like_escape() {
       parse("SELECT * FROM t WHERE s LIKE '50\\%' ESCAPE '\\';");
@@ -1866,6 +2447,11 @@ public class PosgreSQLGrammarTest {
     @Test
     public void similar_to() {
       parse("SELECT * FROM t WHERE name SIMILAR TO '(A|B)%';");
+    }
+
+    @Test
+    public void not_similar_to() {
+      parse("SELECT * FROM t WHERE code NOT SIMILAR TO '[A-Z]+';");
     }
 
     @Test
@@ -1884,6 +2470,11 @@ public class PosgreSQLGrammarTest {
     }
 
     @Test
+    public void not_in_subquery() {
+      parse("SELECT * FROM employees WHERE dept_id NOT IN (SELECT id FROM departments WHERE closed = TRUE);");
+    }
+
+    @Test
     public void any_subquery() {
       parse("SELECT * FROM t WHERE a = ANY (SELECT b FROM s);");
     }
@@ -1891,6 +2482,46 @@ public class PosgreSQLGrammarTest {
     @Test
     public void all_subquery() {
       parse("SELECT * FROM t WHERE a > ALL (SELECT b FROM s);");
+    }
+
+    @Test
+    public void eq_some_subquery() {
+      parse("SELECT * FROM t WHERE a = SOME (SELECT b FROM s);");
+    }
+
+    @Test
+    public void neq_any_subquery() {
+      parse("SELECT * FROM t WHERE a != ANY (SELECT b FROM s);");
+    }
+
+    @Test
+    public void neq_all_subquery() {
+      parse("SELECT * FROM t WHERE a != ALL (SELECT b FROM s);");
+    }
+
+    @Test
+    public void lt_any_subquery() {
+      parse("SELECT * FROM t WHERE a < ANY (SELECT b FROM s);");
+    }
+
+    @Test
+    public void lt_all_subquery() {
+      parse("SELECT * FROM t WHERE a < ALL (SELECT b FROM s);");
+    }
+
+    @Test
+    public void gt_any_subquery() {
+      parse("SELECT * FROM t WHERE a > ANY (SELECT b FROM s);");
+    }
+
+    @Test
+    public void gt_all_subquery() {
+      parse("SELECT * FROM t WHERE a > ALL (SELECT b FROM s);");
+    }
+
+    @Test
+    public void row_constructor_shorthand() {
+      parse("SELECT (1, 2, 3) = (SELECT a, b, c FROM t LIMIT 1);");
     }
 
     @Test
@@ -1907,6 +2538,11 @@ public class PosgreSQLGrammarTest {
           SELECT CASE dept_id WHEN 1 THEN 'Engineering' WHEN 2 THEN 'Sales' ELSE 'Other' END
           FROM employees;
           """);
+    }
+
+    @Test
+    public void case_without_else() {
+      parse("SELECT CASE WHEN salary > 100000 THEN 'high' END FROM employees;");
     }
 
     @Test
@@ -1927,6 +2563,16 @@ public class PosgreSQLGrammarTest {
     @Test
     public void json_arrow2() {
       parse("SELECT data ->> 'name' FROM documents;");
+    }
+
+    @Test
+    public void jsonb_contains_operator() {
+      parse("SELECT * FROM documents WHERE data @> '{\"active\": true}';");
+    }
+
+    @Test
+    public void jsonb_contained_by_operator() {
+      parse("SELECT * FROM documents WHERE '{\"id\": 1}' <@ data;");
     }
 
     @Test
@@ -1957,6 +2603,31 @@ public class PosgreSQLGrammarTest {
     @Test
     public void numeric_literals() {
       parse("SELECT 42, 3.14, 1e10, 2.5e-3 FROM dual;");
+    }
+
+    @Test
+    public void scientific_float() {
+      parse("SELECT 1e10, 2.5e-3, 1.0e+2 FROM dual;");
+    }
+
+    @Test
+    public void dollar_quoted_string() {
+      parse("SELECT $$ hello world $$ AS msg;");
+    }
+
+    @Test
+    public void bit_string_literal() {
+      parse("SELECT B'1010' AS bits;");
+    }
+
+    @Test
+    public void hex_string_literal() {
+      parse("SELECT X'DEADBEEF' AS hex_val;");
+    }
+
+    @Test
+    public void quoted_identifier() {
+      parse("SELECT \"my column\" FROM \"my table\";");
     }
 
     @Test
@@ -1995,6 +2666,7 @@ public class PosgreSQLGrammarTest {
     }
   }
 
+
   // -------------------------------------------------------
   //  Multiple statements in one script
   // -------------------------------------------------------
@@ -2009,8 +2681,35 @@ public class PosgreSQLGrammarTest {
           """);
     }
 
-    @Test @Disabled
+    @Test
+    public void three_statements() {
+      parse("""
+          SELECT 1;
+          SELECT 2;
+          SELECT 3;
+          """);
+    }
+
+    @Test
     public void create_insert_select() {
+      parse("""
+          CREATE TABLE t (id INTEGER PRIMARY KEY, val TEXT);
+          INSERT INTO t (id, val) VALUES (1, 'hello');
+          SELECT * FROM t;
+          """);
+    }
+
+    @Test
+    public void transaction_wrapping_dml() {
+      parse("""
+          BEGIN;
+          UPDATE employees SET salary = salary * 1.05 WHERE dept_id = 1;
+          COMMIT;
+          """);
+    }
+
+    @Test @Disabled
+    public void create_insert_select_disabled() {
       parse("""
           CREATE TABLE t (id INTEGER PRIMARY KEY, val TEXT);
           INSERT INTO t (id, val) VALUES (1, 'hello');
@@ -2019,22 +2718,6 @@ public class PosgreSQLGrammarTest {
     }
   }
 
-  // -------------------------------------------------------
-  //  TABLESAMPLE
-  // -------------------------------------------------------
-  @Nested
-  public class TablesampleTests {
-
-    @Test @Disabled
-    public void tablesample_bernoulli() {
-      parse("SELECT * FROM employees TABLESAMPLE BERNOULLI (10);");
-    }
-
-    @Test @Disabled
-    public void tablesample_system_repeatable() {
-      parse("SELECT * FROM employees TABLESAMPLE SYSTEM (5) REPEATABLE (42);");
-    }
-  }
 
   // -------------------------------------------------------
   //  Invalid SQL — should throw
@@ -2060,6 +2743,32 @@ public class PosgreSQLGrammarTest {
     @Test
     public void empty_input() {
       assertThrows(ParsingException.class, () -> parse(""));
+    }
+
+    @Test
+    public void bare_where_clause() {
+      assertThrows(ParsingException.class, () -> parse("WHERE id = 1;"));
+    }
+
+    @Test
+    public void missing_on_in_join() {
+      // JOIN without ON or USING
+      assertThrows(ParsingException.class, () -> parse("SELECT * FROM a JOIN b;"));
+    }
+
+    @Test
+    public void create_table_no_columns() {
+      assertThrows(ParsingException.class, () -> parse("CREATE TABLE t ();"));
+    }
+
+    @Test
+    public void insert_no_values() {
+      assertThrows(ParsingException.class, () -> parse("INSERT INTO t;"));
+    }
+
+    @Test
+    public void update_no_set() {
+      assertThrows(ParsingException.class, () -> parse("UPDATE t WHERE id = 1;"));
     }
   }
 }
