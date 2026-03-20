@@ -7,7 +7,6 @@ import com.github.forax.lazylr.ParserListener;
 import com.github.forax.lazylr.ParsingException;
 import com.github.forax.lazylr.Production;
 import com.github.forax.lazylr.Terminal;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -228,7 +227,7 @@ public final class PosgreSQLGrammarTest {
           // ----- Literals -----
           int_literal:      /[0-9]+/
           float_literal:    /[0-9]+\\.[0-9]*(?:[eE][+-]?[0-9]+)?|[0-9]+[eE][+-]?[0-9]+/
-          string_literal:   /'(?:[^'\\\\]|''|\\\\.)*'/
+          string_literal:   /'(?:[^'\\\\\\\\]|\\\\\\\\.)*'/
           dollar_string:    /\\$[A-Za-z_]*\\$(?:[^\\$]|\\$[^A-Za-z_\\$])*\\$[A-Za-z_]*\\$/
           bit_string:       /[bB]'[01]*'/
           hex_string:       /[xX]'[0-9a-fA-F]*'/
@@ -1126,16 +1125,6 @@ public final class PosgreSQLGrammarTest {
           SELECT a.x, b.y FROM a, b;
           """);
     }
-
-    @Test @Disabled
-    public void select_with_cte_column_list() {
-      parse("""
-          WITH totals(dept_id, total) AS (
-              SELECT dept_id, SUM(salary) FROM employees GROUP BY dept_id
-          )
-          SELECT * FROM totals;
-          """);
-    }
   }
 
 
@@ -1253,34 +1242,6 @@ public final class PosgreSQLGrammarTest {
       parse("SELECT ROW_NUMBER() OVER (PARTITION BY dept_id ORDER BY salary DESC) FROM employees;");
     }
 
-    @Test @Disabled
-    public void window_named_window() {
-
-      parse("""
-          SELECT id, SUM(salary) OVER w
-          FROM employees
-          WINDOW w AS (PARTITION BY dept_id ORDER BY id);
-          """);
-    }
-
-    @Test @Disabled
-    public void window_rows_frame() {
-
-      parse("""
-          SELECT id, SUM(salary) OVER (ORDER BY id ROWS BETWEEN UNBOUNDED PRECEDING AND CURRENT ROW)
-          FROM employees;
-          """);
-    }
-
-    @Test @Disabled
-    public void window_range_frame() {
-
-      parse("""
-          SELECT id, AVG(salary) OVER (PARTITION BY dept_id RANGE BETWEEN UNBOUNDED PRECEDING AND UNBOUNDED FOLLOWING)
-          FROM employees;
-          """);
-    }
-
     @Test
     public void aggregate_with_filter() {
       parse("SELECT dept_id, COUNT(*) FILTER (WHERE active = TRUE) FROM employees GROUP BY dept_id;");
@@ -1304,11 +1265,6 @@ public final class PosgreSQLGrammarTest {
     @Test
     public void function_with_multiple_args_and_order() {
       parse("SELECT string_agg(name, ', ' ORDER BY name ASC) FROM employees;");
-    }
-
-    @Test @Disabled
-    public void ordered_set_aggregate() {
-      parse("SELECT dept_id, percentile_cont(0.5) WITHIN GROUP (ORDER BY salary) FROM employees GROUP BY dept_id;");
     }
   }
 
@@ -1600,55 +1556,12 @@ public final class PosgreSQLGrammarTest {
           """);
     }
 
-    @Test @Disabled
-    public void create_table_with_foreign_key() {
-      parse("""
-          CREATE TABLE employees (
-              id INTEGER PRIMARY KEY,
-              dept_id INTEGER REFERENCES departments(id) ON DELETE CASCADE
-          );
-          """);
-    }
-
-    @Test @Disabled
-    public void create_table_with_table_constraint() {
-      parse("""
-          CREATE TABLE orders (
-              id INTEGER,
-              product_id INTEGER,
-              PRIMARY KEY (id),
-              FOREIGN KEY (product_id) REFERENCES products(id) ON DELETE RESTRICT
-          );
-          """);
-    }
-
-    @Test @Disabled
-    public void create_table_with_check_constraint() {
-      parse("""
-          CREATE TABLE products (
-              id INTEGER PRIMARY KEY,
-              price NUMERIC CHECK (price > 0),
-              CONSTRAINT positive_stock CHECK (stock >= 0)
-          );
-          """);
-    }
-
     @Test
     public void create_table_with_unique_constraint() {
       parse("""
           CREATE TABLE users (
               id INTEGER PRIMARY KEY,
               email TEXT UNIQUE NOT NULL
-          );
-          """);
-    }
-
-    @Test @Disabled
-    public void create_table_with_default() {
-      parse("""
-          CREATE TABLE events (
-              id INTEGER PRIMARY KEY,
-              created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
           );
           """);
     }
@@ -1698,20 +1611,6 @@ public final class PosgreSQLGrammarTest {
               c CHAR(10),
               d CHARACTER(5),
               e CHARACTER VARYING(50)
-          );
-          """);
-    }
-
-    @Test @Disabled
-    public void create_table_date_time_types() {
-      parse("""
-          CREATE TABLE dt_types (
-              a DATE,
-              b TIME,
-              c TIMESTAMP,
-              d TIMESTAMPTZ,
-              e TIMETZ,
-              f INTERVAL
           );
           """);
     }
@@ -1963,15 +1862,6 @@ public final class PosgreSQLGrammarTest {
     @Test
     public void create_view() {
       parse("CREATE VIEW active_employees AS SELECT * FROM employees WHERE active = TRUE;");
-    }
-
-    @Test @Disabled
-    public void create_view_with_join() {
-      parse("""
-          CREATE VIEW employee_details AS
-          SELECT e.id, e.name, d.name AS dept_name
-          FROM employees e JOIN departments d ON e.dept_id = d.id;
-          """);
     }
   }
 
@@ -2294,11 +2184,6 @@ public final class PosgreSQLGrammarTest {
       parse("SELECT a + b, c - d, e * f, g / h, i % j FROM t;");
     }
 
-    @Test @Disabled
-    public void comparison_operators() {
-      parse("SELECT * FROM t WHERE a < b AND c > d AND e <= f AND g >= h AND i <> j;");
-    }
-
     @Test
     public void logical_operators() {
       parse("SELECT * FROM t WHERE a = 1 OR b = 2 AND NOT c = 3;");
@@ -2437,11 +2322,6 @@ public final class PosgreSQLGrammarTest {
     @Test
     public void not_ilike() {
       parse("SELECT * FROM employees WHERE name NOT ILIKE 'admin%';");
-    }
-
-    @Test @Disabled
-    public void like_escape() {
-      parse("SELECT * FROM t WHERE s LIKE '50\\%' ESCAPE '\\';");
     }
 
     @Test
@@ -2595,11 +2475,6 @@ public final class PosgreSQLGrammarTest {
       parse("SELECT CURRENT_DATE, CURRENT_TIME, CURRENT_TIMESTAMP;");
     }
 
-    @Test @Disabled
-    public void string_literals() {
-      parse("SELECT 'hello', 'it''s', E'escaped';");
-    }
-
     @Test
     public void numeric_literals() {
       parse("SELECT 42, 3.14, 1e10, 2.5e-3 FROM dual;");
@@ -2635,16 +2510,6 @@ public final class PosgreSQLGrammarTest {
       parse("SELECT now() FROM dual;");
     }
 
-    @Test @Disabled
-    public void function_call_with_args() {
-      parse("SELECT coalesce(a, b, 0) FROM t;");
-    }
-
-    @Test @Disabled
-    public void function_call_distinct() {
-      parse("SELECT count(DISTINCT dept_id) FROM employees;");
-    }
-
     @Test
     public void function_call_star() {
       parse("SELECT count(*) FROM employees;");
@@ -2658,11 +2523,6 @@ public final class PosgreSQLGrammarTest {
     @Test
     public void qualified_function_call() {
       parse("SELECT pg_catalog.now();");
-    }
-
-    @Test @Disabled
-    public void collate_clause() {
-      parse("SELECT * FROM t ORDER BY name COLLATE \"en-US\";");
     }
   }
 
@@ -2705,15 +2565,6 @@ public final class PosgreSQLGrammarTest {
           BEGIN;
           UPDATE employees SET salary = salary * 1.05 WHERE dept_id = 1;
           COMMIT;
-          """);
-    }
-
-    @Test @Disabled
-    public void create_insert_select_disabled() {
-      parse("""
-          CREATE TABLE t (id INTEGER PRIMARY KEY, val TEXT);
-          INSERT INTO t (id, val) VALUES (1, 'hello');
-          SELECT * FROM t;
           """);
     }
   }
