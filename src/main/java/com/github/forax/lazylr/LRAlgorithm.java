@@ -2,6 +2,7 @@ package com.github.forax.lazylr;
 
 import com.github.forax.lazylr.LRTransitionEngine.Item;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -123,10 +124,6 @@ final class LRAlgorithm {
   /// @param grammar The grammar to analyze.
   /// @return A mapping from each [Symbol] to its set of starting [Terminal]s.
   public static Map<Symbol, Set<Terminal>> computeFirstSets(Grammar grammar) {
-    // Design Note: this is the textbook algorithm for computing FIRST sets.
-    // Worst case complexity is O(n2) where n is the number of productions.
-    // Crude testing shows that it's good enough for our purposes.
-
     Objects.requireNonNull(grammar);
 
     // Initialize: FIRST(terminal) is {terminal}
@@ -138,11 +135,45 @@ final class LRAlgorithm {
       }
     }
 
-    var changed = true;
-    while (changed) {
-      changed = false;
-      for (var production : grammar.productions()) {
-        var targetSet = firstSets.get(production.head());
+    // Build a reverse dependency map:
+    // if FIRST(B) changes, we need to re-examine every production that has B
+    // somewhere in a prefix position (i.e., B could contribute to FIRST(head)).
+    //
+    // Conservative but correct: for each production A -> X1 X2 ... Xn,
+    // every Xi that can be reached from the front (i.e., all X1..Xi-1 are
+    // nullable) is a potential contributor. We add A as a dependent of each
+    // such Xi that is a NonTerminal.
+    var dependents = new HashMap<NonTerminal, Set<NonTerminal>>();
+    for (var nonTerminal : grammar.nonTerminals()) {
+      dependents.put(nonTerminal, new HashSet<>());
+    }
+    for (var production : grammar.productions()) {
+      for (var symbol : production.body()) {
+        if (symbol instanceof NonTerminal dependency) {
+          // head depends on this non-terminal
+          dependents.computeIfAbsent(dependency, _ -> new HashSet<>())
+              .add(production.head());
+        }
+      }
+    }
+
+    // Seed the worklist with every non-terminal that has at least one
+    // terminal in its FIRST set (i.e., any non-terminal with a direct
+    // terminal production or an epsilon production).
+    var worklist = new ArrayDeque<NonTerminal>();
+    var inWorklist = new HashSet<NonTerminal>();
+    for (var nt : grammar.nonTerminals()) {
+      worklist.add(nt);
+      inWorklist.add(nt);
+    }
+
+    while (!worklist.isEmpty()) {
+      var head = worklist.poll();
+      inWorklist.remove(head);
+
+      var targetSet = firstSets.get(head);
+
+      for (var production : grammar.productionsFor(head)) {
         var beforeSize = targetSet.size();
 
         // Rule: If production is A -> Y1 Y2 ... Yn
@@ -167,8 +198,15 @@ final class LRAlgorithm {
         if (allCanBeEpsilon) {
           targetSet.add(Terminal.EPSILON);
         }
+
+        // If this non-terminal's FIRST set grew, schedule all non-terminals
+        // that depend on it — they may gain new terminals too.
         if (targetSet.size() > beforeSize) {
-          changed = true;
+          for (var dependent : dependents.get(head)) {
+            if (inWorklist.add(dependent)) {
+              worklist.add(dependent);
+            }
+          }
         }
       }
     }
