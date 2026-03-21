@@ -249,7 +249,7 @@ final class LRTransitionEngine {
     if (shiftState != null) {
       return new Action.Shift(shiftState);
     }
-    return null;  // shift/reduce conflict
+    return null;  // parse error
   }
 
   /// Decides between a shift and a reduction based on precedence rules.
