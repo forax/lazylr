@@ -35,7 +35,7 @@ public final class TerminalTest {
   @Test
   public void nameOnlyConstructorHasNoValue() {
     var t = new Terminal("num");
-    assertThrows(NoSuchElementException.class, t::value);
+    assertThrows(IllegalStateException.class, t::value);
   }
 
   @Test

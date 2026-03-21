@@ -78,13 +78,13 @@ public final class Terminal implements Symbol, PrecedenceEntity {
   }
 
   /// The actual text fragment matched in the source, or
-  /// throw [NoSuchElementException] if the terminal is a grammar's terminal.
+  /// throw [IllegalStateException] if the terminal is a grammar's terminal.
   ///
   /// @return The terminal's matched valuel`.
-  /// @throws java.util.NoSuchElementException if the terminal has no value.
+  /// @throws IllegalStateException if the terminal has no value.
   public String value() {
     if (value == null) {
-      throw new NoSuchElementException("terminal has no value");
+      throw new IllegalStateException("terminal has no value");
     }
     return value;
   }
