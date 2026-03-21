@@ -77,10 +77,17 @@ public final class Terminal implements Symbol, PrecedenceEntity {
     return name;
   }
 
+  /// Returns whether the terminal has a value.
+  ///
+  /// @return `true` if the terminal has a value, `false` otherwise.
+  public boolean hasValue() {
+    return value != null;
+  }
+
   /// The actual text fragment matched in the source, or
   /// throw [IllegalStateException] if the terminal is a grammar's terminal.
   ///
-  /// @return The terminal's matched valuel`.
+  /// @return The terminal's matched value.
   /// @throws IllegalStateException if the terminal has no value.
   public String value() {
     if (value == null) {
@@ -96,7 +103,7 @@ public final class Terminal implements Symbol, PrecedenceEntity {
   /// the grammar (with the name `"num"`).
   ///
   /// @param o The object to compare.
-  /// @return {@code true} if the names match.
+  /// @return `true` if the names match.
   @Override
   public boolean equals(Object o) {
     return o instanceof Terminal terminal && name.equals(terminal.name);

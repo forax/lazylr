@@ -94,6 +94,13 @@ public final class MetaGrammar {
     return tokens;
   }
 
+  /// Return true if the grammar section is present.
+  ///
+  /// @return `true` if the grammar is present, `false` otherwise.
+  public boolean hasGrammar() {
+    return grammar != null;
+  }
+
   /// The grammar derived from the `grammar` section, rooted at the first declared
   /// non-terminal.
   ///
@@ -105,7 +112,7 @@ public final class MetaGrammar {
     // section is needed), and forcing all callers to unwrap an Optional would add
     // noise for no benefit.
     if (grammar == null) {
-      throw new IllegalStateException("the grammar section is empty");
+      throw new IllegalStateException("no grammar section was defined");
     }
     return grammar;
   }
