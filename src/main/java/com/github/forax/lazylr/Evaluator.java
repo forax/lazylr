@@ -15,10 +15,16 @@ import java.util.function.Function;
 /// a shift or a reduce.
 ///
 /// ### Evaluation Flow
-/// * **Leaf Nodes**: When the parser encounters a [Terminal], it calls [#evaluate(Terminal)]
-///    to convert the raw token into a value (e.g., parsing a string "123" into an `Integer`).
-/// * **Internal Nodes**: When a [Production] is reduced, it calls
+/// - **Leaf Nodes**: When the parser encounters a [Terminal],
+///   it calls [#evaluate(Terminal)] to convert the raw token into a value
+///   (e.g., parsing a string "123" into an `Integer`).
+/// - **Internal Nodes**: When a [Production] is reduced, it calls
 ///    [#evaluate(Production, List)] with the results of its children.
+///
+/// ### Exception propagation
+/// / Any exception thrown by either `evaluate` method stops the parse loop
+/// and propagates out of [Parser#parse(java.util.Iterator, Evaluator)].
+/// The parser may be reused normally with another input after an evaluator exception.
 ///
 /// ### Creating an Evaluator
 /// Implement this interface directly with a class:
