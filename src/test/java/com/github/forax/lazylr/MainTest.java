@@ -421,7 +421,7 @@ public class MainTest {
 
     @Test
     public void operatorPrecedenceIsRightAssociative(@TempDir Path tempDir) throws Exception {
-      // 1^2^4 with right-associative '^' should give ((1^2)^4), not (1^(2^4))
+      // 1^2^4 with right-associative '^' should give (1^(2^4)), not ((1^2)^4)
       var grammar = tempDir.resolve("grammar.txt");
       var input = tempDir.resolve("input.txt");
       Files.writeString(grammar, """
