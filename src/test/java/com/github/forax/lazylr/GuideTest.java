@@ -395,7 +395,7 @@ public final class GuideTest {
     var node = badParser.parse(badLexer.tokenize("- 4 * 5"), evaluator);
     assertEquals("UnaryMinus[node=Mul[left=Num[], right=Num[]]]", node.toString());
 
-    // Use a virtual terminal UNARY to fix the precedence of the unary minus
+    // Use a virtual token UNARY to fix the precedence of the unary minus
     var mg = MetaGrammar.load("""
         tokens {
           num: /[0-9]+/
@@ -404,7 +404,7 @@ public final class GuideTest {
         precedence {
           left: '-'
           left: '*'
-          right: UNARY
+          right: UNARY  // virtual token
         }
         grammar {
           E: num

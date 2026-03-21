@@ -650,9 +650,11 @@ When the parser sees `'-' E` on its stack and a `*` as lookahead, it compares th
 of the unary production, which it inherits from the terminal `'-'` (low), against `*` (high).
 Since `*` wins, the parser **shifts**, producing `-(4 * 5)` instead of the correct `(-4) * 5`.
 
-The fix is a **virtual precedence token**: a name declared in the `precedence` section that
-the lexer never actually emits, used only to assign a production
-its own independent precedence  level via `%prec`.
+The fix is a **virtual precedence token**: a name declared in the `precedence` section
+that has no corresponding entry in the `tokens` section and is never emitted by the lexer.
+It exists purely as a named precedence level that a production can opt into via `%prec`,
+overriding the default precedence.
+
 
 ```java
 var mg = MetaGrammar.load("""
@@ -663,7 +665,7 @@ var mg = MetaGrammar.load("""
     precedence {
       left:  '-'
       left:  '*'
-      right: UNARY
+      right: UNARY  // virtual token
     }
     grammar {
       E: num
