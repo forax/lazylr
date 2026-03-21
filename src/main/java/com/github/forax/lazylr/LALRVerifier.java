@@ -22,7 +22,6 @@ import static java.util.stream.Collectors.mapping;
 import static java.util.stream.Collectors.toCollection;
 import static java.util.stream.Collectors.toList;
 import static java.util.stream.Collectors.toMap;
-import static java.util.stream.Collectors.toSet;
 
 /// Verifies whether a grammar is LALR(1), using a precedence map
 /// to resolve shift/reduce conflicts.
@@ -525,7 +524,7 @@ public final class LALRVerifier {
       record CoreKey(Production production, int dot) {}
       var coreKeys = state.stream()
           .map(item -> new CoreKey(item.production(), item.dot()))
-          .collect(toSet());
+          .collect(toCollection(LinkedHashSet::new));
 
       for (var coreKey : coreKeys) {
         var prod = coreKey.production();

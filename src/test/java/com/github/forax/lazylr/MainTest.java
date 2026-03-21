@@ -657,8 +657,8 @@ public class MainTest {
       assertEquals("""
           ── State 0 ─────────────────────────────────
              E' :  • E
-             E :   • num
              E :   • E + E
+             E :   • num
             ······································
              goto( num                  ) → 2
              goto( E                    ) → 1
@@ -676,9 +676,9 @@ public class MainTest {
              reduce( E : num            ) on [$, +]
           
           ── State 3 ─────────────────────────────────
-             E :  • num
              E :  E + • E
              E :  • E + E
+             E :  • num
             ······································
              goto( num                  ) → 2
              goto( E                    ) → 4

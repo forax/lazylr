@@ -326,8 +326,8 @@ public final class LALRVerifierTest {
            reduce( E : num            ) on [$, +]
         
         ── State 3 ─────────────────────────────────
-           E :  • num
            E :  E + • E
+           E :  • num
            E :  • E + E
           ······································
            goto( num                  ) → 2
@@ -382,8 +382,8 @@ public final class LALRVerifierTest {
            reduce( E : num            ) on [$, +]
         
         ── State 3 ─────────────────────────────────
-           E :  • num
            E :  E + • E
+           E :  • num
            E :  • E + E
           ······································
            goto( num                  ) → 2
@@ -441,8 +441,8 @@ public final class LALRVerifierTest {
            reduce( E : num            ) on [$, *, +]
         
         ── State 3 ─────────────────────────────────
-           E :  • num
            E :  E + • E
+           E :  • num
            E :  • E + E
            E :  • E * E
           ······································
@@ -450,8 +450,8 @@ public final class LALRVerifierTest {
            goto( E                    ) → 5
         
         ── State 4 ─────────────────────────────────
-           E :  • num
            E :  E * • E
+           E :  • num
            E :  • E + E
            E :  • E * E
           ······································
@@ -528,8 +528,8 @@ public final class LALRVerifierTest {
            reduce( E : num            ) on [$, *, +]
         
         ── State 3 ─────────────────────────────────
-           E :  • num
            E :  E + • E
+           E :  • num
            E :  • E + E
            E :  • E * E
           ······································
@@ -537,8 +537,8 @@ public final class LALRVerifierTest {
            goto( E                    ) → 5
         
         ── State 4 ─────────────────────────────────
-           E :  • num
            E :  E * • E
+           E :  • num
            E :  • E + E
            E :  • E * E
           ······································
