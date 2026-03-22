@@ -154,6 +154,8 @@ public final class LALRVerifier {
   }
 
   /// One LALR state: a set of LR(0) items together with its transition map.
+  /// The transition map is mutable only during the construction of
+  /// the LR(0) automaton.
   private record LR0State(Set<LR0Item> items, Map<Symbol, Integer> transitions) {}
 
   /// The LR(0) automaton: ordered list of states
