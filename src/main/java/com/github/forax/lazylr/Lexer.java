@@ -67,7 +67,8 @@ public final class Lexer {
     return new Tokenizer() {
       private int matchIndex;
       private int terminalIndex;
-      private @Nullable Terminal terminal = nextTerminal(0);
+      private @Nullable Terminal terminal;
+      private boolean computed;   // true means terminal is up to date
 
       private record Match(Token token, String value) {}
 
@@ -127,6 +128,10 @@ public final class Lexer {
 
       @Override
       public boolean hasNext() {
+        if (!computed) {
+          terminal = nextTerminal(matchIndex);
+          computed = true;
+        }
         return terminal != null;
       }
 
@@ -137,12 +142,12 @@ public final class Lexer {
         }
         var terminal = this.terminal;
         terminalIndex = matchIndex;  // for error message
-        if (terminal.name().equals(Terminal.ERROR.name())) {
+        if (Terminal.ERROR.name().equals(terminal.name())) {
           this.terminal = null;
           return terminal;
         }
         matchIndex += terminal.value().length();
-        this.terminal = nextTerminal(matchIndex);
+        computed = false;
         return terminal;
       }
     };
