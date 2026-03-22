@@ -27,6 +27,8 @@ operator precedence, associativity, the dangling-else problem, and unary operato
 The Runnable code is in
 [GuideTest.java](src/test/java/com/github/forax/lazylr/GuideTest.java).
 
+[The javadoc](https://jitpack.io/com/github/forax/lazylr/latest/javadoc/).
+
 ## Getting Started
 
 ### Define your Grammar
