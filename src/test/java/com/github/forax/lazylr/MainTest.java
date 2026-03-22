@@ -652,7 +652,7 @@ public class MainTest {
       var result = runProcess(tempDir, "--print", grammar);
       assertEquals(2, result.exitCode());
       assertEquals("""
-          Unresolved shift/reduce conflict in state 4 on terminal '+' between reduce E : E + E, shift, shift
+          Unresolved shift/reduce conflict in state 4 on terminal '+' between reduce E : E + E, shift
           """, result.stderr);
       assertEquals("""
           ── State 0 ─────────────────────────────────

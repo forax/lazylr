@@ -1,5 +1,6 @@
 package com.github.forax.lazylr.grammar;
 
+import com.github.forax.lazylr.LALRVerifier;
 import com.github.forax.lazylr.Lexer;
 import com.github.forax.lazylr.MetaGrammar;
 import com.github.forax.lazylr.Parser;
@@ -892,6 +893,10 @@ public final class PosgreSQLGrammarTest {
 
   private static void parse(String sql) {
     PARSER.parse(LEXER.tokenize(sql), NOOP);
+  }
+
+  static {
+    LALRVerifier.verify(MG.grammar(), MG.precedenceMap(), System.err::println);
   }
 
 
