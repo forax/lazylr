@@ -173,23 +173,96 @@ public final class LALRVerifier {
   // Step 2: FIRST sets
   // -----------------------------------------------------------------------
 
+  /// Computes FIRST sets for all non-terminals using a worklist algorithm with
+  /// dependency tracking, rather than the naïve fixed-point loop that rescans all
+  /// productions on every iteration. A reverse-dependency map records which
+  /// non-terminals must be re-queued when a given FIRST set grows, so work is
+  /// proportional to the number of new terminals discovered, not to grammar size.
   private static Map<NonTerminal, Set<Terminal>> computeFirstSets(Grammar grammar) {
-    var firstSets = new HashMap<NonTerminal, Set<Terminal>>();
-    for (var nt : grammar.nonTerminals()) {
-      firstSets.put(nt, new HashSet<>());
+    var nonTerminals = grammar.nonTerminals();
+
+    // Initialize one empty set per non-terminal.
+    var firstSets = new HashMap<NonTerminal, Set<Terminal>>(nonTerminals.size() * 2);
+    for (var nonTerminal : nonTerminals) {
+      firstSets.put(nonTerminal, new HashSet<>());
     }
 
-    var changed = true;
-    while (changed) {
-      changed = false;
-      for (var prod : grammar.productions()) {
-        var set = firstSets.get(prod.head());
-        var added = firstOfSequence(prod.body(), firstSets);
-        if (set.addAll(added)) {
-          changed = true;
+    // Build a reverse-dependency map:
+    // dependents.get(B) = { A | some production of A has B in a prefix position }
+    // "Prefix position" here is conservative: every non-terminal in any production
+    // body is registered as a potential dependency of the head.
+    var dependents = new HashMap<NonTerminal, Set<NonTerminal>>(nonTerminals.size() * 2);
+    for (var nonTerminal : nonTerminals) {
+      dependents.put(nonTerminal, new HashSet<>());
+    }
+    for (var production : grammar.productions()) {
+      for (var symbol : production.body()) {
+        if (symbol instanceof NonTerminal bodyNt) {
+          dependents.computeIfAbsent(bodyNt, _ -> new HashSet<>())
+              .add(production.head());
         }
       }
     }
+
+    // Seed the worklist with every non-terminal so that the initial pass
+    // propagates terminals from simple productions (A → t) into all FIRST sets.
+    var worklist = new ArrayDeque<>(nonTerminals);
+    var inWorklist = new HashSet<>(nonTerminals);
+
+    while (!worklist.isEmpty()) {
+      var head = worklist.poll();
+      inWorklist.remove(head);
+
+      var headFirst = firstSets.get(head);
+      var sizeBefore = headFirst.size();
+
+      for (var production : grammar.productionsFor(head)) {
+        // Walk the body left-to-right, adding FIRST(Xᵢ) \ {ε} and stopping
+        // as soon as a non-nullable symbol is encountered.
+        var allNullable = true;
+        for (var symbol : production.body()) {
+          switch (symbol) {
+            case Terminal t -> {
+              // A terminal contributes itself; it cannot be ε (ε is a grammar
+              // sentinel, not a real input token), so the body is non-nullable
+              // from this point onward.
+              headFirst.add(t);
+              allNullable = false;
+            }
+            case NonTerminal nonTerminal -> {
+              var firstSet = firstSets.get(nonTerminal);
+              for (var terminal : firstSet) {
+                if (!terminal.equals(Terminal.EPSILON)) {
+                  headFirst.add(terminal);
+                }
+              }
+              if (!firstSet.contains(Terminal.EPSILON)) {
+                allNullable = false;
+              }
+            }
+          }
+          if (!allNullable) {
+            break;
+          }
+        }
+
+        // ε ∈ FIRST(A) iff every symbol in the body is nullable (or body is empty).
+        if (allNullable) {
+          headFirst.add(Terminal.EPSILON);
+        }
+      }
+
+      // If FIRST(head) grew, re-queue every non-terminal that depends on it:
+      // their FIRST sets may gain new terminals in subsequent iterations.
+      if (headFirst.size() > sizeBefore) {
+        for (var dependent : dependents.get(head)) {
+          if (inWorklist.add(dependent)) {
+            worklist.add(dependent);
+          }
+        }
+      }
+    }
+
     return firstSets;
   }
 
