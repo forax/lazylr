@@ -3,6 +3,7 @@ package com.github.forax.lazylr;
 import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -311,5 +312,24 @@ final class LRTransitionEngine {
         .put(symbol, nextState);
 
     return nextState;
+  }
+
+  /// Returns the set of productions that have been reduced during parsing so far.
+  ///
+  /// Given the lazy nature of the parser, production has been reduced
+  /// when the action table contains a [Action.Reduce] entry for it on
+  /// at least one lookahead terminal.
+  ///
+  /// @return an unmodifiable snapshot of covered productions.
+  Set<Production> reducedProductions() {
+    var covered = new HashSet<Production>();
+    for (var stateActions : actionTable.values()) {
+      for (var action : stateActions.values()) {
+        if (action instanceof Action.Reduce(var production)) {
+          covered.add(production);
+        }
+      }
+    }
+    return covered;
   }
 }

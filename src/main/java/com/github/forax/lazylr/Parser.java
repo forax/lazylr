@@ -337,4 +337,17 @@ public final class Parser {
 
     return false;
   }
+
+  /// Returns the set of productions that have been reduced at least once
+  /// across all [#parse] calls on this instance.
+  ///
+  /// The set grows monotonically: once a production is covered it remains
+  /// covered for the lifetime of this parser instance.
+  ///
+  /// @return an unmodifiable set of covered productions.
+  public Set<Production> coverage() {
+    var coveredSet = engine.reducedProductions();
+    coveredSet.remove(startProduction);
+    return Set.copyOf(coveredSet);
+  }
 }
