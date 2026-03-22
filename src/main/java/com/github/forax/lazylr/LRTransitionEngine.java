@@ -320,12 +320,13 @@ final class LRTransitionEngine {
   /// when the action table contains a [Action.Reduce] entry for it on
   /// at least one lookahead terminal.
   ///
+  /// @param startProduction the production to exclude from the result.
   /// @return an unmodifiable snapshot of covered productions.
-  Set<Production> reducedProductions() {
+  Set<Production> reducedProductions(Production startProduction) {
     var covered = new HashSet<Production>();
     for (var stateActions : actionTable.values()) {
       for (var action : stateActions.values()) {
-        if (action instanceof Action.Reduce(var production)) {
+        if (action instanceof Action.Reduce(var production) && production != startProduction) {
           covered.add(production);
         }
       }

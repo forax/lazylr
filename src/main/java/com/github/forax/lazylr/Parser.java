@@ -346,8 +346,6 @@ public final class Parser {
   ///
   /// @return an unmodifiable set of covered productions.
   public Set<Production> coverage() {
-    var coveredSet = engine.reducedProductions();
-    coveredSet.remove(startProduction);
-    return Set.copyOf(coveredSet);
+    return Set.copyOf(engine.reducedProductions(startProduction));
   }
 }
