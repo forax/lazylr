@@ -54,7 +54,13 @@ public final class Lexer {
   /// * **No Match:** If no token matches at the current index, a [Terminal#ERROR]
   ///   is returned with the first invalid character and the lexer stops.
   ///
-  /// The process is lazy, the input is only scanned as [Iterator#next()] is called.
+  /// ### Context-Sensitive Lexing
+  /// When used together with a [Parser], the lexer operates in a context-sensitive
+  /// mode: only the token patterns that are syntactically valid
+  /// in the current parser state are considered as candidates.
+  ///
+  /// The process is lazy, the input is only scanned when
+  /// [Iterator#hasNext()]/[Iterator#next()] is called.
   ///
   /// @param input The character sequence to tokenize.
   /// @return An [Iterator] of [Terminal]s.

@@ -13,6 +13,10 @@ with the agility of a modern library.
   ensuring fast startup times even for complex grammars.
 * **True LR(1) Power:**
   More powerful than LL(1) and even LALR(1) parsers, handles a strictly larger class of grammars.
+* **Context-Sensitive Lexing:**
+  When used by the parser, the lexer activates only the token patterns that are
+  syntactically valid in the current state, removing ambiguities between tokens
+  with the same value such as keywords and identifiers.
 * **Declarative Precedence:**
   Resolve shift/reduce conflicts (like the "dangling else" or operator precedence) using a simple `Precedence` map
   rather than complex grammar restructuring.
