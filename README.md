@@ -121,7 +121,7 @@ class NodeEvaluator implements Evaluator<Node> {
   public Node evaluate(Terminal term) {
     return switch (term.name()) {
       case "num" -> new NumLit(Integer.parseInt(term.value()));
-      default -> null;
+      default    -> null;
     };
   }
 
