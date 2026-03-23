@@ -111,21 +111,6 @@ final class LRTransitionEngine {
     private Item moveDotForward() {
       return new Item(production, dot + 1, lookahead);
     }
-
-    @Override
-    public String toString() {
-      var joiner = new StringJoiner(" ",
-          production.head().name() + " -> ",
-          " {" + lookahead.name() + "}");
-      var body = production.body();
-      for (var i = 0; i < body.size(); i++) {
-        if (i == dot) {
-          joiner.add(".");
-        }
-        joiner.add(body.get(i).name());
-      }
-      return joiner.toString();
-    }
   }
 
   /// A set of [Item]s representing a specific state in the LR automaton.
