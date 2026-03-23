@@ -76,41 +76,36 @@ public final class Parser {
     return factory.createParser();
   }
 
+  /// A pull-based source of terminals for the parser main loop.
+  ///
+  /// Wraps an [Iterator] of [Terminal]s and appends a [Terminal#EOF] sentinel.
   private static abstract class Scanner {
+    /// Returns the next terminal from the input, or [Terminal#EOF] if the input is exhausted.
+    ///
+    /// @param state the current LR parser state.
+    /// @return the next terminal, never 'null'.
     abstract Terminal pollTerminal(State state);
   }
 
   private static Scanner wrapAndAppendEOF(Iterator<? extends Terminal> iterator) {
     if (iterator instanceof Tokenizer tokenizer) {
       return new Scanner() {
-        private boolean eofSeen;
-
         @Override
         public Terminal pollTerminal(State state) {
           var terminal = tokenizer.pollTerminal(state);
           if (terminal != null) {
             return terminal;
           }
-          if (eofSeen) {
-            throw new NoSuchElementException();
-          }
-          eofSeen = true;
           return Terminal.EOF;
         }
       };
     }
     return new Scanner() {
-      private boolean eofSeen;
-
       @Override
       public Terminal pollTerminal(State state) {
         if (iterator.hasNext()) {
           return iterator.next();
         }
-        if (eofSeen) {
-          throw new NoSuchElementException();
-        }
-        eofSeen = true;
         return Terminal.EOF;
       }
     };
@@ -258,6 +253,10 @@ public final class Parser {
     return Tokenizer.ErrorHandler.parsingErrorMessage(terminal, expected);
   }
 
+  /// Returns the set of terminals that are syntactically valid in the given state.
+  ///
+  /// @param state the current LR parser state.
+  /// @return the set of terminals that can legally appear next in the input.
   static Set<Terminal> expectedTerminals(State state) {
     var expected = new HashSet<Terminal>();
     for (var item : state.items()) {
