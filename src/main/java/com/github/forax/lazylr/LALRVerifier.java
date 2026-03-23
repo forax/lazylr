@@ -463,9 +463,7 @@ public final class LALRVerifier {
               var completeItem = new LR0Item(lr1Item.production, lr1Item.dot);
               var stateMap = lookaheads.get(stateIdx);
               var set = stateMap.get(completeItem);
-              if (set != null) {
-                set.add(lr1Item.lookahead);
-              }
+              set.add(lr1Item.lookahead);
             }
             continue;
           }
@@ -474,7 +472,6 @@ public final class LALRVerifier {
           // After shifting X the automaton moves to a successor state.
           var sym = lr1Item.nextSymbol();
           var successorIdx = state.transitions.get(sym);
-          assert successorIdx != null;
           var advancedLR0 = new LR0Item(lr1Item.production, lr1Item.dot + 1);
 
           if (lr1Item.lookahead == DUMMY) {
@@ -487,9 +484,7 @@ public final class LALRVerifier {
             // Spontaneous generation: a is directly generated for advancedLR0
             var successorMap = lookaheads.get(successorIdx);
             var set = successorMap.get(advancedLR0);
-            if (set != null) {
-              set.add(lr1Item.lookahead);
-            }
+            set.add(lr1Item.lookahead);
           }
         }
       }
@@ -499,9 +494,7 @@ public final class LALRVerifier {
     var augStartItem = new LR0Item(augmentedStart, 0);
     var state0Map = lookaheads.getFirst();
     var seedSet = state0Map.get(augStartItem);
-    if (seedSet != null) {
-      seedSet.add(Terminal.EOF);
-    }
+    seedSet.add(Terminal.EOF);
 
     // Fixed-point propagation
     var changed = true;
@@ -513,7 +506,7 @@ public final class LALRVerifier {
 
         var fromSet = fromMap.get(link.fromItem);
         var toSet   = toMap.get(link.toItem);
-        if (fromSet != null && toSet != null && toSet.addAll(fromSet)) {
+        if (toSet.addAll(fromSet)) {
           changed = true;
         }
       }
