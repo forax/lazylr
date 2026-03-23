@@ -132,11 +132,6 @@ final class LRTransitionEngine {
     public boolean equals(Object o) {
       return o instanceof State state && items.equals(state.items);
     }
-
-    @Override
-    public String toString() {
-      return "State[items=" + items + ']';
-    }
   }
 
   /// Represents a parser decision for a given state and lookahead.
