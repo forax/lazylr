@@ -261,10 +261,12 @@ final class LRTransitionEngine {
 
     // 2. Compute the "Kernel" for the next state
     // Find all items where the dot is before the current symbol and advance it.
-    var kernels = currentState.items().stream()
-        .filter(item -> symbol.equals(item.getNextSymbol()))
-        .map(Item::moveDotForward)
-        .collect(Collectors.toSet());
+    var kernels = new HashSet<Item>();
+    for (var item : currentState.items) {
+      if (symbol.equals(item.getNextSymbol())) {
+        kernels.add(item.moveDotForward());
+      }
+    }
 
     // If no items can accept this symbol, there is no transition (error or accept)
     if (kernels.isEmpty()) {
