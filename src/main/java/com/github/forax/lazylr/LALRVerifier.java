@@ -69,11 +69,10 @@ public final class LALRVerifier {
   ///                      used to resolve shift/reduce conflicts.
   /// @param errorReporter called once per unresolved conflict with a human-readable
   ///                      description of the conflict.
-  /// @return `true` if the grammar is LALR(1), `false` otherwise.
   /// @throws NullPointerException if `grammar`, `precedenceMap` or `errorReporter` is null.
-  public static boolean verify(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap,
+  public static void verify(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap,
                                Consumer<String> errorReporter) {
-    return verify(grammar, precedenceMap, null, false, errorReporter);
+    verify(grammar, precedenceMap, null, false, errorReporter);
   }
 
   /// Verifies that the grammar is LALR(1) (possibly with precedence-based
@@ -89,10 +88,8 @@ public final class LALRVerifier {
   ///                      Ignored if `out` is `null`.
   /// @param errorReporter called once per unresolved conflict with a human-readable
   ///                      description of the conflict.
-  /// @return `true` if the grammar is LALR(1), `false` if conflicts remain after
-  ///         precedence-based resolution.
   /// @throws NullPointerException if `grammar`, `precedenceMap` or `errorReporter` is null.
-  public static boolean verify(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap,
+  public static void verify(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap,
                                @Nullable PrintStream out, boolean alwaysPrint, Consumer<String> errorReporter) {
     Objects.requireNonNull(grammar);
     Objects.requireNonNull(precedenceMap);
@@ -107,7 +104,6 @@ public final class LALRVerifier {
     if (out != null && (alwaysPrint || conflicts)) {
       printAutomaton(lr0Automaton, augmentedStart, lookaheads, actionTable, out);
     }
-    return !conflicts;
   }
 
 
@@ -260,7 +256,7 @@ public final class LALRVerifier {
       }
 
       // If FIRST(head) grew, re-queue every non-terminal that depends on it:
-      // their FIRST sets may gain new terminals in subsequent iterations.
+      // their FIRST sets may gain new terminals in later iterations.
       if (headFirst.size() > sizeBefore) {
         for (var dependent : dependents.get(head)) {
           if (inWorklist.add(dependent)) {
@@ -386,7 +382,7 @@ public final class LALRVerifier {
       if (!(item.nextSymbol() instanceof NonTerminal nonTerminal)) {
         continue;
       }
-      // β is everything after the non-terminal; a is the item's lookahead
+      // 'β' is everything after the non-terminal; 'a' is the item's lookahead
       var body = item.production.body();
       var rest = body.subList(item.dot + 1, body.size());
       var lookaheads = firstOfSequenceWithTerminal(rest, item.lookahead, firstSets);
@@ -416,7 +412,7 @@ public final class LALRVerifier {
   ///   1. Determine which lookaheads are "spontaneously generated" for each
   ///      kernel item in each state.
   ///   2. Build propagation links between kernel items across states.
-  ///   3. Seed EOF on the augmented-start item and propagate to fixed point.
+  ///   3. Seed EOF on the augmented-start item and propagate to a fixed point.
   ///
   /// Returns: for each state index → for each (complete) LR(0) item → set of lookahead terminals.
   private static List<Map<LR0Item, Set<Terminal>>> computeLookaheads(
@@ -454,10 +450,10 @@ public final class LALRVerifier {
         for (var lr1Item : closure) {
           if (lr1Item.isComplete()) {
             // A complete item [A → γ •, a]:
-            //   if a ≠ DUMMY → spontaneously generated lookahead for the
+            //   if a ≠ DUMMY → "spontaneously generated" lookahead for the
             //                   kernel item that "owns" this complete item.
             //   if a == DUMMY → the lookahead propagates (handled via the
-            //                   propagation links for complete items below).
+            //                   propagation links for "complete" items below).
             // We record this on the complete item itself in this state.
             if (lr1Item.lookahead != DUMMY) {
               var completeItem = new LR0Item(lr1Item.production, lr1Item.dot);
@@ -469,7 +465,7 @@ public final class LALRVerifier {
           }
 
           // A non-complete item [B → α • X β, a]:
-          // After shifting X the automaton moves to a successor state.
+          // After shifting 'X' the automaton moves to a successor state.
           var sym = lr1Item.nextSymbol();
           var successorIdx = state.transitions.get(sym);
           var advancedLR0 = new LR0Item(lr1Item.production, lr1Item.dot + 1);
@@ -481,7 +477,7 @@ public final class LALRVerifier {
                 successorIdx, advancedLR0);
             propagationLinks.add(propagationLink);
           } else {
-            // Spontaneous generation: a is directly generated for advancedLR0
+            // Spontaneous generation: 'a' is directly generated for advancedLR0
             var successorMap = lookaheads.get(successorIdx);
             var set = successorMap.get(advancedLR0);
             set.add(lr1Item.lookahead);

@@ -147,9 +147,13 @@ public final class Main {
     }
 
     var printStream = cmdLineArgument.print ? System.out : System.err;
-    var verified = LALRVerifier.verify(mg.grammar(), mg.precedenceMap(),
-        printStream, cmdLineArgument.print, System.err::println);
-    if (!verified) {
+    boolean[] valid = new boolean[] { true };
+    LALRVerifier.verify(mg.grammar(), mg.precedenceMap(),
+        printStream, cmdLineArgument.print, error -> {
+      valid[0] = false;
+      System.err.println(error);
+    });
+    if (!valid[0]) {
       System.exit(2);
       return;
     }
