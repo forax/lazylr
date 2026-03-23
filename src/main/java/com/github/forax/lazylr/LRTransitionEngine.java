@@ -40,12 +40,7 @@ final class LRTransitionEngine {
     private final Terminal lookahead;
     private final int hashCode;  // cached hashCode for perf reason
 
-    public Item(Production production, int dot, Terminal lookahead) {
-      Objects.requireNonNull(production);
-      if (dot < 0 || dot > production.body().size()) {
-        throw new IllegalArgumentException("Dot position must be between 0 and body size");
-      }
-      Objects.requireNonNull(lookahead);
+    Item(Production production, int dot, Terminal lookahead) {
       var hashCode = (System.identityHashCode(production) * 31 + dot) * 31 + lookahead.hashCode();
       this.production = production;
       this.dot = dot;
@@ -117,7 +112,7 @@ final class LRTransitionEngine {
     private final Set<Item> items;
     private final int hashCode;  // cached hashCode for perf reason
 
-    public State(Set<Item> items) {
+    State(Set<Item> items) {
       items = Set.copyOf(items);
       this.items = items;
       this.hashCode = items.hashCode();
