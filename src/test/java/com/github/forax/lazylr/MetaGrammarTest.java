@@ -548,6 +548,34 @@ public final class MetaGrammarTest {
   }
 
   @Test
+  public void hasGrammarReturnsTrueWhenGrammarSectionHasAtLeastOneProduction() {
+    var mg = MetaGrammar.load("""
+      grammar {
+        E: num
+      }
+      """);
+
+    assertTrue(mg.hasGrammar());
+  }
+
+  @Test
+  public void hasGrammarReturnsFalseWhenGrammarSectionIsEmpty() {
+    var mg = MetaGrammar.load("""
+      grammar {
+      }
+      """);
+
+    assertFalse(mg.hasGrammar());
+  }
+
+  @Test
+  public void hasGrammarReturnsFalseWhenNoGrammarSectionIsPresent() {
+    var mg = MetaGrammar.load("");
+
+    assertFalse(mg.hasGrammar());
+  }
+
+  @Test
   public void emptyGrammarSectionThrowsIllegalStateException() {
     var mg = MetaGrammar.load("""
         grammar {
