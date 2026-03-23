@@ -101,7 +101,7 @@ public final class Parser {
     }
     return new Scanner() {
       @Override
-      public Terminal pollTerminal(State state) {
+      public Terminal pollTerminal(State unused) {
         if (iterator.hasNext()) {
           return iterator.next();
         }
@@ -293,20 +293,13 @@ public final class Parser {
 
     // 2. Look at the state now on top of the stack
     var topState = stack.peek();
-    assert topState != null;
 
     // 3. Find the GOTO transition for the NonTerminal we just "created"
     // After reducing tokens to an 'Expression', where do we go from here?
     var nextState = engine.move(topState, production.head());
 
     if (nextState == null) {
-      if (production == startProduction) {
-        return true;  // Accept
-      }
-
-      // Trying to reduce a non-terminal that is not reachable from the start symbol
-      throw new AssertionError("can not reduce " + production +
-          " because there is no GOTO transition for " + production.head());
+      return true;  // Accept
     }
 
     // 4. Push that destination state onto the stack
