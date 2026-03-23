@@ -42,56 +42,56 @@ final class Tokenizer implements Iterator<Terminal> {
     super();
   }
 
-  private record Match(Token token, String value) {}
-
   /// Finds the best-matching token at the given index, using the activated filter if provided.
-  private @Nullable Match nextMatch(int index, @Nullable BitSet activated) {
+  private int nextTokenIndex(int index, @Nullable BitSet activated) {
     if (index == input.length()) {
-      return null;
+      return -1;
     }
-    var longuest = (String) null;
-    var tokenIndex = 0;
+    var longest = -1;
+    var tokenIndex = -1;
     for (var i = 0; i < matchers.length; i++) {
       var matcher = matchers[i];
       if (activated != null && !activated.get(i)) {
         continue;
       }
-      if (matcher.find(index) && matcher.start() == index) {
-        var group = matcher.group();
-        if (longuest == null || longuest.length() < group.length()) {
-          longuest = group;
+      matcher.region(index, input.length());
+      if (matcher.lookingAt()) {
+        var length = matcher.end() - matcher.start();
+        if (length > longest) {
+          longest = length;
           tokenIndex = i;
         }
       }
     }
-    return longuest == null ? null : new Match(tokens.get(tokenIndex), longuest);
+    return tokenIndex;
   }
 
   /// Advances past ignorable tokens and returns the next named terminal, or an error terminal on mismatch.
   private @Nullable Terminal nextTerminal(int index, @Nullable BitSet activated) {
     for(;;) {
-      var match = nextMatch(index, activated);
-      if (match == null) {
+      var tokenIndex = nextTokenIndex(index, activated);
+      if (tokenIndex == -1) {
         if (index == input.length()) {
           return null;
         }
         if (activated != null) {  // retry with all tokens activated
                                   // so we get a proper parsing error message
-          match = nextMatch(index, null);
+          tokenIndex = nextTokenIndex(index, null);
         }
-        if (match == null) {
-          matchIndex = index;  // next match
+        if (tokenIndex == -1) {
+          matchIndex = index;  // for next match
           return error(index, input);
         }
       }
-      var token = match.token;
-      var value = match.value;
-      if (token.name == null) {
-        index += value.length();
+      var name = tokens.get(tokenIndex).name;
+      var matcher = matchers[tokenIndex];
+      if (name == null) {
+        index += matcher.end() - matcher.start();
         continue;
       }
-      matchIndex = index;  // next match
-      return new Terminal(token.name, value);
+      var value = input.subSequence(matcher.start(), matcher.end()).toString();
+      matchIndex = index;  // for next match
+      return new Terminal(name, value);
     }
   }
 
