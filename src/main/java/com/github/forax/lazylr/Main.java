@@ -42,7 +42,7 @@ public final class Main {
       
       Examples:
         lazylr grammar.txt              # validate grammar and print the automaton if there is a conflict
-        lazylr --print grammar.txt      # as above, but the automaton is printed unconditionnaly
+        lazylr --print grammar.txt      # as above, but the automaton is printed unconditionally
         lazylr --generate grammar.txt   # generate Java code that builds the grammar
         lazylr grammar.txt input.txt    # parse input and print derivation tree
       

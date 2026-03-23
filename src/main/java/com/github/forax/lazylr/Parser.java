@@ -175,7 +175,7 @@ public final class Parser {
             return copy[index];
           }
         });
-        // not really needed given there is no way to stop the parser and access the stack
+        // not really needed, there is no way to stop the parser and access the stack
         //Arrays.fill(stack, from, size, null);
         size = from;
         add(result);
@@ -255,7 +255,7 @@ public final class Parser {
   /// Returns the set of terminals that are syntactically valid in the given state.
   ///
   /// @param state the current LR parser state.
-  /// @return the set of terminals that can legally appear next in the input.
+  /// @return the set of terminals that can legally appear next, in the input.
   static Set<Terminal> expectedTerminals(State state) {
     var expected = new HashSet<Terminal>();
     for (var item : state.items()) {
@@ -311,8 +311,8 @@ public final class Parser {
   /// Returns the set of productions that have been reduced at least once
   /// across all [#parse] calls on this instance.
   ///
-  /// The set grows monotonically: once a production is covered it remains
-  /// covered for the lifetime of this parser instance.
+  /// The set grows monotonically: once a production is covered.
+  /// It remains covered for the lifetime of this parser instance.
   ///
   /// @return an unmodifiable set of covered productions.
   public Set<Production> coverage() {

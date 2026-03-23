@@ -39,7 +39,7 @@ public final class ParserFactory {
   ///
   /// @param grammar       the context-free grammar; must not be {@code null}.
   /// @param precedenceMap operator precedence and associativity; must not be {@code null}.
-  /// @return a shared, immutable factory ready to produce parser instances.
+  /// @return a shared, immutable factory ready-to-produce parser instances.
   /// @throws NullPointerException if either argument is {@code null}.
   public static ParserFactory createFactory(Grammar grammar,
                                             Map<? extends PrecedenceEntity, ? extends Precedence> precedenceMap) {

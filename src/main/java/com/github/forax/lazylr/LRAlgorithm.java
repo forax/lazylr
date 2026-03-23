@@ -140,7 +140,7 @@ final class LRAlgorithm {
     // somewhere in a prefix position (i.e., B could contribute to FIRST(head)).
     //
     // Conservative but correct: for each production A -> X1 X2 ... Xn,
-    // every Xi that can be reached from the front (i.e., all X1..Xi-1 are
+    // every Xi that can be reached from the front (i.e., all X1 ... Xi-1 are
     // nullable) is a potential contributor. We add A as a dependent of each
     // such Xi that is a NonTerminal.
     var dependents = new HashMap<NonTerminal, Set<NonTerminal>>();

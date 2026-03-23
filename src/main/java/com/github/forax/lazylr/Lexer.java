@@ -10,7 +10,7 @@ import java.util.Objects;
 /// - **Terminal Creation**: When a match is found and the rule has a 'name', a
 ///   new [Terminal] is created using that name and the matched text.
 /// - **Ignorable Tokens**: If a rule has no name (is `null`), it is considered
-///   an "ignorable token." The matched text is consumed by the [Lexer] but
+///   an "ignorable token." The matched text is consumed by the [Lexer], but
 ///   no [Terminal] is produced for the output stream.
 /// - **Priority**: If multiple rules match at the same position, the rule whose
 ///   match is the longest wins. If two rules match the same number of characters,

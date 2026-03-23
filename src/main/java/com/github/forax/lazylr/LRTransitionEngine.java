@@ -19,8 +19,8 @@ import java.util.Set;
 ///
 /// ### Conflict Resolution
 /// The engine implements standard LR(1) **Shift/Reduce** resolution rules:
-/// - the highest [Precedence] level of the [Production] and the [Terminal] wins,
-/// - if levels are tied, [Precedence.Associativity] is used.
+/// - The highest [Precedence] level of the [Production] and the [Terminal] wins,
+/// - If levels are tied, [Precedence.Associativity] is used.
 ///
 /// ### State Identity
 /// In LR(1), a [State] is defined by its set of [Item]s, where each item includes
