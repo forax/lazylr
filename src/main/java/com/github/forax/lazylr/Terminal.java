@@ -2,7 +2,6 @@ package com.github.forax.lazylr;
 
 import org.jspecify.annotations.Nullable;
 
-import java.util.NoSuchElementException;
 import java.util.Objects;
 
 /// Represents a terminal symbol (token) in the grammar.
