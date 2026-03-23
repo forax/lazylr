@@ -24,7 +24,7 @@ import java.util.Set;
 ///
 /// ### State Identity
 /// In LR(1), a [State] is defined by its set of [Item]s, where each item includes
-/// a lookahead. This engine uses the [stateCache] to ensure state uniqueness,
+/// a lookahead. This engine uses the [#stateCache] to ensure state uniqueness,
 /// which is critical for the parser's correctness and performance.
 ///
 final class LRTransitionEngine {
