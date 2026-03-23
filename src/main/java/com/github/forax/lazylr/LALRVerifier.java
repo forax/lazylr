@@ -459,7 +459,7 @@ public final class LALRVerifier {
             //   if a == DUMMY → the lookahead propagates (handled via the
             //                   propagation links for complete items below).
             // We record this on the complete item itself in this state.
-            if (!lr1Item.lookahead.equals(DUMMY)) {
+            if (lr1Item.lookahead != DUMMY) {
               var completeItem = new LR0Item(lr1Item.production, lr1Item.dot);
               var stateMap = lookaheads.get(stateIdx);
               var set = stateMap.get(completeItem);
@@ -477,7 +477,7 @@ public final class LALRVerifier {
           assert successorIdx != null;
           var advancedLR0 = new LR0Item(lr1Item.production, lr1Item.dot + 1);
 
-          if (lr1Item.lookahead.equals(DUMMY)) {
+          if (lr1Item.lookahead == DUMMY) {
             // The lookahead on kernelItem propagates to advancedLR0 in successorIdx
             var propagationLink = new PropagationLink(
                 stateIdx, kernelItem,
