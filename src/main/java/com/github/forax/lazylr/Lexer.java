@@ -137,10 +137,14 @@ public final class Lexer {
 
       @Override
       public Terminal next() {
-        if (!hasNext()) {
-          throw new NoSuchElementException();
+        if (!computed) {
+          terminal = nextTerminal(matchIndex);
+          computed = true;
         }
         var terminal = this.terminal;
+        if (terminal == null) {
+          throw new NoSuchElementException();
+        }
         terminalIndex = matchIndex;  // for error message
         if (Terminal.ERROR.name().equals(terminal.name())) {
           this.terminal = null;
