@@ -203,12 +203,7 @@ public final class MetaGrammar {
         new Production(symbol,       List.of(name)),
         new Production(symbol,       List.of(quoted)),
 
-        new Production(name,         List.of(ident)),
-        new Production(name,         List.of(tokens)),
-        new Production(name,         List.of(precedence)),
-        new Production(name,         List.of(grammar)),
-        new Production(name,         List.of(left)),
-        new Production(name,         List.of(right))
+        new Production(name,         List.of(ident))
     ));
   }
 
