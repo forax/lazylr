@@ -44,6 +44,7 @@ final class Tokenizer implements Iterator<Terminal> {
 
   private record Match(Token token, String value) {}
 
+  /// Finds the best-matching token at the given index, using the activated filter if provided.
   private @Nullable Match nextMatch(int index, @Nullable BitSet activated) {
     if (index == input.length()) {
       return null;
@@ -66,6 +67,7 @@ final class Tokenizer implements Iterator<Terminal> {
     return longuest == null ? null : new Match(tokens.get(tokenIndex), longuest);
   }
 
+  /// Advances past ignorable tokens and returns the next named terminal, or an error terminal on mismatch.
   private @Nullable Terminal nextTerminal(int index, @Nullable BitSet activated) {
     for(;;) {
       var match = nextMatch(index, activated);
@@ -139,6 +141,7 @@ final class Tokenizer implements Iterator<Terminal> {
     return terminal;
   }
 
+  /// Create a BitSet marking which tokens are relevant for the given state.
   private BitSet computeActivated(LRTransitionEngine.State state) {
     var terminals = Parser.expectedTerminals(state);
     var activated = new BitSet(tokens.size());
@@ -154,6 +157,18 @@ final class Tokenizer implements Iterator<Terminal> {
     return activated;
   }
 
+  /// Returns the next terminal from the input restricted to the terminals expected
+  /// by the given parser state, or 'null' if the input is exhausted.
+  ///
+  /// Unlike [#next()], this method uses the parser state to filter the
+  /// candidate patterns.
+  /// If no pattern matches the current input position, a [Terminal#ERROR] terminal
+  /// is returned and the iterator is considered exhausted.
+  ///
+  /// @param state the current LR parser state, used to determine which terminals
+  ///              are valid at this point in the parsing.
+  /// @return the next [Terminal], 'null' if the input is exhausted,
+  ///         or [Terminal#ERROR] if no pattern matches.
   public @Nullable Terminal pollTerminal(LRTransitionEngine.State state) {
     if (!computed) {
       var activated = activatedCache.computeIfAbsent(state, this::computeActivated);
