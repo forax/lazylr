@@ -2,6 +2,8 @@ package com.github.forax.lazylr;
 
 import org.jspecify.annotations.Nullable;
 
+import java.util.BitSet;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.NoSuchElementException;
@@ -23,6 +25,7 @@ final class Tokenizer implements Iterator<Terminal> {
   private final CharSequence input;
   private final List<Token> tokens;
   private final Matcher[] matchers;
+  private final HashMap<LRTransitionEngine.State, BitSet> activatedCache;
 
   private int matchIndex;
   private int terminalIndex;
@@ -35,12 +38,13 @@ final class Tokenizer implements Iterator<Terminal> {
     this.matchers = tokens.stream()
         .map(token -> token.pattern.matcher(input))
         .toArray(Matcher[]::new);
+    activatedCache = new HashMap<>();
     super();
   }
 
   private record Match(Token token, String value) {}
 
-  private @Nullable Match nextMatch(int index) {
+  private @Nullable Match nextMatch(int index, @Nullable BitSet activated) {
     if (index == input.length()) {
       return null;
     }
@@ -48,6 +52,9 @@ final class Tokenizer implements Iterator<Terminal> {
     var tokenIndex = 0;
     for (var i = 0; i < matchers.length; i++) {
       var matcher = matchers[i];
+      if (activated != null && !activated.get(i)) {
+        continue;
+      }
       if (matcher.find(index) && matcher.start() == index) {
         var group = matcher.group();
         if (longuest == null || longuest.length() < group.length()) {
@@ -59,24 +66,30 @@ final class Tokenizer implements Iterator<Terminal> {
     return longuest == null ? null : new Match(tokens.get(tokenIndex), longuest);
   }
 
-  private @Nullable Terminal nextTerminal(int index) {
+  private @Nullable Terminal nextTerminal(int index, @Nullable BitSet activated) {
     for(;;) {
-      var match = nextMatch(index);
+      var match = nextMatch(index, activated);
       if (match == null) {
         if (index == input.length()) {
           return null;
         }
-        matchIndex = index;  // next match
-        return error(index, input);
+        if (activated != null) {  // retry with all tokens activated
+                                  // so we get a proper parsing error message
+          match = nextMatch(index, null);
+        }
+        if (match == null) {
+          matchIndex = index;  // next match
+          return error(index, input);
+        }
       }
       var token = match.token;
       var value = match.value;
-      if (token.name() == null) {
+      if (token.name == null) {
         index += value.length();
         continue;
       }
       matchIndex = index;  // next match
-      return new Terminal(token.name(), value);
+      return new Terminal(token.name, value);
     }
   }
 
@@ -100,7 +113,7 @@ final class Tokenizer implements Iterator<Terminal> {
   @Override
   public boolean hasNext() {
     if (!computed) {
-      terminal = nextTerminal(matchIndex);
+      terminal = nextTerminal(matchIndex, null);
       computed = true;
     }
     return terminal != null;
@@ -109,7 +122,7 @@ final class Tokenizer implements Iterator<Terminal> {
   @Override
   public Terminal next() {
     if (!computed) {
-      terminal = nextTerminal(matchIndex);
+      terminal = nextTerminal(matchIndex, null);
       computed = true;
     }
     var terminal = this.terminal;
@@ -126,9 +139,25 @@ final class Tokenizer implements Iterator<Terminal> {
     return terminal;
   }
 
-  public @Nullable Terminal pollTerminal(LRTransitionEngine.@Nullable State state) {
+  private BitSet computeActivated(LRTransitionEngine.State state) {
+    var terminals = Parser.expectedTerminals(state);
+    var activated = new BitSet(tokens.size());
+    for (var i = 0; i < tokens.size(); i++) {
+      var token = tokens.get(i);
+      var name = token.name;
+      if (name == null) {
+        activated.set(i);
+        continue;
+      }
+      activated.set(i, terminals.contains(new Terminal(name)));
+    }
+    return activated;
+  }
+
+  public @Nullable Terminal pollTerminal(LRTransitionEngine.State state) {
     if (!computed) {
-      terminal = nextTerminal(matchIndex);
+      var activated = activatedCache.computeIfAbsent(state, this::computeActivated);
+      terminal = nextTerminal(matchIndex, activated);
       computed = true;
     }
     var terminal = this.terminal;

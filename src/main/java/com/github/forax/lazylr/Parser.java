@@ -258,7 +258,7 @@ public final class Parser {
     return Tokenizer.ErrorHandler.parsingErrorMessage(terminal, expected);
   }
 
-  private static Set<Terminal> expectedTerminals(State state) {
+  static Set<Terminal> expectedTerminals(State state) {
     var expected = new HashSet<Terminal>();
     for (var item : state.items()) {
       if (item.isCompleted()) {

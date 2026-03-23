@@ -29,7 +29,7 @@ public final class Token {
     }
   }
 
-   private final @Nullable String name;
+   final @Nullable String name;
    final Pattern pattern;
 
    private Token(@Nullable String name, Pattern pattern, boolean unused) {
