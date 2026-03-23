@@ -1,12 +1,8 @@
 package com.github.forax.lazylr;
 
-import org.jspecify.annotations.Nullable;
-
 import java.util.Iterator;
 import java.util.List;
-import java.util.NoSuchElementException;
 import java.util.Objects;
-import java.util.regex.Matcher;
 
 /// A lexical analyzer that transforms a character sequence into a stream of [Terminal]s.
 ///
