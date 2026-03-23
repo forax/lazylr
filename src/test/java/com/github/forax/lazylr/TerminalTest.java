@@ -51,6 +51,18 @@ public final class TerminalTest {
   }
 
   @Test
+  public void hasValueReturnsFalseForGrammarTerminal() {
+    var t = new Terminal("num");
+    assertFalse(t.hasValue());
+  }
+
+  @Test
+  public void hasValueReturnsTrueForLexerTerminal() {
+    var t = new Terminal("num", "42");
+    assertTrue(t.hasValue());
+  }
+
+  @Test
   public void equalsSameName() {
     assertEquals(new Terminal("num"), new Terminal("num"));
   }
