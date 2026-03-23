@@ -9,7 +9,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 /// Manage state transitions and resolve grammar conflicts using precedence.
 ///
@@ -159,8 +158,8 @@ final class LRTransitionEngine {
   // The Transition Table: (CurrentState -> Symbol) -> NextState
   private final HashMap<State, Map<Symbol, State>> transitionTable = new HashMap<>();
 
-  // The Action Table: (CurrentState -> Symbol) -> Action
-  private final HashMap<State, Map<Symbol, Action>> actionTable = new HashMap<>();
+  // The Action Table: (CurrentState -> Terminal) -> Action
+  private final HashMap<State, Map<Terminal, Action>> actionTable = new HashMap<>();
 
   LRTransitionEngine(LRAlgorithm algorithm, Map<PrecedenceEntity, Precedence> precedenceMap) {
     this.algorithm = algorithm;
