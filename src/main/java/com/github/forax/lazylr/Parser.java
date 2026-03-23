@@ -211,7 +211,7 @@ public final class Parser {
     // We add the EOF marker to the input
     var scanner = wrapAndAppendEOF(input);
 
-    var stack = new ArrayDeque<State>();
+    var stack = new ArrayDeque<State>(32);
     stack.push(initialState);
 
     var currentToken = scanner.pollTerminal(initialState);
@@ -286,7 +286,8 @@ public final class Parser {
     // 1. Pop N states from the stack, where N is the number of
     // symbols on the right-hand side of the rule.
     // (e.g., if E -> E + E, pop 3 states)
-    for (var i = 0; i < production.body().size(); i++) {
+    var bodySize = production.body().size();
+    for (var i = 0; i < bodySize; i++) {
       stack.pop();
     }
 
