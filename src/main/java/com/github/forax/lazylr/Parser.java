@@ -76,27 +76,20 @@ public final class Parser {
     return factory.createParser();
   }
 
-  private static Iterator<Terminal> wrapAndAppendEOF(Iterator<? extends Terminal> iterator) {
-    // Design Note: the two inner classes is code duplication, but it is intentional.
-    // For VM devirtualization, the Tokenizer (iterator + better error reporting) wrapper
-    // must capture and delegate to a Tokenizer, not an Iterator, so the VM can see the
-    // exact type at the call sites.
-    // The plain Iterator wrapper must not implement Tokenizer, because the instanceof check
-    // in errorMessage() is used to distinguish inputs where position information is available.
+  private static abstract class Scanner {
+    abstract Terminal pollTerminal(State state);
+  }
 
+  private static Scanner wrapAndAppendEOF(Iterator<? extends Terminal> iterator) {
     if (iterator instanceof Tokenizer tokenizer) {
-      return new Tokenizer() {
+      return new Scanner() {
         private boolean eofSeen;
 
         @Override
-        public boolean hasNext() {
-          return tokenizer.hasNext() || !eofSeen;
-        }
-
-        @Override
-        public Terminal next() {
-          if (tokenizer.hasNext()) {
-            return tokenizer.next();
+        public Terminal pollTerminal(State state) {
+          var terminal = tokenizer.pollTerminal(state);
+          if (terminal != null) {
+            return terminal;
           }
           if (eofSeen) {
             throw new NoSuchElementException();
@@ -104,28 +97,13 @@ public final class Parser {
           eofSeen = true;
           return Terminal.EOF;
         }
-
-        @Override
-        public int index() {
-          return tokenizer.index();
-        }
-
-        @Override
-        public CharSequence input() {
-          return tokenizer.input();
-        }
       };
     }
-    return new Iterator<>() {
+    return new Scanner() {
       private boolean eofSeen;
 
       @Override
-      public boolean hasNext() {
-        return iterator.hasNext() || !eofSeen;
-      }
-
-      @Override
-      public Terminal next() {
+      public Terminal pollTerminal(State state) {
         if (iterator.hasNext()) {
           return iterator.next();
         }
@@ -237,12 +215,12 @@ public final class Parser {
     checkOwnerThread();
 
     // We add the EOF marker to the input
-    var tokens = wrapAndAppendEOF(input);
+    var scanner = wrapAndAppendEOF(input);
 
     var stack = new ArrayDeque<State>();
     stack.push(initialState);
 
-    var currentToken = tokens.next();
+    var currentToken = scanner.pollTerminal(initialState);
     for (;;) {
       var currentState = stack.peek();
       assert currentState != null;
@@ -255,7 +233,7 @@ public final class Parser {
       switch (action) {
         case LRTransitionEngine.Action.Shift(var nextState) -> {
           executeShift(stack, currentToken, nextState, listener);
-          currentToken = tokens.next();
+          currentToken = scanner.pollTerminal(nextState);
         }
         case LRTransitionEngine.Action.Reduce(var production) -> {
           if (executeReduction(stack, production, listener)) {

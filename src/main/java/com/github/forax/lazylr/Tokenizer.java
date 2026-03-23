@@ -1,8 +1,13 @@
 package com.github.forax.lazylr;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.Iterator;
+import java.util.List;
+import java.util.NoSuchElementException;
 import java.util.Set;
 import java.util.function.Predicate;
+import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
@@ -14,17 +19,134 @@ import java.util.stream.Stream;
 /// detailed error messages with line and column information.
 ///
 /// @see Lexer#tokenize(CharSequence)
-interface Tokenizer extends Iterator<Terminal> {
-  /// Returns the current character index in the input.
-  /// @return The current character index in the input.
-  int index();
+final class Tokenizer implements Iterator<Terminal> {
+  private final CharSequence input;
+  private final List<Token> tokens;
+  private final Matcher[] matchers;
+
+  private int matchIndex;
+  private int terminalIndex;
+  private @Nullable Terminal terminal;
+  private boolean computed;   // true means terminal is up to date
+
+  Tokenizer(CharSequence input, List<Token> tokens) {
+    this.input = input;
+    this.tokens = tokens;
+    this.matchers = tokens.stream()
+        .map(token -> token.pattern.matcher(input))
+        .toArray(Matcher[]::new);
+    super();
+  }
+
+  private record Match(Token token, String value) {}
+
+  private @Nullable Match nextMatch(int index) {
+    if (index == input.length()) {
+      return null;
+    }
+    var longuest = (String) null;
+    var tokenIndex = 0;
+    for (var i = 0; i < matchers.length; i++) {
+      var matcher = matchers[i];
+      if (matcher.find(index) && matcher.start() == index) {
+        var group = matcher.group();
+        if (longuest == null || longuest.length() < group.length()) {
+          longuest = group;
+          tokenIndex = i;
+        }
+      }
+    }
+    return longuest == null ? null : new Match(tokens.get(tokenIndex), longuest);
+  }
+
+  private @Nullable Terminal nextTerminal(int index) {
+    for(;;) {
+      var match = nextMatch(index);
+      if (match == null) {
+        if (index == input.length()) {
+          return null;
+        }
+        matchIndex = index;  // next match
+        return error(index, input);
+      }
+      var token = match.token;
+      var value = match.value;
+      if (token.name() == null) {
+        index += value.length();
+        continue;
+      }
+      matchIndex = index;  // next match
+      return new Terminal(token.name(), value);
+    }
+  }
+
+  private static Terminal error(int index, CharSequence input) {
+    var errorMessage = ErrorHandler.lexingErrorMessage(index, input);
+    return new Terminal(Terminal.ERROR.name(), errorMessage);
+  }
 
   /// Returns the original input character sequence.
   /// @return The original input character sequence.
-  CharSequence input();
+  public CharSequence input() {
+    return input;
+  }
+
+  /// Returns the current character index in the input.
+  /// @return The current character index in the input.
+  public int index() {
+    return terminalIndex;
+  }
+
+  @Override
+  public boolean hasNext() {
+    if (!computed) {
+      terminal = nextTerminal(matchIndex);
+      computed = true;
+    }
+    return terminal != null;
+  }
+
+  @Override
+  public Terminal next() {
+    if (!computed) {
+      terminal = nextTerminal(matchIndex);
+      computed = true;
+    }
+    var terminal = this.terminal;
+    if (terminal == null) {
+      throw new NoSuchElementException();
+    }
+    terminalIndex = matchIndex;  // for error message
+    if (Terminal.ERROR.name().equals(terminal.name())) {
+      this.terminal = null;
+      return terminal;
+    }
+    matchIndex += terminal.value().length();
+    computed = false;
+    return terminal;
+  }
+
+  public @Nullable Terminal pollTerminal(LRTransitionEngine.@Nullable State state) {
+    if (!computed) {
+      terminal = nextTerminal(matchIndex);
+      computed = true;
+    }
+    var terminal = this.terminal;
+    if (terminal == null) {
+      return null;
+    }
+    terminalIndex = matchIndex;  // for error message
+    if (Terminal.ERROR.name().equals(terminal.name())) {
+      this.terminal = null;
+      return terminal;
+    }
+    matchIndex += terminal.value().length();
+    computed = false;
+    return terminal;
+  }
 
   /// Utility class for generating lexing/parsing error messages.
-  final class ErrorHandler {
+  static final class ErrorHandler {
     private ErrorHandler() {
       throw new AssertionError();
     }
