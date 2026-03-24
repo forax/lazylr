@@ -2,7 +2,7 @@ package com.github.forax.lazylr;
 
 import org.jspecify.annotations.Nullable;
 
-import java.util.BitSet;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -24,13 +24,15 @@ import java.util.stream.Stream;
 final class Tokenizer implements Iterator<Terminal> {
   private final CharSequence input;
   private final List<Token> tokens;
+
   private final Matcher[] matchers;
-  private final HashMap<LRTransitionEngine.State, BitSet> activatedCache;
+  private final int[] allTokenIndices;
+  private final HashMap<LRTransitionEngine.State, int[]> activatedCache;
 
   private int matchIndex;
   private int terminalIndex;
   private @Nullable Terminal terminal;
-  private boolean computed;   // true means terminal is up to date
+  private boolean computed;   // true means current terminal is up to date
 
   Tokenizer(CharSequence input, List<Token> tokens) {
     this.input = input;
@@ -38,22 +40,24 @@ final class Tokenizer implements Iterator<Terminal> {
     this.matchers = tokens.stream()
         .map(token -> token.pattern.matcher(input))
         .toArray(Matcher[]::new);
-    activatedCache = new HashMap<>();
+    var allTokenIndices = new int[tokens.size()];
+    for (var i = 0; i < allTokenIndices.length; i++) {
+      allTokenIndices[i] = i;
+    }
+    this.allTokenIndices = allTokenIndices;
+    this.activatedCache = new HashMap<>();
     super();
   }
 
-  /// Finds the best-matching token at the given index, using the activated filter if provided.
-  private int nextTokenIndex(int index, @Nullable BitSet activated) {
+  /// Finds the best-matching token at the given index, using the activated matchers.
+  private int nextTokenIndex(int index, int[] activeIndices) {
     if (index == input.length()) {
       return -1;
     }
     var longest = -1;
     var tokenIndex = -1;
-    for (var i = 0; i < matchers.length; i++) {
+    for (var i : activeIndices) {
       var matcher = matchers[i];
-      if (activated != null && !activated.get(i)) {
-        continue;
-      }
       matcher.region(index, input.length());
       if (matcher.lookingAt()) {
         var length = matcher.end() - matcher.start();
@@ -67,16 +71,16 @@ final class Tokenizer implements Iterator<Terminal> {
   }
 
   /// Advances past ignorable tokens and returns the next named terminal, or an error terminal on mismatch.
-  private @Nullable Terminal nextTerminal(int index, @Nullable BitSet activated) {
+  private @Nullable Terminal nextTerminal(int index, int[] activeIndices) {
     for(;;) {
-      var tokenIndex = nextTokenIndex(index, activated);
+      var tokenIndex = nextTokenIndex(index, activeIndices);
       if (tokenIndex == -1) {
         if (index == input.length()) {
           return null;
         }
-        if (activated != null) {  // retry with all tokens activated
-                                  // so we get a proper parsing error message
-          tokenIndex = nextTokenIndex(index, null);
+        if (activeIndices != allTokenIndices) {
+          // retry with all matchers activated to get a proper error
+          tokenIndex = nextTokenIndex(index, allTokenIndices);
         }
         if (tokenIndex == -1) {
           matchIndex = index;  // for next match
@@ -86,6 +90,7 @@ final class Tokenizer implements Iterator<Terminal> {
       var name = tokens.get(tokenIndex).name;
       var matcher = matchers[tokenIndex];
       if (name == null) {
+        // ignorable token: skip over and continue.
         index += matcher.end() - matcher.start();
         continue;
       }
@@ -115,7 +120,7 @@ final class Tokenizer implements Iterator<Terminal> {
   @Override
   public boolean hasNext() {
     if (!computed) {
-      terminal = nextTerminal(matchIndex, null);
+      terminal = nextTerminal(matchIndex, allTokenIndices);
       computed = true;
     }
     return terminal != null;
@@ -124,7 +129,7 @@ final class Tokenizer implements Iterator<Terminal> {
   @Override
   public Terminal next() {
     if (!computed) {
-      terminal = nextTerminal(matchIndex, null);
+      terminal = nextTerminal(matchIndex, allTokenIndices);
       computed = true;
     }
     var terminal = this.terminal;
@@ -141,20 +146,18 @@ final class Tokenizer implements Iterator<Terminal> {
     return terminal;
   }
 
-  /// Create a BitSet marking which tokens are relevant for the given state.
-  private BitSet computeActivated(LRTransitionEngine.State state) {
+  /// Create an int array with the index of which tokens are relevant for the given state.
+  private int[] computeActivatedIndices(LRTransitionEngine.State state) {
     var terminals = Parser.expectedTerminals(state);
-    var activated = new BitSet(tokens.size());
+    var indices = new int[tokens.size()];
+    var size = 0;
     for (var i = 0; i < tokens.size(); i++) {
-      var token = tokens.get(i);
-      var name = token.name;
-      if (name == null) {
-        activated.set(i);
-        continue;
+      var name = tokens.get(i).name;
+      if (name == null || terminals.contains(new Terminal(name))) {
+        indices[size++] = i;
       }
-      activated.set(i, terminals.contains(new Terminal(name)));
     }
-    return activated;
+    return Arrays.copyOf(indices, size);
   }
 
   /// Returns the next terminal from the input restricted to the terminals expected
@@ -171,8 +174,8 @@ final class Tokenizer implements Iterator<Terminal> {
   ///         or [Terminal#ERROR] if no pattern matches.
   public @Nullable Terminal pollTerminal(LRTransitionEngine.State state) {
     if (!computed) {
-      var activated = activatedCache.computeIfAbsent(state, this::computeActivated);
-      terminal = nextTerminal(matchIndex, activated);
+      var activeIndices = activatedCache.computeIfAbsent(state, this::computeActivatedIndices);
+      terminal = nextTerminal(matchIndex, activeIndices);
       computed = true;
     }
     var terminal = this.terminal;
