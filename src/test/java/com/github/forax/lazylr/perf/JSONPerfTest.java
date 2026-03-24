@@ -26,7 +26,7 @@ public final class JSONPerfTest {
     var iterator = lexer.tokenize(JSON_TEXT);
 
     var result = new ArrayList<Terminal>();
-    for(; iterator.hasNext();) {
+    while (iterator.hasNext()) {
       var terminal = iterator.next();
       if (Terminal.ERROR.equals(terminal)) {
         throw new AssertionError(terminal.value());
