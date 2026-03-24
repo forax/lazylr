@@ -2,7 +2,7 @@ package com.github.forax.lazylr;
 
 import org.jspecify.annotations.Nullable;
 
-import java.util.Arrays;
+import java.util.BitSet;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -26,8 +26,7 @@ final class Tokenizer implements Iterator<Terminal> {
   private final List<Token> tokens;
 
   private final Matcher[] matchers;
-  private final int[] allTokenIndices;
-  private final HashMap<LRTransitionEngine.State, int[]> activatedCache;
+  private final HashMap<LRTransitionEngine.State, BitSet> activatedCache;
 
   private int matchIndex;
   private int terminalIndex;
@@ -40,24 +39,22 @@ final class Tokenizer implements Iterator<Terminal> {
     this.matchers = tokens.stream()
         .map(token -> token.pattern.matcher(input))
         .toArray(Matcher[]::new);
-    var allTokenIndices = new int[tokens.size()];
-    for (var i = 0; i < allTokenIndices.length; i++) {
-      allTokenIndices[i] = i;
-    }
-    this.allTokenIndices = allTokenIndices;
-    this.activatedCache = new HashMap<>();
+    activatedCache = new HashMap<>();
     super();
   }
 
-  /// Finds the best-matching token at the given index, using the activated matchers.
-  private int nextTokenIndex(int index, int[] activeIndices) {
+  /// Finds the best-matching token at the given index, using the activated filter if provided.
+  private int nextTokenIndex(int index, @Nullable BitSet activated) {
     if (index == input.length()) {
       return -1;
     }
     var longest = -1;
     var tokenIndex = -1;
-    for (var i : activeIndices) {
+    for (var i = 0; i < matchers.length; i++) {
       var matcher = matchers[i];
+      if (activated != null && !activated.get(i)) {
+        continue;
+      }
       matcher.region(index, input.length());
       if (matcher.lookingAt()) {
         var length = matcher.end() - matcher.start();
@@ -71,16 +68,16 @@ final class Tokenizer implements Iterator<Terminal> {
   }
 
   /// Advances past ignorable tokens and returns the next named terminal, or an error terminal on mismatch.
-  private @Nullable Terminal nextTerminal(int index, int[] activeIndices) {
+  private @Nullable Terminal nextTerminal(int index, @Nullable BitSet activated) {
     for(;;) {
-      var tokenIndex = nextTokenIndex(index, activeIndices);
+      var tokenIndex = nextTokenIndex(index, activated);
       if (tokenIndex == -1) {
         if (index == input.length()) {
           return null;
         }
-        if (activeIndices != allTokenIndices) {
-          // retry with all matchers activated to get a proper error
-          tokenIndex = nextTokenIndex(index, allTokenIndices);
+        if (activated != null) {
+          // retry with all matchers activated to get a proper error message
+          tokenIndex = nextTokenIndex(index, null);
         }
         if (tokenIndex == -1) {
           matchIndex = index;  // for next match
@@ -120,7 +117,7 @@ final class Tokenizer implements Iterator<Terminal> {
   @Override
   public boolean hasNext() {
     if (!computed) {
-      terminal = nextTerminal(matchIndex, allTokenIndices);
+      terminal = nextTerminal(matchIndex, null);
       computed = true;
     }
     return terminal != null;
@@ -129,7 +126,7 @@ final class Tokenizer implements Iterator<Terminal> {
   @Override
   public Terminal next() {
     if (!computed) {
-      terminal = nextTerminal(matchIndex, allTokenIndices);
+      terminal = nextTerminal(matchIndex, null);
       computed = true;
     }
     var terminal = this.terminal;
@@ -146,18 +143,16 @@ final class Tokenizer implements Iterator<Terminal> {
     return terminal;
   }
 
-  /// Create an int array with the index of which tokens are relevant for the given state.
-  private int[] computeActivatedIndices(LRTransitionEngine.State state) {
+  /// Create a BitSet marking which tokens are relevant for the given state.
+  private BitSet computeActivated(LRTransitionEngine.State state) {
     var terminals = Parser.expectedTerminals(state);
-    var indices = new int[tokens.size()];
-    var size = 0;
+    var activated = new BitSet(tokens.size());
     for (var i = 0; i < tokens.size(); i++) {
-      var name = tokens.get(i).name;
-      if (name == null || terminals.contains(new Terminal(name))) {
-        indices[size++] = i;
-      }
+      var token = tokens.get(i);
+      var name = token.name;
+      activated.set(i, name == null || terminals.contains(new Terminal(name)));
     }
-    return Arrays.copyOf(indices, size);
+    return activated;
   }
 
   /// Returns the next terminal from the input restricted to the terminals expected
@@ -174,8 +169,8 @@ final class Tokenizer implements Iterator<Terminal> {
   ///         or [Terminal#ERROR] if no pattern matches.
   public @Nullable Terminal pollTerminal(LRTransitionEngine.State state) {
     if (!computed) {
-      var activeIndices = activatedCache.computeIfAbsent(state, this::computeActivatedIndices);
-      terminal = nextTerminal(matchIndex, activeIndices);
+      var activated = activatedCache.computeIfAbsent(state, this::computeActivated);
+      terminal = nextTerminal(matchIndex, activated);
       computed = true;
     }
     var terminal = this.terminal;
@@ -268,14 +263,14 @@ final class Tokenizer implements Iterator<Terminal> {
     /// Formats a set of expected terminals for display in error messages.
     private static String expectedTerminals(Set<Terminal> expected) {
       return Stream.concat(
-          expected.stream()
-              .filter(Predicate.not(Terminal.EOF::equals))
-              .map(terminal -> {
-                var name = terminal.name();
-                return Character.isJavaIdentifierPart(name.charAt(0)) ? name : "'" + name + "'";
-              })
-              .sorted(),
-             expected.contains(Terminal.EOF) ? Stream.of("<end of file>") : Stream.empty())
+              expected.stream()
+                  .filter(Predicate.not(Terminal.EOF::equals))
+                  .map(terminal -> {
+                    var name = terminal.name();
+                    return Character.isJavaIdentifierPart(name.charAt(0)) ? name : "'" + name + "'";
+                  })
+                  .sorted(),
+              expected.contains(Terminal.EOF) ? Stream.of("<end of file>") : Stream.empty())
           .collect(Collectors.joining(", "));
     }
 
