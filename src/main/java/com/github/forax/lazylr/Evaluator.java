@@ -6,6 +6,7 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.WrongMethodTypeException;
+import java.lang.reflect.Modifier;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -200,7 +201,7 @@ public interface Evaluator<T extends @Nullable Object> {
     var productionMap = new HashMap<String, MethodHandle>();
     var terminalMap = new HashMap<String, MethodHandle>();
     for(var method : methods) {
-      if (method.getDeclaringClass() == Object.class) {
+      if (method.getDeclaringClass() == Object.class || Modifier.isStatic(method.getModifiers())) {
         continue;
       }
       if (method.getParameterCount() == 0) {
