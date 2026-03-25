@@ -136,7 +136,7 @@ public interface Evaluator<T extends @Nullable Object> {
   ///         constraints described in [#reflect(MethodHandles.Lookup, Object)].
   ///
   /// @see #reflect(MethodHandles.Lookup, Object)
-  static Evaluator<@Nullable Object> reflect(Object object) {
+  static <V extends @Nullable Object> Evaluator<@Nullable V> reflect(Object object) {
     Objects.requireNonNull(object);
     final class Holder {
       private static final StackWalker WALKER =
@@ -194,7 +194,7 @@ public interface Evaluator<T extends @Nullable Object> {
   /// @throws IllegalStateException if any public method on 'object' violates
   ///         the constraints above, or if the lookup does not have enough
   ///         access to unreflect a public method.
-  static Evaluator<@Nullable Object> reflect(MethodHandles.Lookup lookup, Object object) {
+  static <V extends @Nullable Object> Evaluator<V> reflect(MethodHandles.Lookup lookup, Object object) {
     Objects.requireNonNull(lookup);
     Objects.requireNonNull(object);
     var methods = object.getClass().getMethods();
@@ -229,15 +229,16 @@ public interface Evaluator<T extends @Nullable Object> {
       terminalMap.put(method.getName(),
           mh.asType(MethodType.methodType(Object.class, Object.class,Terminal.class)));
     }
-    return new Evaluator<@Nullable Object>() {
+    return new Evaluator<>() {
       @Override
-      public @Nullable Object evaluate(Terminal terminal) {
+      @SuppressWarnings("unchecked")
+      public V evaluate(Terminal terminal) {
         var mh = terminalMap.get(terminal.name());
         if (mh == null) {
           return null;  // The Terminal has no value
         }
         try {
-          return mh.invokeExact(object, terminal);
+          return (V) mh.invokeExact(object, terminal);
         } catch(WrongMethodTypeException | ClassCastException e) {
           throw new IllegalStateException("terminal method " + terminal.name() + " has wrong parameter type", e);
         } catch (RuntimeException | Error e) {
@@ -248,7 +249,8 @@ public interface Evaluator<T extends @Nullable Object> {
       }
 
       @Override
-      public @Nullable Object evaluate(Production production, List<@Nullable Object> arguments) {
+      @SuppressWarnings("unchecked")
+      public V evaluate(Production production, List<V> arguments) {
         var mh = productionMap.get(production.name());
         if (mh == null) {
           // A production can have no evaluator if it is a leaf node
@@ -261,7 +263,7 @@ public interface Evaluator<T extends @Nullable Object> {
             .filter(Objects::nonNull)
             .toArray();
         try {
-          return mh.invokeExact(object, values);
+          return (V) mh.invokeExact(object, values);
         } catch(WrongMethodTypeException | ClassCastException e) {
           throw new IllegalStateException("production method " + production.name() +
               " has wrong parameter types, arguments " + Arrays.toString(values), e);

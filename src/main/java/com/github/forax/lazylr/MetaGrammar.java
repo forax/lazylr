@@ -161,7 +161,7 @@ public final class MetaGrammar {
   ///
   /// @see Lexer#createLexer(List)
   /// @see Parser#createParser(Grammar, Map)
-  public <V> V parse(CharSequence input, Evaluator<V> evaluator) throws ParsingException{
+  public <V extends @Nullable Object> V parse(CharSequence input, Evaluator<V> evaluator) throws ParsingException{
     Objects.requireNonNull(input);
     Objects.requireNonNull(evaluator);
     return parse(input, _ -> evaluator);
@@ -189,7 +189,7 @@ public final class MetaGrammar {
   ///
   /// @see Lexer#createLexer(List)
   /// @see Parser#createParser(Grammar, Map)
-  public <V> V parse(CharSequence input,
+  public <V extends @Nullable Object> V parse(CharSequence input,
                      Function<? super Iterator<Terminal>,  ? extends Evaluator<V>> evaluatorFactory)
     throws ParsingException {
 
