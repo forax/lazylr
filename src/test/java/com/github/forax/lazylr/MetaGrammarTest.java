@@ -276,7 +276,7 @@ public final class MetaGrammarTest {
   }
 
   @Test
-  public void multipleSectionsOfSameKind() {
+  public void multipleSectionsOfTokens() {
     var mg = MetaGrammar.load("""
         tokens {
           num: /[0-9]+/
@@ -284,8 +284,19 @@ public final class MetaGrammarTest {
         tokens {
           id: /[a-z]+/
         }
+        """);
+
+    var tokens = mg.tokens();
+    assertEquals(List.of("num", "id"), tokenNames(tokens));
+  }
+
+  @Test
+  public void multipleSectionsOfGrammar() {
+    var mg = MetaGrammar.load("""
         grammar {
           Expr: num
+        }
+        grammar {
           Expr: id
         }
         """);
@@ -295,9 +306,25 @@ public final class MetaGrammarTest {
         "Expr : num",
         "Expr : id"
     ), productionNames(grammar));
+  }
 
-    var tokens = mg.tokens();
-    assertEquals(List.of("num", "id"), tokenNames(tokens));
+  @Test
+  public void multipleSectionsOfPrecedence() {
+    var mg = MetaGrammar.load("""
+        tokens {
+          plus: /\\+/
+          minus: /\\-/
+        }
+        precedence {
+          left:  plus
+        }
+        precedence {
+          left:  minus
+        }
+        """);
+
+    var precedenceMap = mg.precedenceMap();
+    System.out.println(precedenceMap);
   }
 
   @Test
