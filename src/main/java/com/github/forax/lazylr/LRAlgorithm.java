@@ -172,9 +172,9 @@ final class LRAlgorithm {
       inWorklist.remove(head);
 
       var targetSet = firstSets.get(head);
+      var beforeSize = targetSet.size();
 
       for (var production : grammar.productionsFor(head)) {
-        var beforeSize = targetSet.size();
 
         // Rule: If production is A -> Y1 Y2 ... Yn
         var allCanBeEpsilon = true;
