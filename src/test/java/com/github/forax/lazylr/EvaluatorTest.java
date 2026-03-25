@@ -3,11 +3,11 @@ package com.github.forax.lazylr;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public class EvaluatorTest {
 
@@ -120,5 +120,42 @@ public class EvaluatorTest {
 
     var expr = parser.parse(lexer.tokenize("2 + 3 * 5"), new ExprEvaluator());
     assertEquals(17, eval(expr));
+  }
+
+  @Test
+  public void startPositionsDuringParsing() {
+    var E = new NonTerminal("E");
+    var num = new Terminal("num");
+    var plus = new Terminal("+");
+
+    var grammar = new Grammar(E, List.of(
+        new Production(E, List.of(num)),
+        new Production(E, List.of(E, plus, E)))
+    );
+    var precedence = Map.of(plus, new Precedence(1, Precedence.Associativity.LEFT));
+
+    var lexer  = Lexer.createLexer(List.of(
+        new Token("num", "[0-9]+"),
+        new Token("+", "\\+"),
+        new Token("\\s+")
+    ));
+    var input  = lexer.tokenize("42 + 113 + 27");
+
+    var startPositions = new ArrayList<Integer>();
+    var parser = Parser.createParser(grammar, precedence);
+    parser.parse(input, new Evaluator<>() {
+      @Override
+      public Object evaluate(@NonNull Terminal terminal) {
+        startPositions.add(Lexer.position(input));
+        return null;
+      }
+
+      @Override
+      public Object evaluate(@NonNull Production production, @NonNull List<Object> arguments) {
+        return null;
+      }
+    });
+
+    assertEquals(List.of(0, 3, 5, 9, 11), startPositions);
   }
 }

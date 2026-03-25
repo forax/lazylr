@@ -622,7 +622,7 @@ System.out.println(parser.parse(lexer.tokenize("if 1 then if 0 then 99 else 42")
 
 ## Step 8: Unary Operators and `%prec`
 
-> **Goal:** Parse `- 4 * 5` as `(-4) * 5`, not `-(4 * 5)`.
+> **Goal:** Parse `- 4 * 5` as `(-4) * 5`, not `-(4 * 5)`, and record each number's source position.
 
 All our operators so far have been binary. Let's add a **unary minus**.
 
@@ -681,12 +681,72 @@ var mg = MetaGrammar.load("""
 >    with the `UNARY` level. Now when the parser has `'-' E` on its stack and sees `*`, `UNARY` outranks `*`,
 >    so it reduces, binding the unary minus tightly to its operand before any binary operator can interfere.
 
+### Recording source positions
+
+Real compilers and interpreters need to report where in the source an error occurred.
+The `Lexer.position(iterator)` method returns the character offset of the last terminal
+returned by `next()`, making it straightforward to embed positions directly into AST nodes.
+
+The key is to pass the iterator created by the lexer to the evaluator,
+so that `Lexer.position()` can be called from inside `evaluate(Terminal)` at the
+moment the token is shifted — before the iterator advances further:
+
 ```java
+sealed interface Node {}
+record Sub(Node left, Node right) implements Node {}
+record Mul(Node left, Node right) implements Node {}
+record UnaryMinus(Node node) implements Node {}
+record Num(int value, int pos) implements Node {}
+
+record NodeEvaluator(Iterator<Terminal> input) implements Evaluator<Node> {
+  @Override
+  public Node evaluate(Terminal terminal) {
+    return switch (terminal.name()) {
+      case "num" -> {
+        var pos = Lexer.position(input);   // capture position at shift time
+        yield new Num(Integer.parseInt(terminal.value()), pos);
+      }
+      default -> null;
+    };
+  }
+
+  @Override
+  public Node evaluate(Production production, List<Node> args) {
+    return switch (production.name()) {
+      case "E : num"   -> args.getFirst();
+      case "E : E - E" -> new Sub(args.get(0), args.get(2));
+      case "E : E * E" -> new Mul(args.get(0), args.get(2));
+      case "E : - E"   -> new UnaryMinus(args.get(1));
+      default -> throw new IllegalStateException("Unexpected production: " + production.name());
+    };
+  }
+}
+```
+
+Notice that `NodeEvaluator` is declared as a **record** that holds the iterator as a component.
+This is the idiomatic way to give the evaluator access to position information
+without resorting to mutable fields or closures.
+
+Putting it all together:
+
+```java
+var lexer  = Lexer.createLexer(mg.tokens());
+var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
+var input  = lexer.tokenize("- 4 * 5");
+
+var node = parser.parse(input, new NodeEvaluator(input));
+System.out.println(node);
+```
+
+```
 // Output:
-// Mul[left=UnaryMinus[node=Num[]], right=Num[]]
+// Mul[left=UnaryMinus[node=Num[value=4, pos=2]], right=Num[value=5, pos=6]]
 ```
 
 `(-4) * 5`, exactly what we wanted.
+
+> 💡 `pos=2` means the token `4` starts at character offset 2 in the input (`"- 4 * 5"`),
+>    and `pos=6` means the token `5` starts at offset 6.
 
 ---
 

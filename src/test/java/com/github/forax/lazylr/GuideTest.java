@@ -348,13 +348,16 @@ public final class GuideTest {
     record Sub(Node left, Node right) implements Node {}
     record Mul(Node left, Node right) implements Node {}
     record UnaryMinus(Node node) implements Node {}
-    record Num() implements Node {}
+    record Num(int value, int pos) implements Node {}
 
-    class NodeEvaluator implements Evaluator<Node> {
+    record NodeEvaluator(Iterator<Terminal> input) implements Evaluator<Node> {
       @Override
       public Node evaluate(@NonNull Terminal terminal) {
         return switch (terminal.name()) {
-          case "num" -> new Num();
+          case "num" -> {
+            var pos = Lexer.position(input);
+            yield new Num(Integer.parseInt(terminal.value()), pos);
+          }
           default -> null;
         };
       }
@@ -369,7 +372,6 @@ public final class GuideTest {
         };
       }
     }
-    var evaluator = new NodeEvaluator();
 
     // This is not a correct grammar, precedence of the unary minus is wrong
     var badMg = MetaGrammar.load("""
@@ -391,9 +393,10 @@ public final class GuideTest {
 
     var badLexer  = Lexer.createLexer(badMg.tokens());
     var badParser = Parser.createParser(badMg.grammar(), badMg.precedenceMap());
+    var badInput  = badLexer.tokenize("- 4 * 5");
 
-    var node = badParser.parse(badLexer.tokenize("- 4 * 5"), evaluator);
-    assertEquals("UnaryMinus[node=Mul[left=Num[], right=Num[]]]", node.toString());
+    var node = badParser.parse(badInput, new NodeEvaluator(badInput));
+    assertEquals("UnaryMinus[node=Mul[left=Num[value=4, pos=2], right=Num[value=5, pos=6]]]", node.toString());
 
     // Use a virtual token UNARY to fix the precedence of the unary minus
     var mg = MetaGrammar.load("""
@@ -416,8 +419,9 @@ public final class GuideTest {
 
     var lexer  = Lexer.createLexer(mg.tokens());
     var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
+    var input  = lexer.tokenize("- 4 * 5");
 
-    node = parser.parse(lexer.tokenize("- 4 * 5"), evaluator);
-    assertEquals("Mul[left=UnaryMinus[node=Num[]], right=Num[]]", node.toString());
+    node = parser.parse(input, new NodeEvaluator(input));
+    assertEquals("Mul[left=UnaryMinus[node=Num[value=4, pos=2]], right=Num[value=5, pos=6]]", node.toString());
   }
 }

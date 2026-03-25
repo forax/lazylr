@@ -61,6 +61,9 @@ public interface Evaluator<T extends @Nullable Object> {
   /// This is typically where you extract the [Terminal#value()] (the actual
   /// lexeme from the input) and convert it into a literal or leaf node.
   ///
+  /// The start position of the terminal in the input can be obtained
+  /// by calling [Lexer#position(java.util.Iterator)].
+  ///
   /// @param terminal The terminal token matched by the lexer.
   /// @return A value representing the terminal or `null` if the terminal has no value.
   T evaluate(Terminal terminal);

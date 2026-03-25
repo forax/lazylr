@@ -30,6 +30,9 @@ public interface ParserListener {
   ///
   /// This event fires immediately when the token is consumed.
   ///
+  /// The start position of the terminal in the input can be obtained
+  /// by calling [Lexer#position(java.util.Iterator)].
+  ///
   /// @param token The terminal token currently being shifted.
   void onShift(Terminal token);
 
