@@ -147,7 +147,7 @@ public final class Main {
     }
 
     var printStream = cmdLineArgument.print ? System.out : System.err;
-    boolean[] valid = new boolean[] { true };
+    var valid = new boolean[] { true };
     LALRVerifier.verify(mg.grammar(), mg.precedenceMap(),
         printStream, cmdLineArgument.print, error -> {
       valid[0] = false;
