@@ -272,26 +272,26 @@ public final class Parser {
         // lexical error
         return Tokenizer.ErrorHandler.lexingErrorMessage(tokenizer.index(), tokenizer.input());
       }
-      var expected = expectedTerminals(state);
+      var expected = expectedTerminalNames(state);
       return Tokenizer.ErrorHandler.parsingErrorMessage(terminal, expected, tokenizer.index(), tokenizer.input());
     }
-    var expected = expectedTerminals(state);
+    var expected = expectedTerminalNames(state);
     return Tokenizer.ErrorHandler.parsingErrorMessage(terminal, expected);
   }
 
-  /// Returns the set of terminals that are syntactically valid in the given state.
+  /// Returns the set of terminal names that are syntactically valid in the given state.
   ///
   /// @param state the current LR parser state.
   /// @return the set of terminals that can legally appear next, in the input.
-  static Set<Terminal> expectedTerminals(State state) {
-    var expected = new HashSet<Terminal>();
+  static Set<String> expectedTerminalNames(State state) {
+    var expected = new HashSet<String>();
     for (var item : state.items()) {
       if (item.isCompleted()) {
-        expected.add(item.lookahead());
+        expected.add(item.lookahead().name());
       } else {
         var next = item.getNextSymbol();
         if (next instanceof Terminal terminal) {
-          expected.add(terminal);
+          expected.add(terminal.name());
         }
       }
     }

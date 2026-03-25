@@ -146,12 +146,12 @@ final class Tokenizer implements Iterator<Terminal> {
 
   /// Create a BitSet marking which tokens are relevant for the given state.
   private BitSet computeActivated(LRTransitionEngine.State state) {
-    var terminals = Parser.expectedTerminals(state);
+    var terminalNames = Parser.expectedTerminalNames(state);
     var activated = new BitSet(tokens.size());
     for (var i = 0; i < tokens.size(); i++) {
       var token = tokens.get(i);
       var name = token.name;
-      activated.set(i, name == null || terminals.contains(new Terminal(name)));
+      activated.set(i, name == null || terminalNames.contains(name));
     }
     return activated;
   }
@@ -262,16 +262,14 @@ final class Tokenizer implements Iterator<Terminal> {
     }
 
     /// Formats a set of expected terminals for display in error messages.
-    private static String expectedTerminals(Set<Terminal> expected) {
+    private static String expectedTerminals(Set<String> expected) {
       return Stream.concat(
               expected.stream()
-                  .filter(Predicate.not(Terminal.EOF::equals))
-                  .map(terminal -> {
-                    var name = terminal.name();
-                    return Character.isJavaIdentifierPart(name.charAt(0)) ? name : "'" + name + "'";
-                  })
+                  .filter(Predicate.not(Terminal.EOF.name()::equals))
+                  .map(name ->
+                      Character.isJavaIdentifierPart(name.charAt(0)) ? name : "'" + name + "'")
                   .sorted(),
-              expected.contains(Terminal.EOF) ? Stream.of("<end of file>") : Stream.empty())
+              expected.contains(Terminal.EOF.name()) ? Stream.of("<end of file>") : Stream.empty())
           .collect(Collectors.joining(", "));
     }
 
@@ -304,7 +302,7 @@ final class Tokenizer implements Iterator<Terminal> {
     /// @param index    The character index where the error occurred.
     /// @param input    The input character sequence being parsed.
     /// @return A formatted error message.
-    public static String parsingErrorMessage(Terminal terminal, Set<Terminal> expected, int index, CharSequence input) {
+    public static String parsingErrorMessage(Terminal terminal, Set<String> expected, int index, CharSequence input) {
       var lineColumn = lineColumn(index, input);
       var line = lineColumn.line();
       var column = lineColumn.column();
@@ -325,7 +323,7 @@ final class Tokenizer implements Iterator<Terminal> {
     /// @param terminal The unexpected terminal encountered.
     /// @param expected The set of expected terminals.
     /// @return A formatted error message.
-    public static String parsingErrorMessage(Terminal terminal, Set<Terminal> expected) {
+    public static String parsingErrorMessage(Terminal terminal, Set<String> expected) {
       return "Parsing error: unexpected terminal '" + terminal.name() + "', expected " + expectedTerminals(expected);
     }
   }
