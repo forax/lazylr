@@ -561,7 +561,7 @@ public final class MetaGrammarTest {
 
 
   @Test
-  public void duplicateProductionThrowsIllegalArgumentException() {
+  public void duplicateProductionThrowsParsingException() {
     assertThrows(ParsingException.class, () ->
       MetaGrammar.load("""
         grammar {
