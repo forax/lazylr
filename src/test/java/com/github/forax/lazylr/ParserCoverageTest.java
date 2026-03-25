@@ -176,7 +176,7 @@ public final class ParserCoverageTest {
   }
 
   @Test
-  public void productionsReducedBeforeFailureAreStillCovered() {
+  public void productionsReducedBeforeFailureAreCovered() {
     // E -> E + E | num
     var E    = new NonTerminal("E");
     var plus = new Terminal("+");
