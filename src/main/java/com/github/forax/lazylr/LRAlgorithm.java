@@ -41,8 +41,7 @@ final class LRAlgorithm {
   /// Computes the LR(1) closure of a set of items.
   ///
   /// This expansion is what allows the parser to predict which productions
-  /// might be encountered next. It uses an internal worklist to iteratively
-  /// add items until a fixed point is reached.
+  /// might be encountered next.
   ///
   /// @param seedItems The kernel or initial items of a state.
   /// @return A complete set of items representing a full LR(1) state.
