@@ -211,13 +211,13 @@ public final class Parser {
     // We add the EOF marker to the input
     var scanner = wrapAndAppendEOF(input);
 
-    var stack = new ArrayDeque<State>(32);
-    stack.push(initialState);
+    var stack = new State[32];
+    stack[0] = initialState;
+    var stackSize = 1;
 
     var currentToken = scanner.pollTerminal(initialState);
     for (;;) {
-      var currentState = stack.peek();
-      assert currentState != null;
+      var currentState = stack[stackSize - 1];
 
       var action = engine.getAction(currentState, currentToken);
       if (action == null) {
@@ -227,17 +227,42 @@ public final class Parser {
       switch (action) {
         case LRTransitionEngine.Action.Shift(var nextState) -> {
           listener.onShift(currentToken);
-          executeShift(stack, nextState);
+          if (stackSize == stack.length) {
+            stack = resize(stack);
+          }
+          stack[stackSize++] = nextState;
           currentToken = scanner.pollTerminal(nextState);
         }
         case LRTransitionEngine.Action.Reduce(var production) -> {
           listener.onReduce(production);
-          if (executeReduction(stack, production)) {
-            return;
+
+          // 1. Pop N states from the stack, where N is the number of
+          // symbols on the right-hand side of the rule.
+          // (e.g., if E -> E + E, pop 3 states)
+          stackSize -= production.body().size();
+
+          // 2. Look at the state now on top of the stack
+          var topState = stack[stackSize - 1];
+
+          // 3. Find the GOTO transition for the NonTerminal we just "created"
+          // After reducing tokens to an 'Expression', where do we go from here?
+          var nextState = engine.move(topState, production.head());
+          if (nextState == null) {
+            return;  // Accept
           }
+
+          // 4. Push that destination state onto the stack
+          if (stackSize == stack.length) {
+            stack = resize(stack);
+          }
+          stack[stackSize++] = nextState;
         }
       }
     }
+  }
+
+  private State[] resize(State[] stack) {
+    return Arrays.copyOf(stack, stack.length << 1);
   }
 
   /// Generate an error message for parsing exceptions
@@ -271,40 +296,6 @@ public final class Parser {
       }
     }
     return expected;
-  }
-
-  /// Pushes the token's destination state onto the stack and
-  /// consumes the token from the input.
-  private static void executeShift(ArrayDeque<State> stack, State nextState) {
-    stack.push(nextState);
-  }
-
-  /// Shrinks the stack and then performs a 'GOTO' transition.
-  /// Returns true if the reduction leads to an Accept state, false otherwise.
-  private boolean executeReduction(ArrayDeque<State> stack, Production production) {
-    // 1. Pop N states from the stack, where N is the number of
-    // symbols on the right-hand side of the rule.
-    // (e.g., if E -> E + E, pop 3 states)
-    var bodySize = production.body().size();
-    for (var i = 0; i < bodySize; i++) {
-      stack.pop();
-    }
-
-    // 2. Look at the state now on top of the stack
-    var topState = stack.peek();
-
-    // 3. Find the GOTO transition for the NonTerminal we just "created"
-    // After reducing tokens to an 'Expression', where do we go from here?
-    var nextState = engine.move(topState, production.head());
-
-    if (nextState == null) {
-      return true;  // Accept
-    }
-
-    // 4. Push that destination state onto the stack
-    stack.push(nextState);
-
-    return false;
   }
 
   /// Returns the set of productions that have been reduced at least once
