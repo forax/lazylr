@@ -294,8 +294,7 @@ final class LRTransitionEngine {
   /// This method relies on the lazy nature of the parser: because states are computed
   /// on demand as input is processed, a [Action.Reduce] entry for a production can
   /// only exist in the action table if the parser actually visited the state containing
-  /// that reduction while processing real input. Therefore, the presence of a reduce
-  /// action is equivalent to the production having been reduced at least once.
+  /// that reduction while processing real input.
   ///
   /// @param startProduction the production to exclude from the result.
   /// @return an unmodifiable snapshot of covered productions.
