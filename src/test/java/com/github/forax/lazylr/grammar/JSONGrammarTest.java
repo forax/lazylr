@@ -87,7 +87,7 @@ public final class JSONGrammarTest {
   private static final Evaluator<@Nullable Object> EVALUATOR = new Evaluator<@Nullable Object>() {
 
     @Override
-    public @Nullable Object evaluate(Terminal terminal) {
+    public @Nullable Object evaluate(Terminal terminal, int position) {
       return switch (terminal.name()) {
         case "string"  -> new JSONString(stripQuotes(terminal.value()));
         case "number"  -> new JSONNumber(Double.parseDouble(terminal.value()));

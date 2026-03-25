@@ -11,7 +11,7 @@ import static org.junit.jupiter.api.Assertions.*;
 public final class ParserCoverageTest {
 
   private static final ParserListener NOOP = new ParserListener() {
-    @Override public void onShift(Terminal token) {}
+    @Override public void onShift(Terminal token, int position) {}
     @Override public void onReduce(Production production) {}
   };
 

@@ -42,7 +42,7 @@ public final class ReadmeExampleTest {
 
     class NodeEvaluator implements Evaluator<Node> {
       @Override
-      public Node evaluate(@NonNull Terminal term) {
+      public Node evaluate(@NonNull Terminal term, int pos) {
         return switch (term.name()) {
           case "num" -> new NumLit(Integer.parseInt(term.value()));
           default -> null;

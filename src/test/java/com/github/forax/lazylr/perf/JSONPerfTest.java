@@ -43,7 +43,7 @@ public final class JSONPerfTest {
     var parser = Parser.createParser(JSONData.GRAMMAR, Map.of());
     parser.parse(TERMINALS.iterator(), new ParserListener() {
       @Override
-      public void onShift(@NonNull Terminal token) {
+      public void onShift(@NonNull Terminal token, int position) {
         // empty
       }
       @Override public void onReduce(@NonNull Production production) {
@@ -58,7 +58,7 @@ public final class JSONPerfTest {
     var parser = Parser.createParser(JSONData.GRAMMAR, Map.of());
     parser.parse(lexer.tokenize(JSON_TEXT), new ParserListener() {
       @Override
-      public void onShift(@NonNull Terminal token) {
+      public void onShift(@NonNull Terminal token, int position) {
         // empty
       }
       @Override public void onReduce(@NonNull Production production) {

@@ -150,8 +150,8 @@ public final class Parser {
       }
 
       @Override
-      public void onShift(Terminal token) {
-        add(evaluator.evaluate(token));
+      public void onShift(Terminal token, int position) {
+        add(evaluator.evaluate(token, position));
       }
 
       @Override
@@ -208,6 +208,8 @@ public final class Parser {
     Objects.requireNonNull(listener);
     checkOwnerThread();
 
+    var tokenizer = input instanceof Tokenizer inputTokenizer ? inputTokenizer : null;
+
     // We add the EOF marker to the input
     var scanner = wrapAndAppendEOF(input);
 
@@ -226,7 +228,7 @@ public final class Parser {
 
       switch (action) {
         case LRTransitionEngine.Action.Shift(var nextState) -> {
-          listener.onShift(currentToken);
+          listener.onShift(currentToken, tokenizer == null ? -1 : tokenizer.index());
           executeShift(stack, nextState);
           currentToken = scanner.pollTerminal(nextState);
         }

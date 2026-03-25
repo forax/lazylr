@@ -887,7 +887,7 @@ public final class PosgreSQLGrammarTest {
   private static final Parser PARSER = Parser.createParser(MG.grammar(), MG.precedenceMap());
 
   private static final ParserListener NOOP = new ParserListener() {
-    @Override public void onShift(Terminal token) {}
+    @Override public void onShift(Terminal token, int position) {}
     @Override public void onReduce(Production production) {}
   };
 

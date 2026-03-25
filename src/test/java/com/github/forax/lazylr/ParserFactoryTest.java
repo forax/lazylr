@@ -94,7 +94,7 @@ public final class ParserFactoryTest {
   private static Evaluator<Integer> arithmeticEvaluator() {
     return new Evaluator<>() {
       @Override
-      public Integer evaluate(Terminal terminal) {
+      public Integer evaluate(Terminal terminal, int position) {
         return switch (terminal.name()) {
           case "num" -> Integer.parseInt(terminal.value());
           default    -> 0;
@@ -156,7 +156,7 @@ public final class ParserFactoryTest {
   }
 
   private static final ParserListener NOOP_LISTENER = new ParserListener() {
-    @Override public void onShift(Terminal token) {}
+    @Override public void onShift(Terminal token, int position) {}
     @Override public void onReduce(Production production) {}
   };
 

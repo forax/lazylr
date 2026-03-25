@@ -24,7 +24,7 @@ public final class ParserTest {
     var parser = Parser.createParser(grammar, precedence);
     var result = new StringBuilder();
     parser.parse(input.iterator(), new ParserListener() {
-      @Override public void onShift(@NonNull Terminal token) {
+      @Override public void onShift(@NonNull Terminal token, int position) {
         result.append("Shift ").append(token.name()).append('\n');
       }
       @Override public void onReduce(@NonNull Production production) {
@@ -57,7 +57,7 @@ public final class ParserTest {
     var parser = Parser.createParser(grammar, Map.of());
     var evaluator = new Evaluator<>() {
       @Override
-      public Object evaluate(@NonNull Terminal terminal) {
+      public Object evaluate(@NonNull Terminal terminal, int position) {
         return fail();
       }
 
@@ -89,7 +89,7 @@ public final class ParserTest {
     var parser = Parser.createParser(grammar, Map.of());
     ParserListener listener = new ParserListener() {
       @Override
-      public void onShift(@NonNull Terminal token) {
+      public void onShift(@NonNull Terminal token, int position) {
         fail();
       }
 
@@ -705,7 +705,7 @@ public final class ParserTest {
     var parser = Parser.createParser(grammar, Map.of());
     var evaluator = new Evaluator<String>() {
       @Override
-      public String evaluate(@NonNull Terminal token) {
+      public String evaluate(@NonNull Terminal token, int position) {
         return token.name();
       }
 
@@ -795,7 +795,7 @@ public final class ParserTest {
 
     var exception = assertThrows(ParsingException.class, () -> {
       parser.parse(terminals, new ParserListener() {
-        @Override public void onShift(@NonNull Terminal token) {}
+        @Override public void onShift(@NonNull Terminal token, int position) {}
         @Override public void onReduce(@NonNull Production production) {}
       });
     });
@@ -835,7 +835,7 @@ public final class ParserTest {
 
     var exception = assertThrows(ParsingException.class, () -> {
       parser.parse(terminals, new ParserListener() {
-        @Override public void onShift(@NonNull Terminal token) {}
+        @Override public void onShift(@NonNull Terminal token, int position) {}
         @Override public void onReduce(@NonNull Production production) {}
       });
     });
@@ -877,7 +877,7 @@ public final class ParserTest {
 
     var exception = assertThrows(ParsingException.class, () -> {
       parser.parse(terminals, new ParserListener() {
-        @Override public void onShift(@NonNull Terminal token) {}
+        @Override public void onShift(@NonNull Terminal token, int position) {}
         @Override public void onReduce(@NonNull Production production) {}
       });
     });
@@ -923,7 +923,7 @@ public final class ParserTest {
 
     var exception = assertThrows(ParsingException.class, () -> {
       parser.parse(terminals, new ParserListener() {
-        @Override public void onShift(@NonNull Terminal token) {}
+        @Override public void onShift(@NonNull Terminal token, int position) {}
         @Override public void onReduce(@NonNull Production production) {}
       });
     });
@@ -955,7 +955,7 @@ public final class ParserTest {
 
     assertThrows(ParsingException.class, () ->
         parser.parse(List.of(id).iterator(), new ParserListener() {
-          @Override public void onShift(@NonNull Terminal token) {}
+          @Override public void onShift(@NonNull Terminal token, int position) {}
           @Override public void onReduce(@NonNull Production production) {}
         }));
   }
@@ -975,7 +975,7 @@ public final class ParserTest {
 
     assertThrows(ParsingException.class, () ->
         parser.parse(List.of(id, plus, id, plus, id).iterator(), new ParserListener() {
-          @Override public void onShift(@NonNull Terminal token) {}
+          @Override public void onShift(@NonNull Terminal token, int position) {}
           @Override public void onReduce(@NonNull Production production) {}
         }));
   }

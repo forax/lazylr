@@ -29,8 +29,8 @@ public final class GuideTest {
     var parser = Parser.createParser(grammar, Map.of());
 
     class IntEvaluator implements Evaluator<Integer> {
-      public Integer evaluate(@NonNull Terminal t) {
-        System.out.println("seen terminal: " + t.name() + " = " + t.value());
+      public Integer evaluate(@NonNull Terminal t, int pos) {
+        System.out.println("seen terminal: " + t.name() + " = " + t.value() + " at " + pos);
         return Integer.parseInt(t.value());
       }
 
@@ -97,7 +97,7 @@ public final class GuideTest {
 
     class IntEvaluator implements Evaluator<Integer> {
       @Override
-      public Integer evaluate(@NonNull Terminal terminal) {
+      public Integer evaluate(@NonNull Terminal terminal, int position) {
         return switch (terminal.name()) {
           case "num" -> Integer.parseInt(terminal.value());
           default    -> 0;
@@ -148,7 +148,7 @@ public final class GuideTest {
 
     class IntEvaluator implements Evaluator<Integer> {
       @Override
-      public Integer evaluate(@NonNull Terminal terminal) {
+      public Integer evaluate(@NonNull Terminal terminal, int position) {
         return switch (terminal.name()) {
           case "num" -> Integer.parseInt(terminal.value());
           default    -> 0;
@@ -199,7 +199,7 @@ public final class GuideTest {
 
     class IntEvaluator implements Evaluator<Integer> {
       @Override
-      public Integer evaluate(@NonNull Terminal terminal) {
+      public Integer evaluate(@NonNull Terminal terminal, int position) {
         return switch (terminal.name()) {
           case "num" -> Integer.parseInt(terminal.value());
           default    -> 0;
@@ -252,7 +252,7 @@ public final class GuideTest {
 
     class IntEvaluator implements Evaluator<Integer> {
       @Override
-      public Integer evaluate(@NonNull Terminal terminal) {
+      public Integer evaluate(@NonNull Terminal terminal, int position) {
         return switch (terminal.name()) {
           case "num" -> Integer.parseInt(terminal.value());
           default    -> 0;
@@ -313,7 +313,7 @@ public final class GuideTest {
 
     class IntEvaluator implements Evaluator<Integer> {
       @Override
-      public Integer evaluate(@NonNull Terminal terminal) {
+      public Integer evaluate(@NonNull Terminal terminal, int position) {
         return switch (terminal.name()) {
           case "num" -> Integer.parseInt(terminal.value());
           default    -> 0;
@@ -348,13 +348,13 @@ public final class GuideTest {
     record Sub(Node left, Node right) implements Node {}
     record Mul(Node left, Node right) implements Node {}
     record UnaryMinus(Node node) implements Node {}
-    record Num() implements Node {}
+    record Num(int value, int pos) implements Node {}
 
     class NodeEvaluator implements Evaluator<Node> {
       @Override
-      public Node evaluate(@NonNull Terminal terminal) {
+      public Node evaluate(@NonNull Terminal terminal, int pos) {
         return switch (terminal.name()) {
-          case "num" -> new Num();
+          case "num" -> new Num(Integer.parseInt(terminal.value()), pos);
           default -> null;
         };
       }
@@ -393,7 +393,7 @@ public final class GuideTest {
     var badParser = Parser.createParser(badMg.grammar(), badMg.precedenceMap());
 
     var node = badParser.parse(badLexer.tokenize("- 4 * 5"), evaluator);
-    assertEquals("UnaryMinus[node=Mul[left=Num[], right=Num[]]]", node.toString());
+    assertEquals("UnaryMinus[node=Mul[left=Num[value=4, pos=2], right=Num[value=5, pos=6]]]", node.toString());
 
     // Use a virtual token UNARY to fix the precedence of the unary minus
     var mg = MetaGrammar.load("""
@@ -418,6 +418,6 @@ public final class GuideTest {
     var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
 
     node = parser.parse(lexer.tokenize("- 4 * 5"), evaluator);
-    assertEquals("Mul[left=UnaryMinus[node=Num[]], right=Num[]]", node.toString());
+    assertEquals("Mul[left=UnaryMinus[node=Num[value=4, pos=2]], right=Num[value=5, pos=6]]", node.toString());
   }
 }
