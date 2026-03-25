@@ -30,11 +30,11 @@ public final class LALRVerifierTest {
     var p1 = new Production(E, List.of(NUM));
     var grammar = new Grammar(E, List.of(p1));
 
-    LALRVerifier.verify(grammar, Map.of(), ERROR_REPORTER);
+    LALRVerifier.verifySilently(grammar, Map.of(), ERROR_REPORTER);
   }
 
   @Test
-  public void verifyResolvedShiftReduceConflict() {
+  public void verifySilentlyResolvedShiftReduceConflict() {
     // E -> E + E | num
     // Standard arithmetic ambiguity resolved with precedence
     var pPlus = new Production(E, List.of(E, PLUS, E));
@@ -45,7 +45,7 @@ public final class LALRVerifierTest {
     var prec = new Precedence(1, Precedence.Associativity.LEFT);
     var precedenceMap = Map.of(PLUS, prec, pPlus, prec);
 
-    LALRVerifier.verify(grammar, precedenceMap, ERROR_REPORTER);
+    LALRVerifier.verifySilently(grammar, precedenceMap, ERROR_REPORTER);
   }
 
   @Test
@@ -56,7 +56,7 @@ public final class LALRVerifierTest {
     var grammar = new Grammar(E, List.of(pPlus, pNum));
 
     assertThrows(IllegalStateException.class, () ->
-        LALRVerifier.verify(grammar, Map.of(), ERROR_REPORTER)
+        LALRVerifier.verifySilently(grammar, Map.of(), ERROR_REPORTER)
     );
   }
 
@@ -75,12 +75,12 @@ public final class LALRVerifierTest {
     var grammar = new Grammar(S, List.of(pS1, pS2, pA, pB));
 
     assertThrows(IllegalStateException.class, () ->
-        LALRVerifier.verify(grammar, Map.of(), ERROR_REPORTER)
+        LALRVerifier.verifySilently(grammar, Map.of(), ERROR_REPORTER)
     );
   }
 
   @Test
-  public void verifyDanglingElseResolved() {
+  public void verifySilentlyDanglingElseResolved() {
     // S -> if S | if S else S | num
     var pIf = new Production(S, List.of(IF, S));
     var pIfElse = new Production(S, List.of(IF, S, ELSE, S));
@@ -99,11 +99,11 @@ public final class LALRVerifierTest {
         pIf, precLow
     );
 
-    LALRVerifier.verify(grammar, precedenceMap, ERROR_REPORTER);
+    LALRVerifier.verifySilently(grammar, precedenceMap, ERROR_REPORTER);
   }
 
   @Test
-  public void verifyOperatorPrecedenceLevels() {
+  public void verifySilentlyOperatorPrecedenceLevels() {
     // E -> E + E | E * E | num
     var pPlus = new Production(E, List.of(E, PLUS, E));
     var pMul = new Production(E, List.of(E, MUL, E));
@@ -120,11 +120,11 @@ public final class LALRVerifierTest {
         pMul, high
     );
 
-    LALRVerifier.verify(grammar, precedenceMap, ERROR_REPORTER);
+    LALRVerifier.verifySilently(grammar, precedenceMap, ERROR_REPORTER);
   }
 
   @Test
-  public void verifyShiftBeforeReduce() {
+  public void verifySilentlyShiftBeforeReduce() {
     // S -> A | B
     // A -> x y
     // B -> x
@@ -144,11 +144,11 @@ public final class LALRVerifierTest {
     var precHigh = new Precedence(2, Precedence.Associativity.LEFT);
     var precedenceMap = Map.of(pA, precLow, x, precHigh);
 
-    LALRVerifier.verify(grammar, precedenceMap, ERROR_REPORTER);
+    LALRVerifier.verifySilently(grammar, precedenceMap, ERROR_REPORTER);
   }
 
   @Test
-  public void verifyReduceBeforeShift() {
+  public void verifySilentlyReduceBeforeShift() {
     // S -> B | A
     // A -> x y
     // B -> x
@@ -168,11 +168,11 @@ public final class LALRVerifierTest {
     var precHigh = new Precedence(2, Precedence.Associativity.LEFT);
     var precedenceMap = Map.of(pA, precLow, x, precHigh);
 
-    LALRVerifier.verify(grammar, precedenceMap, ERROR_REPORTER);
+    LALRVerifier.verifySilently(grammar, precedenceMap, ERROR_REPORTER);
   }
 
   @Test
-  public void verifyEmptyProduction() {
+  public void verifySilentlyEmptyProduction() {
     // S -> A num
     // A -> ε | "+"
     // This tests that epsilon productions are handled correctly:
@@ -184,11 +184,11 @@ public final class LALRVerifierTest {
 
     var grammar = new Grammar(S, List.of(pS, pAe, pAp));
 
-    LALRVerifier.verify(grammar, Map.of(), ERROR_REPORTER);
+    LALRVerifier.verifySilently(grammar, Map.of(), ERROR_REPORTER);
   }
 
   @Test
-  public void verifyRightAssociativity() {
+  public void verifySilentlyRightAssociativity() {
     // E -> E + E | num   (RIGHT associative +)
     // e.g. a + b + c is parsed as a + (b + c)
     var pPlus = new Production(E, List.of(E, PLUS, E));
@@ -200,11 +200,11 @@ public final class LALRVerifierTest {
     var prec = new Precedence(1, Precedence.Associativity.RIGHT);
     var precedenceMap = Map.of(PLUS, prec, pPlus, prec);
 
-    LALRVerifier.verify(grammar, precedenceMap, ERROR_REPORTER);
+    LALRVerifier.verifySilently(grammar, precedenceMap, ERROR_REPORTER);
   }
 
   @Test
-  public void verifyFullyNullableProduction() {
+  public void verifySilentlyFullyNullableProduction() {
     // S -> A B
     // A -> ε
     // B -> ε
@@ -217,11 +217,11 @@ public final class LALRVerifierTest {
 
     var grammar = new Grammar(S, List.of(pS, pAe, pBe));
 
-    LALRVerifier.verify(grammar, Map.of(),  ERROR_REPORTER);
+    LALRVerifier.verifySilently(grammar, Map.of(),  ERROR_REPORTER);
   }
 
   @Test
-  public void verifyLALRGrammar() {
+  public void verifySilentlyLALRGrammar() {
     // Grammar (DeRemer 1971) — LALR(1) but not SLR(1):
     //   S → L = R  |  R
     //   L → * R    |  id
@@ -246,12 +246,12 @@ public final class LALRVerifierTest {
         new Production(R, List.of(L))
     ));
 
-    LALRVerifier.verify(grammar, Map.of(), ERROR_REPORTER);
+    LALRVerifier.verifySilently(grammar, Map.of(), ERROR_REPORTER);
   }
 
 
 
-  private static String verifyAndDump(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap) {
+  private static String verifySilentlyAndDump(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap) {
     var buf = new ByteArrayOutputStream();
     var out = new PrintStream(buf);
     LALRVerifier.verify(grammar, precedenceMap, out, true, _ -> {});
@@ -259,7 +259,7 @@ public final class LALRVerifierTest {
   }
 
   @Test
-  public void verifyAndDumpSingleProduction() {
+  public void verifySilentlyAndDumpSingleProduction() {
     // E → num
     var E   = new NonTerminal("E");
     var NUM = new Terminal("num");
@@ -267,7 +267,7 @@ public final class LALRVerifierTest {
     var pNum    = new Production(E, List.of(NUM));
     var grammar = new Grammar(E, List.of(pNum));
 
-    var output = verifyAndDump(grammar, Map.of());
+    var output = verifySilentlyAndDump(grammar, Map.of());
 
     assertEquals("""
         ── State 0 ─────────────────────────────────
@@ -291,7 +291,7 @@ public final class LALRVerifierTest {
   }
 
   @Test
-  public void verifyAndDumpAdditionConflicts() {
+  public void verifySilentlyAndDumpAdditionConflicts() {
     // E → E '+' E
     // E → num
     var E    = new NonTerminal("E");
@@ -302,7 +302,7 @@ public final class LALRVerifierTest {
     var pAdd    = new Production(E, List.of(E, PLUS, E));
     var grammar = new Grammar(E, List.of(pNum, pAdd));
 
-    var output = verifyAndDump(grammar, Map.of());
+    var output = verifySilentlyAndDump(grammar, Map.of());
 
     assertEquals("""
         ── State 0 ─────────────────────────────────
@@ -344,7 +344,7 @@ public final class LALRVerifierTest {
   }
 
   @Test
-  public void verifyAndDumpAdditionWithPrecedence() {
+  public void verifySilentlyAndDumpAdditionWithPrecedence() {
     // E → E '+' E
     // E → num
     var E    = new NonTerminal("E");
@@ -358,7 +358,7 @@ public final class LALRVerifierTest {
     var precLeft = new Precedence(1, Precedence.Associativity.LEFT);
     var precedenceMap = Map.of(PLUS, precLeft, pAdd, precLeft);
 
-    var output = verifyAndDump(grammar, precedenceMap);
+    var output = verifySilentlyAndDump(grammar, precedenceMap);
 
     assertEquals("""
         ── State 0 ─────────────────────────────────
@@ -400,7 +400,7 @@ public final class LALRVerifierTest {
   }
 
   @Test
-  public void verifyAndDumpMultiplicationConflicts() {
+  public void verifySilentlyAndDumpMultiplicationConflicts() {
     // E → E '+' E
     // E → E '*' E
     // E → num
@@ -414,7 +414,7 @@ public final class LALRVerifierTest {
     var pMul    = new Production(E, List.of(E, MUL, E));
     var grammar = new Grammar(E, List.of(pNum, pAdd, pMul));
 
-    var output = verifyAndDump(grammar, Map.of());
+    var output = verifySilentlyAndDump(grammar, Map.of());
 
     assertEquals("""
         ── State 0 ─────────────────────────────────
@@ -480,7 +480,7 @@ public final class LALRVerifierTest {
   }
 
   @Test
-  public void verifyAndDumpMultiplicationWithPrecedence() {
+  public void verifySilentlyAndDumpMultiplicationWithPrecedence() {
     // E → E '+' E
     // E → E '*' E
     // E → num
@@ -501,7 +501,7 @@ public final class LALRVerifierTest {
         MUL,  precMul,  pMul, precMul
     );
 
-    var output = verifyAndDump(grammar, precedenceMap);
+    var output = verifySilentlyAndDump(grammar, precedenceMap);
 
     assertEquals("""
         ── State 0 ─────────────────────────────────

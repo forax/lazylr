@@ -114,7 +114,7 @@ var grammar = new Grammar(E, List.of(pNum));    // E is the start symbol
 Before doing anything else, it's good practice to check the grammar for conflicts:
 
 ```java
-LALRVerifier.verify(grammar, Map.of(), msg -> System.err.println("Conflict: " + msg));
+LALRVerifier.verify(grammar, Map.of());
 ```
 
 > 💡 `LALRVerifier.verify` checks that the grammar is conflict-free, that the parser will
@@ -228,15 +228,13 @@ var pNumViaB = new Production(B, List.of(NUM));  // B : num   ← same as A!
 
 var grammar = new Grammar(E, List.of(pA, pB, pNumViaA, pNumViaB));
 
-LALRVerifier.verify(grammar, Map.of(), error -> {
-    System.err.println("Conflict detected: " + error);
-});
+LALRVerifier.verify(grammar, Map.of());
 ```
 
 ```
 // Output:
-// Reduce/reduce conflict in state 4 on terminal '$' between
-//   [Reduce[production=A : num]] and [Reduce[production=B : num]]
+// Unresolved reduce/reduce conflict in state 4 on terminal '$'
+//   between reduce A : num, reduce B : num
 ```
 
 > ⚠️ **What happened?** After reading a `num`, the parser knows
@@ -258,6 +256,10 @@ This step introduces two important ideas:
 
 From here on, we use `MetaGrammar.load(...)` to describe the grammar as text,
 rather than building Java objects by hand.
+
+The `MetaGrammar` has two facade methods:
+- `verify()`, that verifies that the grammar is well-formed,
+- and `parse(text, evaluator)`that creates the lexer and parser for you. 
 
 The format has three sections:
 
@@ -283,7 +285,8 @@ var mg = MetaGrammar.load("""
     }
     """);
 
-LALRVerifier.verify(mg.grammar(), Map.of(), System.err::println);
+// Optional: verify the grammar is LALR(1)
+mg.verify();
 ```
 
 > 💡 **Two things to notice:**
@@ -295,9 +298,6 @@ LALRVerifier.verify(mg.grammar(), Map.of(), System.err::println);
 >      on deeply nested input.
 
 ```java
-var lexer  = Lexer.createLexer(mg.tokens());
-var parser = Parser.createParser(mg.grammar(), Map.of());
-
 class IntEvaluator implements Evaluator<Integer> {
   public Integer evaluate(Terminal t) {
     return switch (t.name()) {
@@ -318,7 +318,8 @@ class IntEvaluator implements Evaluator<Integer> {
   }
 }
 
-System.out.println(parser.parse(lexer.tokenize("sum(42, 17)"), new IntEvaluator()));
+var result = mg.parse("sum(42, 17)", new IntEvaluator())
+System.out.println(result);
 ```
 
 ```
@@ -351,8 +352,6 @@ var mg = MetaGrammar.load("""
       E: E '+' E
     }
     """);
-
-LALRVerifier.verify(mg.grammar(), Map.of(), System.err::println);
 ```
 
 ```
@@ -380,8 +379,6 @@ var mg = MetaGrammar.load("""
       E: E '+' E
     }
     """);
-
-LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
 ```
 
 > 💡 **Note:** `%prec '+'` is not needed here, by default, a production inherits the precedence
@@ -389,9 +386,6 @@ LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
 >    Since that's already `'+'`, the precedence map does the right thing automatically.
 
 ```java
-var lexer  = Lexer.createLexer(mg.tokens());
-var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
-
 class IntEvaluator implements Evaluator<Integer> {
   public Integer evaluate(Terminal t) {
     return switch (t.name()) {
@@ -412,7 +406,8 @@ class IntEvaluator implements Evaluator<Integer> {
   }
 }
 
-System.out.println(parser.parse(lexer.tokenize("1 + 2 + 3"), new IntEvaluator()));
+var result = mg.parse("1 + 2 + 3", new IntEvaluator());
+System.out.println(result);
 ```
 
 ```
@@ -454,8 +449,6 @@ var mg = MetaGrammar.load("""
       E: E '*' E
     }
     """);
-
-LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
 ```
 
 > 💡 **Precedence levels are relative, not absolute**, only their ordering matters.
@@ -484,7 +477,8 @@ class IntEvaluator implements Evaluator<Integer> {
   }
 }
 
-System.out.println(parser.parse(lexer.tokenize("2 + 3 * 4"), new IntEvaluator()));
+var result = mg.parse("2 + 3 * 4", new IntEvaluator());
+System.out.println(result);
 ```
 
 ```
@@ -524,8 +518,6 @@ var mg = MetaGrammar.load("""
       E: E '^' E
     }
     """);
-
-LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
 ```
 
 > 💡 **How right-associativity works:** When the parser sees `E ^ E` on its stack and
@@ -535,7 +527,7 @@ LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
 ```java
 // ... evaluator with (int) Math.pow(args.get(0), args.get(2)) for "E : E ^ E"
 
-System.out.println(parser.parse(lexer.tokenize("2 ^ 3 ^ 2"), evaluator));
+System.out.println(mg.parse("2 ^ 3 ^ 2", evaluator));
 ```
 
 ```
@@ -591,7 +583,7 @@ var mg = MetaGrammar.load("""
     }
     """);
 
-LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
+mg.verify();
 ```
 
 > 💡 **What's the conflict?** When the parser sees `if E then E` on its stack and an `else` lookahead,
@@ -602,9 +594,9 @@ LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
 ```java
 var evaluator = new IntEvaluator(); // handles if/then/else cases
 
-System.out.println(parser.parse(lexer.tokenize("if 1 then 10 else 20"),              evaluator));
-System.out.println(parser.parse(lexer.tokenize("if 0 then 10 else 20"),              evaluator));
-System.out.println(parser.parse(lexer.tokenize("if 1 then if 0 then 99 else 42"),    evaluator));
+System.out.println(parser.parse("if 1 then 10 else 20", evaluator));
+System.out.println(parser.parse("if 0 then 10 else 20", evaluator));
+System.out.println(parser.parse("if 1 then if 0 then 99 else 42", evaluator));
 ```
 
 ```
@@ -730,11 +722,7 @@ without resorting to mutable fields or closures.
 Putting it all together:
 
 ```java
-var lexer  = Lexer.createLexer(mg.tokens());
-var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
-var input  = lexer.tokenize("- 4 * 5");
-
-var node = parser.parse(input, new NodeEvaluator(input));
+var node = mg.parse("- 4 * 5", NodeEvaluator::new);
 System.out.println(node);
 ```
 
@@ -756,6 +744,6 @@ To summarize, if there is a reduce/reduce conflict, the grammar has to be simpli
 If there is a shift/reduce conflict, the precedence map can be used to declare
 which terminal is more important than the other and what is the associativity (LEFT vs RIGHT).
 
-In doubt: run `LALRVerifier.verify` early and often :)
+In doubt: run `MetaGrammar.verify()` early and often :)
 
 Happy parsing ...

@@ -239,7 +239,7 @@ final class JavaCodeGenerator {
     sb.append("""
         static void main() {
           var mg = createGrammar();
-          LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
+          mg.verify();
         }
         """);
 

@@ -63,6 +63,19 @@ public final class LALRVerifier {
 
   /// Verifies that the grammar is LALR(1) (possibly with precedence-based
   /// conflict resolution).
+  /// In case of conflicts, prints the LALR state automaton to `System.err`.
+  ///
+  /// @param grammar       the grammar to verify.
+  /// @param precedenceMap maps terminals and productions to their precedence;
+  ///                      used to resolve shift/reduce conflicts.
+  /// @throws NullPointerException if `grammar`, `precedenceMap.
+  public static void verify(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap) {
+    verify(grammar, precedenceMap, System.err, false, System.err::println);
+  }
+
+  /// Verifies that the grammar is LALR(1) (possibly with precedence-based
+  /// conflict resolution).
+  /// In case of conflicts, the 'errorReporter' is called once per unresolved conflict.
   ///
   /// @param grammar       the grammar to verify.
   /// @param precedenceMap maps terminals and productions to their precedence;
@@ -70,8 +83,8 @@ public final class LALRVerifier {
   /// @param errorReporter called once per unresolved conflict with a human-readable
   ///                      description of the conflict.
   /// @throws NullPointerException if `grammar`, `precedenceMap` or `errorReporter` is null.
-  public static void verify(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap,
-                               Consumer<String> errorReporter) {
+  public static void verifySilently(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap,
+                                    Consumer<? super String> errorReporter) {
     verify(grammar, precedenceMap, null, false, errorReporter);
   }
 
@@ -90,7 +103,7 @@ public final class LALRVerifier {
   ///                      description of the conflict.
   /// @throws NullPointerException if `grammar`, `precedenceMap` or `errorReporter` is null.
   public static void verify(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap,
-                               @Nullable PrintStream out, boolean alwaysPrint, Consumer<String> errorReporter) {
+                            @Nullable PrintStream out, boolean alwaysPrint, Consumer<? super String> errorReporter) {
     Objects.requireNonNull(grammar);
     Objects.requireNonNull(precedenceMap);
     Objects.requireNonNull(errorReporter);
@@ -648,7 +661,7 @@ public final class LALRVerifier {
   // -----------------------------------------------------------------------
 
   private static boolean reportConflicts(List<Map<Terminal, Result>> actionTable,
-                                         Consumer<String> errorReporter) {
+                                         Consumer<? super String> errorReporter) {
     var conflicts = false;
     for (var i = 0; i < actionTable.size(); i++) {
       for (var entry : actionTable.get(i).entrySet()) {

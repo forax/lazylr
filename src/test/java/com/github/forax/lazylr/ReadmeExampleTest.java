@@ -3,14 +3,13 @@ package com.github.forax.lazylr;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
-import java.util.Iterator;
 import java.util.List;
 
 public final class ReadmeExampleTest {
   @Test
   public void example() {
     // Define your grammar
-    var mg = MetaGrammar.load("""
+    MetaGrammar mg = MetaGrammar.load("""
         tokens {
           num: /[0-9]+/
           /[ ]+/
@@ -30,9 +29,7 @@ public final class ReadmeExampleTest {
         """);
 
     // Verifie the grammar for conflicts (optional)
-    LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), error -> {
-      System.err.println("Conflict detected: " + error);
-    });
+    mg.verify();
 
     //Transforming to an AST using an Evaluator
     /*sealed*/ interface Node {}
@@ -62,17 +59,11 @@ public final class ReadmeExampleTest {
       }
     }
 
-    Lexer lexer = Lexer.createLexer(mg.tokens());
-    Parser parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
-
     // Usage Example
     String input = "2 + - 3 * 4";
 
-    // Tokenize using token names
-    Iterator<Terminal> terminals = lexer.tokenize(input);
-
     // Parse and create the AST
-    Node ast = parser.parse(terminals, new NodeEvaluator());
+    Node ast = mg.parse(input, new NodeEvaluator());
 
     // Profit!
     System.out.println(ast);

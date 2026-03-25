@@ -40,7 +40,7 @@ The Runnable code is in
 `MetaGrammar` lets you describe tokens, precedence, and productions in a compact textual format.
 
 ```java
-var mg = MetaGrammar.load("""
+MetaGrammar mg = MetaGrammar.load("""
     tokens {
       num: /[0-9]+/
       /[ ]+/
@@ -90,12 +90,10 @@ so `- 3 * 4` correctly parses as `(-3) * 4`.
 
 ### Check if your grammar is correct
 
-The class `LALRVerifier` can be used to check if a grammar is LALR(1) or not.
+The method `verify()` can be used to check if a grammar is LALR(1) or not.
 
 ```java
-LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), error -> {
-    System.err.println("Conflict detected: " + error);
-});
+mg.verify();
 ```
 
 ### Transforming to an AST using an Evaluator
@@ -141,16 +139,12 @@ class NodeEvaluator implements Evaluator<Node> {
 
 ### Bringing it all together
 
-Tokenize the input, parse, and create the AST:
+Parse a text and create the AST:
 
 ```java
-Lexer lexer = Lexer.createLexer(mg.tokens());
-Parser parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
-
 String input = "2 + - 3 * 4";
 
-Iterator<Terminal> terminals = lexer.tokenize(input);
-Node ast = parser.parse(terminals, new NodeEvaluator());
+Node ast = mg.parse(input, new NodeEvaluator());
 
 // Profit!
 System.out.println(ast);

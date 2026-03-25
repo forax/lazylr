@@ -20,7 +20,7 @@ public final class GuideTest {
     var pNum    = new Production(E, List.of(NUM));
     var grammar = new Grammar(E, List.of(pNum));
 
-    LALRVerifier.verify(grammar, Map.of(), msg -> fail("Unexpected conflict: " + msg));
+    LALRVerifier.verifySilently(grammar, Map.of(), msg -> fail("Unexpected conflict: " + msg));
 
     var lexer = Lexer.createLexer(List.of(
         new Token("num", "[0-9]+"),
@@ -67,7 +67,7 @@ public final class GuideTest {
     // Both A and B can derive 'num'.
     // In state {E -> .A, E -> .B, A -> .num, B -> .num},
     // shifting 'num' leads to a state with two different reduction options.
-    LALRVerifier.verify(grammar, Map.of(), System.out::println);
+    LALRVerifier.verify(grammar, Map.of());
   }
 
   // -------------------------------------------------------------------------
@@ -90,10 +90,8 @@ public final class GuideTest {
         }
         """);
 
-    LALRVerifier.verify(mg.grammar(), Map.of(), msg -> fail("Unexpected conflict: " + msg));
-
-    var lexer  = Lexer.createLexer(mg.tokens());
-    var parser = Parser.createParser(mg.grammar(), Map.of());
+    // Optional: verify the grammar
+    mg.verifySilently(msg -> fail("Unexpected conflict: " + msg));
 
     class IntEvaluator implements Evaluator<Integer> {
       @Override
@@ -117,7 +115,7 @@ public final class GuideTest {
     }
 
     var input  = "sum(42, 17)";
-    var result = parser.parse(lexer.tokenize(input), new IntEvaluator());
+    var result = mg.parse(input, new IntEvaluator());
 
     assertEquals(59, result);
   }
@@ -141,10 +139,7 @@ public final class GuideTest {
         }
         """);
 
-    LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), msg -> fail("Unexpected conflict: " + msg));
-
-    var lexer  = Lexer.createLexer(mg.tokens());
-    var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
+    mg.verifySilently(msg -> fail("Unexpected conflict: " + msg));
 
     class IntEvaluator implements Evaluator<Integer> {
       @Override
@@ -166,7 +161,7 @@ public final class GuideTest {
     }
 
     var input  = "1 + 2 + 3";
-    var result = parser.parse(lexer.tokenize(input), new IntEvaluator());
+    var result = mg.parse(input, new IntEvaluator());
 
     assertEquals(6, result);
   }
@@ -192,10 +187,7 @@ public final class GuideTest {
         }
         """);
 
-    LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), msg -> fail("Unexpected conflict: " + msg));
-
-    var lexer  = Lexer.createLexer(mg.tokens());
-    var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
+    mg.verifySilently(msg -> fail("Unexpected conflict: " + msg));
 
     class IntEvaluator implements Evaluator<Integer> {
       @Override
@@ -217,7 +209,7 @@ public final class GuideTest {
     }
 
     var input  = "2 + 3 * 4";
-    var result = parser.parse(lexer.tokenize(input), new IntEvaluator());
+    var result = mg.parse(input, new IntEvaluator());
 
     assertEquals(14, result);
   }
@@ -245,10 +237,7 @@ public final class GuideTest {
         }
         """);
 
-    LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), msg -> fail("Unexpected conflict: " + msg));
-
-    var lexer  = Lexer.createLexer(mg.tokens());
-    var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
+    mg.verifySilently(msg -> fail("Unexpected conflict: " + msg));
 
     class IntEvaluator implements Evaluator<Integer> {
       @Override
@@ -271,7 +260,7 @@ public final class GuideTest {
     }
 
     var input  = "2 ^ 3 ^ 2";
-    var result = parser.parse(lexer.tokenize(input), new IntEvaluator());
+    var result = mg.parse(input, new IntEvaluator());
 
     assertEquals(512, result);
   }
@@ -306,10 +295,7 @@ public final class GuideTest {
         }
         """);
 
-    LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), msg -> fail("Unexpected conflict: " + msg));
-
-    var lexer  = Lexer.createLexer(mg.tokens());
-    var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
+    mg.verifySilently(msg -> fail("Unexpected conflict: " + msg));
 
     class IntEvaluator implements Evaluator<Integer> {
       @Override
@@ -334,9 +320,9 @@ public final class GuideTest {
     }
     var evaluator = new IntEvaluator();
 
-    assertEquals(10, parser.parse(lexer.tokenize("if 1 then 10 else 20"), evaluator));
-    assertEquals(20, parser.parse(lexer.tokenize("if 0 then 10 else 20"), evaluator));
-    assertEquals(42, parser.parse(lexer.tokenize("if 1 then if 0 then 99 else 42"), evaluator));
+    assertEquals(10, mg.parse("if 1 then 10 else 20", evaluator));
+    assertEquals(20, mg.parse("if 0 then 10 else 20", evaluator));
+    assertEquals(42, mg.parse("if 1 then if 0 then 99 else 42", evaluator));
   }
 
   // -------------------------------------------------------------------------
@@ -391,11 +377,8 @@ public final class GuideTest {
         }
         """);
 
-    var badLexer  = Lexer.createLexer(badMg.tokens());
-    var badParser = Parser.createParser(badMg.grammar(), badMg.precedenceMap());
-    var badInput  = badLexer.tokenize("- 4 * 5");
-
-    var node = badParser.parse(badInput, new NodeEvaluator(badInput));
+    var input = "- 4 * 5";
+    var node = badMg.parse(input, NodeEvaluator::new);
     assertEquals("UnaryMinus[node=Mul[left=Num[value=4, pos=2], right=Num[value=5, pos=6]]]", node.toString());
 
     // Use a virtual token UNARY to fix the precedence of the unary minus
@@ -417,11 +400,7 @@ public final class GuideTest {
         }
     """);
 
-    var lexer  = Lexer.createLexer(mg.tokens());
-    var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
-    var input  = lexer.tokenize("- 4 * 5");
-
-    node = parser.parse(input, new NodeEvaluator(input));
+    node = mg.parse(input, NodeEvaluator::new);
     assertEquals("Mul[left=UnaryMinus[node=Num[value=4, pos=2]], right=Num[value=5, pos=6]]", node.toString());
   }
 }

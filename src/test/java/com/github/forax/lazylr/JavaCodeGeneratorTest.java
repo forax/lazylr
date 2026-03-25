@@ -2,6 +2,7 @@ package com.github.forax.lazylr;
 
 import org.junit.jupiter.api.Test;
 
+import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
 import javax.tools.FileObject;
 import javax.tools.ForwardingJavaFileManager;
@@ -27,9 +28,9 @@ public final class JavaCodeGeneratorTest {
     assertNotNull(compiler);
 
     var classpath = System.getProperty("java.class.path");
-    var diagnostics = new DiagnosticCollector<JavaFileObject>();
+    var diagnosticCollector = new DiagnosticCollector<JavaFileObject>();
 
-    var delegate = compiler.getStandardFileManager(diagnostics, null, null);
+    var delegate = compiler.getStandardFileManager(diagnosticCollector, null, null);
     try (var fileManager = new ForwardingJavaFileManager<>(delegate) {
       @Override
       public JavaFileObject getJavaFileForOutput(Location location,
@@ -55,10 +56,11 @@ public final class JavaCodeGeneratorTest {
       };
 
       var ok = compiler
-          .getTask(null, fileManager, diagnostics, List.of("-cp", classpath), null, List.of(source))
+          .getTask(null, fileManager, diagnosticCollector, List.of("-cp", classpath), null, List.of(source))
           .call();
       if (!ok) {
-        var errors = diagnostics.getDiagnostics().stream()
+        var diagnostics = List.copyOf(diagnosticCollector.getDiagnostics());
+        var errors = diagnostics.stream()
             .map(d -> "  line " + d.getLineNumber() + ": " + d.getMessage(null))
             .collect(Collectors.joining("\n"));
         var codeLines = code.lines().toList();
@@ -121,7 +123,7 @@ public final class JavaCodeGeneratorTest {
         
         static void main() {
           var mg = createGrammar();
-          LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
+          mg.verify();
         }
         """, code);
   }
@@ -172,7 +174,7 @@ public final class JavaCodeGeneratorTest {
         
         static void main() {
           var mg = createGrammar();
-          LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
+          mg.verify();
         }
         """, code);
   }
@@ -223,7 +225,7 @@ public final class JavaCodeGeneratorTest {
         
         static void main() {
           var mg = createGrammar();
-          LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
+          mg.verify();
         }
         """, code);
   }
@@ -282,7 +284,7 @@ public final class JavaCodeGeneratorTest {
         
         static void main() {
           var mg = createGrammar();
-          LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
+          mg.verify();
         }
         """, code);
   }
@@ -347,7 +349,7 @@ public final class JavaCodeGeneratorTest {
         
         static void main() {
           var mg = createGrammar();
-          LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
+          mg.verify();
         }
         """, code);
   }
@@ -418,7 +420,7 @@ public final class JavaCodeGeneratorTest {
         
         static void main() {
           var mg = createGrammar();
-          LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
+          mg.verify();
         }
         """, code);
   }
@@ -487,7 +489,7 @@ public final class JavaCodeGeneratorTest {
         
         static void main() {
           var mg = createGrammar();
-          LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
+          mg.verify();
         }
         """, code);
   }
@@ -563,7 +565,7 @@ public final class JavaCodeGeneratorTest {
         
         static void main() {
           var mg = createGrammar();
-          LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
+          mg.verify();
         }
         """, code);
   }

@@ -699,7 +699,7 @@ public final class ParserTest {
     // combining lookaheads into {c, d} for BOTH E→e and F→e — a reduce/reduce conflict.
 
     var conflicts = new ArrayList<String>();
-    LALRVerifier.verify(grammar, Map.of(), conflicts::add);
+    LALRVerifier.verifySilently(grammar, Map.of(), conflicts::add);
     assertEquals(2, conflicts.size());
 
     var parser = Parser.createParser(grammar, Map.of());

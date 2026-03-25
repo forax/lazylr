@@ -5,10 +5,13 @@ import org.jspecify.annotations.Nullable;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -112,7 +115,7 @@ public final class MetaGrammar {
     // section is needed), and forcing all callers to unwrap an Optional would add
     // noise for no benefit.
     if (grammar == null) {
-      throw new IllegalStateException("no grammar section was defined");
+      throw new IllegalStateException("no grammar section is defined");
     }
     return grammar;
   }
@@ -125,6 +128,80 @@ public final class MetaGrammar {
   /// @return the precedence map, in declaration order.
   public Map<PrecedenceEntity, Precedence> precedenceMap() {
     return precedenceMap;
+  }
+
+  public void verify() {
+    if (grammar == null) {
+      throw new IllegalStateException("no grammar section is defined");
+    }
+    LALRVerifier.verify(grammar, precedenceMap);
+  }
+
+  public void verifySilently(Consumer<? super String> errorReporter) {
+    if (grammar == null) {
+      throw new IllegalStateException("no grammar section is defined");
+    }
+    LALRVerifier.verifySilently(grammar, precedenceMap, errorReporter);
+  }
+
+  /// Parses the given input using this meta-grammar and evaluates it using the provided evaluator.
+  ///
+  /// The parsing process is as follows:
+  /// - A [Lexer] is created from the tokens section defined in this meta-grammar.
+  /// - The input is tokenized into an iterator of [Terminal].
+  /// - A [Parser] is created from the grammar and precedence sections and
+  ///   used to parse using the [Evaluator].
+  ///
+  /// @param input the input text to tokenize and parse
+  /// @param evaluator the evaluator used to compute semantic values during parsing
+  /// @param <V> the type of the evaluation result
+  /// @return the result produced by the evaluator
+  /// @throws IllegalStateException if no grammar section is defined in this meta-grammar
+  /// @throws ParsingException if a lexing or parsing error occurs
+  ///
+  /// @see Lexer#createLexer(List)
+  /// @see Parser#createParser(Grammar, Map)
+  public <V> V parse(CharSequence input, Evaluator<V> evaluator) throws ParsingException{
+    Objects.requireNonNull(input);
+    Objects.requireNonNull(evaluator);
+    return parse(input, _ -> evaluator);
+  }
+
+  /// Parses the given input using this meta-grammar, creating an evaluator from
+  /// an Iterator of [Terminal]s.
+  ///
+  /// This is useful when evaluation depends on token-level details (e.g., source locations
+  /// or custom error reporting).
+  ///
+  /// The parsing process is as follows:
+  /// - A [Lexer] is created from the tokens section defined in this meta-grammar
+  /// - The input is tokenized into an iterator of [Terminal]
+  /// - An [Evaluator] is created by applying the 'evaluatorFactory' to the iterator
+  /// - A [Parser] is created from the grammar and precedence sections and
+  ///   used to parse the terminals from the iterator
+  ///
+  /// @param input the input text to tokenize and parse
+  /// @param evaluatorFactory a function that creates an evaluator from the token iterator
+  /// @param <V> the type of the evaluation result
+  /// @return the result produced by the evaluator
+  /// @throws IllegalStateException if no grammar section is defined in this meta-grammar
+  /// @throws ParsingException if a lexing or parsing error occurs
+  ///
+  /// @see Lexer#createLexer(List)
+  /// @see Parser#createParser(Grammar, Map)
+  public <V> V parse(CharSequence input,
+                     Function<? super Iterator<Terminal>,  ? extends Evaluator<V>> evaluatorFactory)
+    throws ParsingException {
+
+    Objects.requireNonNull(input);
+    Objects.requireNonNull(evaluatorFactory);
+    if (grammar == null) {
+      throw new IllegalStateException("no grammar section is defined");
+    }
+    var lexer = Lexer.createLexer(tokens);
+    var parser = Parser.createParser(grammar, precedenceMap);
+    var tokenizer = lexer.tokenize(input);
+    return parser.parse(tokenizer, evaluatorFactory.apply(tokenizer));
   }
 
   // grammar definition
