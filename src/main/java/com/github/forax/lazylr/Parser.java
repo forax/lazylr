@@ -226,11 +226,13 @@ public final class Parser {
 
       switch (action) {
         case LRTransitionEngine.Action.Shift(var nextState) -> {
-          executeShift(stack, currentToken, nextState, listener);
+          listener.onShift(currentToken);
+          executeShift(stack, nextState);
           currentToken = scanner.pollTerminal(nextState);
         }
         case LRTransitionEngine.Action.Reduce(var production) -> {
-          if (executeReduction(stack, production, listener)) {
+          listener.onReduce(production);
+          if (executeReduction(stack, production)) {
             return;
           }
         }
@@ -273,16 +275,13 @@ public final class Parser {
 
   /// Pushes the token's destination state onto the stack and
   /// consumes the token from the input.
-  private static void executeShift(ArrayDeque<State> stack, Terminal token, State nextState, ParserListener listener) {
-    listener.onShift(token);
+  private static void executeShift(ArrayDeque<State> stack, State nextState) {
     stack.push(nextState);
   }
 
   /// Shrinks the stack and then performs a 'GOTO' transition.
   /// Returns true if the reduction leads to an Accept state, false otherwise.
-  private boolean executeReduction(ArrayDeque<State> stack, Production production, ParserListener listener) {
-    listener.onReduce(production);
-
+  private boolean executeReduction(ArrayDeque<State> stack, Production production) {
     // 1. Pop N states from the stack, where N is the number of
     // symbols on the right-hand side of the rule.
     // (e.g., if E -> E + E, pop 3 states)
