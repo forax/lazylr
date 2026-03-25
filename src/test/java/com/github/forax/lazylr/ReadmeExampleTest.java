@@ -1,9 +1,6 @@
 package com.github.forax.lazylr;
 
-import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
-
-import java.util.List;
 
 public final class ReadmeExampleTest {
   @Test
@@ -37,25 +34,26 @@ public final class ReadmeExampleTest {
     record UnaryOp(String op, Node node) implements Node {}
     record BinaryOp(String op, Node left, Node right) implements Node {}
 
-    class NodeEvaluator implements Evaluator<Node> {
-      @Override
-      public Node evaluate(@NonNull Terminal term) {
-        return switch (term.name()) {
-          case "num" -> new NumLit(Integer.parseInt(term.value()));
-          default -> null;
-        };
+    class NodeEval {
+      public Node num(Terminal term) {
+        return new NumLit(Integer.parseInt(term.value()));
       }
 
-      @Override
-      public Node evaluate(@NonNull Production prod, @NonNull List<Node> args) {
-        return switch (prod.name()) {
-          case "E : num" -> args.get(0);
-          case "E : E + E" -> new BinaryOp("+", args.get(0), args.get(2));
-          case "E : E - E" -> new BinaryOp("-", args.get(0), args.get(2));
-          case "E : E * E" -> new BinaryOp("*", args.get(0), args.get(2));
-          case "E : - E" -> new UnaryOp("-", args.get(1));
-          default -> throw new AssertionError("Unknown: " + prod.name());
-        };
+      @ProductionName("E : E + E")
+      public Node add(Node left, Node right) {
+        return new BinaryOp("+", left, right);
+      }
+      @ProductionName("E : E - E")
+      public Node sub(Node left, Node right) {
+        return new BinaryOp("-", left, right);
+      }
+      @ProductionName("E : E * E")
+      public Node mul(Node left, Node right) {
+        return new BinaryOp("*", left, right);
+      }
+      @ProductionName("E : - E")
+      public Node unary(Node node) {
+        return new UnaryOp("-", node);
       }
     }
 
@@ -63,7 +61,7 @@ public final class ReadmeExampleTest {
     String input = "2 + - 3 * 4";
 
     // Parse and create the AST
-    Node ast = mg.parse(input, new NodeEvaluator());
+    Node ast = mg.parse(input, Evaluator.reflect(new NodeEval()));
 
     // Profit!
     System.out.println(ast);

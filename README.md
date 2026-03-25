@@ -98,7 +98,7 @@ mg.verify();
 
 ### Transforming to an AST using an Evaluator
 
-Lazy LR uses an `Evaluator<T>` to transform the parse tree into your desired result,
+Lazy LR uses an `Evaluator` to transform the parse tree into your desired result,
 usually an AST (Abstract Syntax Tree), but you can also evaluate productions directly.
 
 Using Java Records makes for a concise AST:
@@ -114,25 +114,26 @@ Implement the evaluate methods to map terminals and productions to your AST node
 Because `Terminal` carries the matched value, you can extract the raw text here:
 
 ```java
-class NodeEvaluator implements Evaluator<Node> {
-  @Override
-  public Node evaluate(Terminal term) {
-    return switch (term.name()) {
-      case "num" -> new NumLit(Integer.parseInt(term.value()));
-      default    -> null;
-    };
+class NodeEval {
+  public Node num(Terminal term) {
+    return new NumLit(Integer.parseInt(term.value()));
   }
 
-  @Override
-  public Node evaluate(Production prod, List<Node> args) {
-    return switch (prod.name()) {
-      case "E : num"   -> args.get(0);
-      case "E : E + E" -> new BinaryOp("+", args.get(0), args.get(2));
-      case "E : E - E" -> new BinaryOp("-", args.get(0), args.get(2));
-      case "E : E * E" -> new BinaryOp("*", args.get(0), args.get(2));
-      case "E : - E"   -> new UnaryOp("-", args.get(1));
-      default -> throw new AssertionError("Unknown: " + prod.name());
-    };
+  @ProductionName("E : E + E")
+  public Node add(Node left, Node right) {
+    return new BinaryOp("+", left, right);
+  }
+  @ProductionName("E : E - E")
+  public Node sub(Node left, Node right) {
+    return new BinaryOp("-", left, right);
+  }
+  @ProductionName("E : E * E")
+  public Node mul(Node left, Node right) {
+    return new BinaryOp("*", left, right);
+  }
+  @ProductionName("E : - E")
+  public Node unary(Node node) {
+    return new UnaryOp("-", node);
   }
 }
 ```
@@ -144,7 +145,7 @@ Parse a text and create the AST:
 ```java
 String input = "2 + - 3 * 4";
 
-Node ast = mg.parse(input, new NodeEvaluator());
+Node ast = mg.parse(input, Evaluator.reflect(new NodeEval()));
 
 // Profit!
 System.out.println(ast);
