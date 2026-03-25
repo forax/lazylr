@@ -76,7 +76,8 @@ final class Tokenizer implements Iterator<Terminal> {
           return null;
         }
         if (activated != null) {
-          // retry with all matchers activated to get a proper error message
+          // retry with all matchers activated to try to get a parsing
+          // error instead of a lexing error
           tokenIndex = nextTokenIndex(index, null);
         }
         if (tokenIndex == -1) {
