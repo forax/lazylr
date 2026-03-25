@@ -13,12 +13,12 @@ package com.github.forax.lazylr;
 /// ### Example
 /// Given the grammar `E : E '+' E` and input `1 + 2`, the events are:
 /// ```
-/// onShift(num "1" pos=0)  // shift the first number
-/// onReduce(E : num)       // immediately reduce it to E
-/// onShift('+' pos=2)      // shift the operator
-/// onShift(num "2" pos=4)  // shift the second number
-/// onReduce(E : num)       // immediately reduce it to E
-/// onReduce(E : E + E)     // finally reduce the whole expression
+/// onShift(num "1")       // shift the first number
+/// onReduce(E : num)      // immediately reduce it to E
+/// onShift('+')           // shift the operator
+/// onShift(num "2")       // shift the second number
+/// onReduce(E : num)      // immediately reduce it to E
+/// onReduce(E : E + E)    // finally reduce the whole expression
 /// ```
 ///
 /// Refer to [Evaluator] for a more high-level functional interface.
@@ -31,8 +31,7 @@ public interface ParserListener {
   /// This event fires immediately when the token is consumed.
   ///
   /// @param token The terminal token currently being shifted.
-  /// @param position The position of the terminal in the input or -1 if unknown.
-  void onShift(Terminal token, int position);
+  void onShift(Terminal token);
 
   /// Invoked when the parser completes a [Production].
   ///

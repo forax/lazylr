@@ -257,7 +257,7 @@ public final class MetaGrammar {
     parser.parse(lexer.tokenize(input), new Evaluator<>() {
 
       @Override
-      public Object evaluate(Terminal t, int pos) {
+      public Object evaluate(Terminal t) {
         return t.value();
       }
 

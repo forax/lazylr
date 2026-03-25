@@ -225,7 +225,7 @@ public final class ParserCTest {
 
   private static class NodeEvaluator implements Evaluator<Node> {
     @Override
-    public Node evaluate(@NonNull Terminal terminal, int position) {
+    public Node evaluate(@NonNull Terminal terminal) {
       return switch (terminal.name()) {
         case "num" -> new NumLit(Integer.parseInt(terminal.value()));
         case "id"  -> new IdRef(terminal.value());

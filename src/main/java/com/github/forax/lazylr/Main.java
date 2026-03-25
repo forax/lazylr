@@ -180,7 +180,7 @@ public final class Main {
     var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
     var evaluator = new Evaluator<Node>() {
       @Override
-      public Node evaluate(Terminal terminal, int position) {
+      public Node evaluate(Terminal terminal) {
         return new Node(terminal, List.of());
       }
 

@@ -151,7 +151,7 @@ public final class LarkGrammarParserTest {
 
     parser.parse(input.iterator(), new ParserListener() {
       @Override
-      public void onShift(@NonNull Terminal token, int position) {
+      public void onShift(@NonNull Terminal token) {
         //IO.println("Shift " + token.name());
         result.append("Shift ").append(token.name()).append('\n');
       }
