@@ -386,27 +386,19 @@ var mg = MetaGrammar.load("""
 >    Since that's already `'+'`, the precedence map does the right thing automatically.
 
 ```java
-class IntEvaluator implements Evaluator<Integer> {
-  public Integer evaluate(Terminal t) {
-    return switch (t.name()) {
-      case "num" -> Integer.parseInt(t.value());
-      default -> 0;
-    };
+class IntEval {
+  public int num(Terminal t) {
+    return Integer.parseInt(t.value());
   }
 
-  public Integer evaluate(Production p, List<Integer> args) {
-    return switch (p.name()) {
-      case "E : num"   -> args.get(0);
-      case "E : E + E" -> {
-        System.out.println("Reducing " + p + " with args " + args);
-        yield args.get(0) + args.get(2);
-      }
-      default -> throw new IllegalStateException("unknown production " + p.name());
-    };
+  @ProductionName("E : E + E")
+  public int add(int left, int right) {
+    return left + right;
   }
 }
 
-var result = mg.parse("1 + 2 + 3", new IntEvaluator());
+var input  = "1 + 2 + 3";
+var result = mg.parse(input, Evaluator.reflect(new IntEval()));
 System.out.println(result);
 ```
 
@@ -457,27 +449,20 @@ var mg = MetaGrammar.load("""
 >    so the parser **shifts** (reads more input) rather than reducing `E + E` early.
 
 ```java
-// ... (lexer and parser setup as above)
-
-class IntEvaluator implements Evaluator<Integer> {
-  public Integer evaluate(Terminal t) {
-    return switch (t.name()) {
-      case "num" -> Integer.parseInt(t.value());
-      default -> 0;
-    };
+class IntEval {
+  public int num(Terminal t) {
+    return Integer.parseInt(t.value());
   }
 
-  public Integer evaluate(Production p, List<Integer> args) {
-    return switch (p.name()) {
-      case "E : num"   -> args.get(0);
-      case "E : E + E" -> { System.out.println("+ with " + args); yield args.get(0) + args.get(2); }
-      case "E : E * E" -> { System.out.println("* with " + args); yield args.get(0) * args.get(2); }
-      default -> throw new IllegalStateException("unknown production " + p.name());
-    };
-  }
+  @ProductionName("E : E + E")
+  public int add(int left, int right) { return left + right; }
+
+  @ProductionName("E : E * E")
+  public int mul(int left, int right) { return left * right; }
 }
 
-var result = mg.parse("2 + 3 * 4", new IntEvaluator());
+var input  = "2 + 3 * 4";
+var result = mg.parse(input, Evaluator.reflect(new IntEval()));
 System.out.println(result);
 ```
 
@@ -525,9 +510,15 @@ var mg = MetaGrammar.load("""
 >    makes it **shift** instead, deferring the reduction and grouping from the right.
 
 ```java
-// ... evaluator with (int) Math.pow(args.get(0), args.get(2)) for "E : E ^ E"
+class IntEval {
+  //...
 
-System.out.println(mg.parse("2 ^ 3 ^ 2", evaluator));
+  @ProductionName("E : E ^ E")
+  public int pow(int left, int right) { return (int) Math.pow(left, right); }
+}
+
+var result = mg.parse("2 ^ 3 ^ 2", Evaluator.reflect(new IntEval()));
+System.out.println(result);
 ```
 
 ```
@@ -592,7 +583,17 @@ mg.verify();
 >    the `else` always binds to the nearest (innermost) `if`.
 
 ```java
-var evaluator = new IntEvaluator(); // handles if/then/else cases
+class IntEval {
+  // ...
+
+  @ProductionName("E : if E then E")
+  public int if_(int condition, int then_) { return condition != 0 ? then_ : 0; }
+
+  @ProductionName("E : if E then E else E")
+  public int if_(int condition, int then_, int else_) { return condition != 0 ? then_ : else_; }
+}
+
+var evaluator = Evaluator.reflect(new IntEval());
 
 System.out.println(parser.parse("if 1 then 10 else 20", evaluator));
 System.out.println(parser.parse("if 0 then 10 else 20", evaluator));
@@ -673,16 +674,6 @@ var mg = MetaGrammar.load("""
 >    with the `UNARY` level. Now when the parser has `'-' E` on its stack and sees `*`, `UNARY` outranks `*`,
 >    so it reduces, binding the unary minus tightly to its operand before any binary operator can interfere.
 
-### Recording source positions
-
-Real compilers and interpreters need to report where in the source an error occurred.
-The `Lexer.position(iterator)` method returns the character offset of the last terminal
-returned by `next()`, making it straightforward to embed positions directly into AST nodes.
-
-The key is to pass the iterator created by the lexer to the evaluator,
-so that `Lexer.position()` can be called from inside `evaluate(Terminal)` at the
-moment the token is shifted — before the iterator advances further:
-
 ```java
 sealed interface Node {}
 record Sub(Node left, Node right) implements Node {}
@@ -690,51 +681,40 @@ record Mul(Node left, Node right) implements Node {}
 record UnaryMinus(Node node) implements Node {}
 record Num(int value, int pos) implements Node {}
 
-record NodeEvaluator(Iterator<Terminal> input) implements Evaluator<Node> {
-  @Override
-  public Node evaluate(Terminal terminal) {
-    return switch (terminal.name()) {
-      case "num" -> {
-        var pos = Lexer.position(input);   // capture position at shift time
-        yield new Num(Integer.parseInt(terminal.value()), pos);
-      }
-      default -> null;
-    };
+class NodeEval {
+  public Node num(Terminal t) {
+    return new Num(Integer.parseInt(t.value()));
   }
 
-  @Override
-  public Node evaluate(Production production, List<Node> args) {
-    return switch (production.name()) {
-      case "E : num"   -> args.getFirst();
-      case "E : E - E" -> new Sub(args.get(0), args.get(2));
-      case "E : E * E" -> new Mul(args.get(0), args.get(2));
-      case "E : - E"   -> new UnaryMinus(args.get(1));
-      default -> throw new IllegalStateException("Unexpected production: " + production.name());
-    };
+  @ProductionName("E : E - E")
+  public Node sub(Node left, Node right) {
+    return new Sub(left, right);
+  }
+  @ProductionName("E : E * E")
+  public Node mul(Node left, Node right) {
+    return new Mul(left, right);
+  }
+  @ProductionName("E : - E")
+  public Node unary(Node node) {
+    return new UnaryMinus(node);
   }
 }
+var evaluator = Evaluator.reflect(new NodeEval());
 ```
-
-Notice that `NodeEvaluator` is declared as a **record** that holds the iterator as a component.
-This is the idiomatic way to give the evaluator access to position information
-without resorting to mutable fields or closures.
 
 Putting it all together:
 
 ```java
-var node = mg.parse("- 4 * 5", NodeEvaluator::new);
+var node = mg.parse("- 4 * 5", evaluator);
 System.out.println(node);
 ```
 
 ```
 // Output:
-// Mul[left=UnaryMinus[node=Num[value=4, pos=2]], right=Num[value=5, pos=6]]
+// Mul[left=UnaryMinus[node=Num[value=4]], right=Num[value=5]]
 ```
 
 `(-4) * 5`, exactly what we wanted.
-
-> 💡 `pos=2` means the token `4` starts at character offset 2 in the input (`"- 4 * 5"`),
->    and `pos=6` means the token `5` starts at offset 6.
 
 ---
 

@@ -141,27 +141,19 @@ public final class GuideTest {
 
     mg.verifySilently(msg -> fail("Unexpected conflict: " + msg));
 
-    class IntEvaluator implements Evaluator<Integer> {
-      @Override
-      public Integer evaluate(@NonNull Terminal terminal) {
-        return switch (terminal.name()) {
-          case "num" -> Integer.parseInt(terminal.value());
-          default    -> 0;
-        };
+    class IntEval {
+      public int num(Terminal t) {
+        return Integer.parseInt(t.value());
       }
 
-      @Override
-      public Integer evaluate(@NonNull Production production, @NonNull List<Integer> args) {
-        return switch (production.name()) {
-          case "E : num"   -> args.get(0);
-          case "E : E + E" -> args.get(0) + args.get(2);
-          default -> throw new IllegalStateException("unknown production: " + production.name());
-        };
+      @ProductionName("E : E + E")
+      public int add(int left, int right) {
+        return left + right;
       }
     }
 
     var input  = "1 + 2 + 3";
-    var result = mg.parse(input, new IntEvaluator());
+    var result = mg.parse(input, Evaluator.reflect(new IntEval()));
 
     assertEquals(6, result);
   }
@@ -189,27 +181,20 @@ public final class GuideTest {
 
     mg.verifySilently(msg -> fail("Unexpected conflict: " + msg));
 
-    class IntEvaluator implements Evaluator<Integer> {
-      @Override
-      public Integer evaluate(@NonNull Terminal terminal) {
-        return switch (terminal.name()) {
-          case "num" -> Integer.parseInt(terminal.value());
-          default    -> 0;
-        };
+    class IntEval {
+      public int num(Terminal t) {
+        return Integer.parseInt(t.value());
       }
-      @Override
-      public Integer evaluate(@NonNull Production production, @NonNull List<Integer> args) {
-        return switch (production.name()) {
-          case "E : num"   -> args.get(0);
-          case "E : E + E" -> args.get(0) + args.get(2);
-          case "E : E * E" -> args.get(0) * args.get(2);
-          default -> throw new IllegalStateException("unknown production: " + production.name());
-        };
-      }
+
+      @ProductionName("E : E + E")
+      public int add(int left, int right) { return left + right; }
+
+      @ProductionName("E : E * E")
+      public int mul(int left, int right) { return left * right; }
     }
 
     var input  = "2 + 3 * 4";
-    var result = mg.parse(input, new IntEvaluator());
+    var result = mg.parse(input, Evaluator.reflect(new IntEval()));
 
     assertEquals(14, result);
   }
@@ -239,28 +224,23 @@ public final class GuideTest {
 
     mg.verifySilently(msg -> fail("Unexpected conflict: " + msg));
 
-    class IntEvaluator implements Evaluator<Integer> {
-      @Override
-      public Integer evaluate(@NonNull Terminal terminal) {
-        return switch (terminal.name()) {
-          case "num" -> Integer.parseInt(terminal.value());
-          default    -> 0;
-        };
+    class IntEval {
+      public int num(Terminal t) {
+        return Integer.parseInt(t.value());
       }
-      @Override
-      public Integer evaluate(@NonNull Production production, @NonNull List<Integer> args) {
-        return switch (production.name()) {
-          case "E : num"   -> args.get(0);
-          case "E : E + E" -> args.get(0) + args.get(2);
-          case "E : E * E" -> args.get(0) * args.get(2);
-          case "E : E ^ E" -> (int) Math.pow(args.get(0), args.get(2));
-          default -> throw new IllegalStateException("unknown production: " + production.name());
-        };
-      }
+
+      @ProductionName("E : E + E")
+      public int add(int left, int right) { return left + right; }
+
+      @ProductionName("E : E * E")
+      public int mul(int left, int right) { return left * right; }
+
+      @ProductionName("E : E ^ E")
+      public int pow(int left, int right) { return (int) Math.pow(left, right); }
     }
 
     var input  = "2 ^ 3 ^ 2";
-    var result = mg.parse(input, new IntEvaluator());
+    var result = mg.parse(input,Evaluator.reflect(new IntEval()));
 
     assertEquals(512, result);
   }
@@ -297,28 +277,28 @@ public final class GuideTest {
 
     mg.verifySilently(msg -> fail("Unexpected conflict: " + msg));
 
-    class IntEvaluator implements Evaluator<Integer> {
-      @Override
-      public Integer evaluate(@NonNull Terminal terminal) {
-        return switch (terminal.name()) {
-          case "num" -> Integer.parseInt(terminal.value());
-          default    -> 0;
-        };
+    class IntEval {
+      public int num(Terminal t) {
+        return Integer.parseInt(t.value());
       }
-      @Override
-      public Integer evaluate(@NonNull Production production, @NonNull List<Integer> args) {
-        return switch (production.name()) {
-          case "E : num"                -> args.get(0);
-          case "E : E + E"              -> args.get(0) + args.get(2);
-          case "E : E * E"              -> args.get(0) * args.get(2);
-          case "E : E ^ E"              -> (int) Math.pow(args.get(0), args.get(2));
-          case "E : if E then E"        -> args.get(1) != 0 ? args.get(3) : 0;
-          case "E : if E then E else E" -> args.get(1) != 0 ? args.get(3) : args.get(5);
-          default -> throw new IllegalStateException("unknown production: " + production.name());
-        };
-      }
+
+      @ProductionName("E : E + E")
+      public int add(int left, int right) { return left + right; }
+
+      @ProductionName("E : E * E")
+      public int mul(int left, int right) { return left * right; }
+
+      @ProductionName("E : E ^ E")
+      public int pow(int left, int right) { return (int) Math.pow(left, right); }
+
+      @ProductionName("E : if E then E")
+      public int if_(int condition, int then_) { return condition != 0 ? then_ : 0; }
+
+      @ProductionName("E : if E then E else E")
+      public int if_(int condition, int then_, int else_) { return condition != 0 ? then_ : else_; }
     }
-    var evaluator = new IntEvaluator();
+
+    var evaluator = Evaluator.reflect(new IntEval());
 
     assertEquals(10, mg.parse("if 1 then 10 else 20", evaluator));
     assertEquals(20, mg.parse("if 0 then 10 else 20", evaluator));
@@ -334,30 +314,27 @@ public final class GuideTest {
     record Sub(Node left, Node right) implements Node {}
     record Mul(Node left, Node right) implements Node {}
     record UnaryMinus(Node node) implements Node {}
-    record Num(int value, int pos) implements Node {}
+    record Num(int value) implements Node {}
 
-    record NodeEvaluator(Iterator<Terminal> input) implements Evaluator<Node> {
-      @Override
-      public Node evaluate(@NonNull Terminal terminal) {
-        return switch (terminal.name()) {
-          case "num" -> {
-            var pos = Lexer.position(input);
-            yield new Num(Integer.parseInt(terminal.value()), pos);
-          }
-          default -> null;
-        };
+    class NodeEval {
+      public Node num(Terminal t) {
+        return new Num(Integer.parseInt(t.value()));
       }
-      @Override
-      public Node evaluate(@NonNull Production production, @NonNull List<Node> args) {
-        return switch (production.name()) {
-          case "E : num" -> args.getFirst();
-          case "E : E - E" -> new Sub(args.get(0), args.get(2));
-          case "E : E * E" -> new Mul(args.get(0), args.get(2));
-          case "E : - E" -> new UnaryMinus(args.get(1));
-          default -> throw new IllegalStateException("Unexpected production: " + production.name());
-        };
+
+      @ProductionName("E : E - E")
+      public Node sub(Node left, Node right) {
+        return new Sub(left, right);
+      }
+      @ProductionName("E : E * E")
+      public Node mul(Node left, Node right) {
+        return new Mul(left, right);
+      }
+      @ProductionName("E : - E")
+      public Node unary(Node node) {
+        return new UnaryMinus(node);
       }
     }
+    var evaluator = Evaluator.reflect(new NodeEval());
 
     // This is not a correct grammar, precedence of the unary minus is wrong
     var badMg = MetaGrammar.load("""
@@ -378,8 +355,8 @@ public final class GuideTest {
         """);
 
     var input = "- 4 * 5";
-    var node = badMg.parse(input, NodeEvaluator::new);
-    assertEquals("UnaryMinus[node=Mul[left=Num[value=4, pos=2], right=Num[value=5, pos=6]]]", node.toString());
+    var node = badMg.parse(input, evaluator);
+    assertEquals("UnaryMinus[node=Mul[left=Num[value=4], right=Num[value=5]]]", node.toString());
 
     // Use a virtual token UNARY to fix the precedence of the unary minus
     var mg = MetaGrammar.load("""
@@ -400,7 +377,7 @@ public final class GuideTest {
         }
     """);
 
-    node = mg.parse(input, NodeEvaluator::new);
-    assertEquals("Mul[left=UnaryMinus[node=Num[value=4, pos=2]], right=Num[value=5, pos=6]]", node.toString());
+    node = mg.parse(input, evaluator);
+    assertEquals("Mul[left=UnaryMinus[node=Num[value=4]], right=Num[value=5]]", node.toString());
   }
 }
