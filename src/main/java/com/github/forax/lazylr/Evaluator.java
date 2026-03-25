@@ -45,20 +45,6 @@ import java.util.function.Function;
 ///   }
 /// }
 /// ```
-/// Or use [#of(Function, BiFunction)] to compose two lambdas inline:
-/// ```java
-/// var evaluator = Evaluator.of(
-///     terminal -> switch (terminal.name()) {
-///       case "num" -> Integer.parseInt(terminal.value());
-///       default    -> 0;
-///     },
-///     (production, args) -> switch (production.name()) {
-///       case "E : num"   -> args.get(0);
-///       case "E : E + E" -> args.get(0) + args.get(2);
-///       default -> throw new IllegalStateException("unknown production: " + production.name());
-///     }
-/// );
-/// ```
 ///
 /// @param <T> The type of the value produced by the evaluation.
 ///
@@ -93,36 +79,4 @@ public interface Evaluator<T extends @Nullable Object> {
   /// @return The result of the reduction (the new value for the production non-terminal)
   ///         or `null` if the production has no value.
   T evaluate(Production production, List<T> arguments);
-
-
-  /// Creates an [Evaluator] from two functions, one for terminals and one for productions.
-  ///
-  /// This factory method is a convenient alternative to implementing the interface
-  /// with a class when the evaluation logic fits naturally as lambdas or
-  /// method references.
-  ///
-  /// @param terminalEvaluator a function that maps a [Terminal] to a value;
-  ///        corresponds to [#evaluate(Terminal)]
-  /// @param productionEvaluator a function that maps a [Production] and its
-  ///        evaluated arguments to a value; corresponds to [#evaluate(Production, List)]
-  /// @return an [Evaluator] that delegates to the two provided functions
-  /// @throws NullPointerException if either argument is `null`
-  /// @param <V> the type of value produced by the evaluation
-  static <V extends @Nullable Object> Evaluator<V> of(
-      Function<? super Terminal, ? extends V> terminalEvaluator,
-      BiFunction<? super Production, ? super List<V>, ? extends V> productionEvaluator) {
-    Objects.requireNonNull(terminalEvaluator);
-    Objects.requireNonNull(productionEvaluator);
-    return new Evaluator<>() {
-      @Override
-      public V evaluate(Terminal terminal) {
-        return terminalEvaluator.apply(terminal);
-      }
-
-      @Override
-      public V evaluate(Production production, List<V> arguments) {
-        return productionEvaluator.apply(production, arguments);
-      }
-    };
-  }
 }
