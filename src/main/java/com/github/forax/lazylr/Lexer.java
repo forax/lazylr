@@ -65,4 +65,17 @@ public final class Lexer {
     Objects.requireNonNull(input);
     return new Tokenizer(input, tokens);
   }
+
+  /// Returns the start position of the last terminal returned by [Iterator#next()]
+  /// in the input or -1 if unknown.
+  ///
+  /// @param iterator An iterator produced by [Lexer#tokenize(CharSequence)].
+  /// @return The position of the iterator in the input or -1 if unknown.
+  public static int position(Iterator<Terminal> iterator) {
+    Objects.requireNonNull(iterator);
+    if (iterator instanceof Tokenizer tokenizer) {
+      return tokenizer.index();
+    }
+    return -1;
+  }
 }

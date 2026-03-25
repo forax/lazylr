@@ -3,6 +3,7 @@ package com.github.forax.lazylr;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 
@@ -457,5 +458,123 @@ public final class LexerTest {
     assertEquals("変数名_456", token3.value());
 
     assertFalse(terminals.hasNext());
+  }
+
+
+  // -- Tests of Lexer.position()
+
+  private static Lexer simpleLexer() {
+    return Lexer.createLexer(List.of(
+        new Token("num", "[0-9]+"),
+        new Token("id",  "[a-z]+"),
+        new Token("\\s+")          // ignorable whitespace
+    ));
+  }
+
+  @Test
+  public void positionNullIteratorThrows() {
+    assertThrows(NullPointerException.class, () -> Lexer.position(null));
+  }
+
+  @Test
+  public void positionEmptyIteratorReturnsMinusOne() {
+    var iterator = Collections.<Terminal>emptyIterator();
+    assertEquals(-1, Lexer.position(iterator));
+  }
+
+  @Test
+  public void positionListIteratorReturnsMinusOne() {
+    var iterator = List.of(new Terminal("num", "1")).iterator();
+    assertEquals(-1, Lexer.position(iterator));
+  }
+
+  @Test
+  public void positionBeforeFirstNextIsZero() {
+    var lexer = simpleLexer();
+    var iterator = lexer.tokenize("42 abc");
+    assertEquals(0, Lexer.position(iterator));
+  }
+
+  @Test
+  public void positionAfterFirstToken() {
+    var lexer = simpleLexer();
+    var iterator = lexer.tokenize("42 abc");
+    iterator.next();  // "42" at index 0
+    assertEquals(0, Lexer.position(iterator));
+  }
+
+  @Test
+  public void positionAfterSecondToken() {
+    var lexer = simpleLexer();
+    var iterator = lexer.tokenize("42 abc");
+    iterator.next();  // "42"  at index 0
+    iterator.next();  // "abc" at index 3
+    assertEquals(3, Lexer.position(iterator));
+  }
+
+  @Test
+  public void positionAfterThirdToken() {
+    var lexer = simpleLexer();
+    var iterator = lexer.tokenize("1 22 333");
+    iterator.next();  // "1"   at index 0
+    iterator.next();  // "22"  at index 2
+    iterator.next();  // "333" at index 5
+    assertEquals(5, Lexer.position(iterator));
+  }
+
+  @Test
+  public void positionSkipsLeadingWhitespace() {
+    var lexer = simpleLexer();
+    var iterator = lexer.tokenize("   hello");
+    iterator.next();  // "hello" at index 3
+    assertEquals(3, Lexer.position(iterator));
+  }
+
+  @Test
+  public void positionSingleCharacterToken() {
+    var lexer = Lexer.createLexer(List.of(new Token("op", "[+\\-*]")));
+    var iterator = lexer.tokenize("+");
+    iterator.next();
+    assertEquals(0, Lexer.position(iterator));
+  }
+
+  @Test
+  public void positionEmptyInputStaysZero() {
+    var lexer = simpleLexer();
+    var iterator = lexer.tokenize("");
+    assertEquals(0, Lexer.position(iterator));
+  }
+
+  @Test
+  public void positionIsStable() {
+    var lexer = simpleLexer();
+    var iterator = lexer.tokenize("42 abc");
+    iterator.next();
+    assertEquals(Lexer.position(iterator), Lexer.position(iterator));
+  }
+
+  @Test
+  public void positionAtErrorTerminal() {
+    var lexer = simpleLexer();
+    var iterator = lexer.tokenize("42 @bad");
+    iterator.next();  // "42"
+    var error = iterator.next();  // error at index 3
+    assertEquals(Terminal.ERROR.name(), error.name());
+    assertEquals(3, Lexer.position(iterator));
+  }
+
+  @Test
+  public void positionInMultilineInput() {
+    var lexer = Lexer.createLexer(List.of(
+        new Token("id",  "[a-z]+"),
+        new Token("eol", "\\n"),
+        new Token("[ \\t]+")
+    ));
+    // "foo\nbar": "foo" at 0, "\n" at 3, "bar" at 4
+    var iterator = lexer.tokenize("foo\nbar");
+    iterator.next();  // "foo" at 0
+    iterator.next();  // "\n"  at 3
+    iterator.next();  // "bar" at 4
+    assertEquals(4, Lexer.position(iterator));
   }
 }
