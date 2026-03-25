@@ -398,7 +398,7 @@ class IntEval {
 }
 
 var input  = "1 + 2 + 3";
-var result = mg.parse(input, Evaluator.reflect(new IntEval()));
+var result = mg.parse(input, new IntEval());
 System.out.println(result);
 ```
 
@@ -462,7 +462,7 @@ class IntEval {
 }
 
 var input  = "2 + 3 * 4";
-var result = mg.parse(input, Evaluator.reflect(new IntEval()));
+var result = mg.parse(input, new IntEval());
 System.out.println(result);
 ```
 
@@ -517,7 +517,7 @@ class IntEval {
   public int pow(int left, int right) { return (int) Math.pow(left, right); }
 }
 
-var result = mg.parse("2 ^ 3 ^ 2", Evaluator.reflect(new IntEval()));
+var result = mg.parse("2 ^ 3 ^ 2", new IntEval());
 System.out.println(result);
 ```
 

@@ -153,7 +153,7 @@ public final class GuideTest {
     }
 
     var input  = "1 + 2 + 3";
-    var result = mg.parse(input, Evaluator.reflect(new IntEval()));
+    var result = mg.parse(input, new IntEval());
 
     assertEquals(6, result);
   }
@@ -194,7 +194,7 @@ public final class GuideTest {
     }
 
     var input  = "2 + 3 * 4";
-    var result = mg.parse(input, Evaluator.reflect(new IntEval()));
+    var result = mg.parse(input, new IntEval());
 
     assertEquals(14, result);
   }
@@ -240,7 +240,7 @@ public final class GuideTest {
     }
 
     var input  = "2 ^ 3 ^ 2";
-    var result = mg.parse(input,Evaluator.reflect(new IntEval()));
+    var result = mg.parse(input,new IntEval());
 
     assertEquals(512, result);
   }
@@ -298,7 +298,7 @@ public final class GuideTest {
       public int if_(int condition, int then_, int else_) { return condition != 0 ? then_ : else_; }
     }
 
-    var evaluator = Evaluator.reflect(new IntEval());
+    var evaluator = Evaluator.<Integer>reflect(new IntEval());
 
     assertEquals(10, mg.parse("if 1 then 10 else 20", evaluator));
     assertEquals(20, mg.parse("if 0 then 10 else 20", evaluator));
@@ -334,7 +334,7 @@ public final class GuideTest {
         return new UnaryMinus(node);
       }
     }
-    var evaluator = Evaluator.reflect(new NodeEval());
+    var evaluator = Evaluator.<Node>reflect(new NodeEval());
 
     // This is not a correct grammar, precedence of the unary minus is wrong
     var badMg = MetaGrammar.load("""
