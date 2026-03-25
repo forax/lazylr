@@ -311,20 +311,23 @@ public final class MetaGrammarTest {
   @Test
   public void multipleSectionsOfPrecedence() {
     var mg = MetaGrammar.load("""
-        tokens {
-          plus: /\\+/
-          minus: /\\-/
+        precedence {
+          left:  '+'
         }
         precedence {
-          left:  plus
+          right:  '^'
         }
-        precedence {
-          left:  minus
+        grammar {
+          E: '+'
+          E: '^'
         }
         """);
 
     var precedenceMap = mg.precedenceMap();
-    System.out.println(precedenceMap);
+    assertEquals(Map.of(
+        new Terminal("+"), new Precedence(1, LEFT),
+        new Terminal("^"), new Precedence(2, RIGHT)
+    ), precedenceMap);
   }
 
   @Test
