@@ -61,7 +61,7 @@ public final class ReadmeExampleTest {
     String input = "2 + - 3 * 4";
 
     // Parse and create the AST
-    Node ast = mg.parse(input, Evaluator.reflect(new NodeEval()));
+    Node ast = mg.parse(input, new NodeEval());
 
     // Profit!
     System.out.println(ast);

@@ -145,7 +145,7 @@ Parse a text and create the AST:
 ```java
 String input = "2 + - 3 * 4";
 
-Node ast = mg.parse(input, Evaluator.reflect(new NodeEval()));
+Node ast = mg.parse(input, new NodeEval());
 
 // Profit!
 System.out.println(ast);
