@@ -1,13 +1,17 @@
 package com.github.forax.lazylr.perf;
 
+import com.github.forax.lazylr.Evaluator;
 import com.github.forax.lazylr.Lexer;
 import com.github.forax.lazylr.Parser;
 import com.github.forax.lazylr.ParserListener;
 import com.github.forax.lazylr.Production;
+import com.github.forax.lazylr.ProductionName;
 import com.github.forax.lazylr.Terminal;
+import com.github.forax.lazylr.Visitor;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -53,7 +57,7 @@ public final class JSONPerfTest {
   }
 
   @Test
-  public void jsonLexerAndParserPerfTest() {
+  public void jsonLexerAndParserListenerPerfTest() {
     var lexer = Lexer.createLexer(JSONData.TOKENS);
     var parser = Parser.createParser(JSONData.GRAMMAR, Map.of());
     parser.parse(lexer.tokenize(JSON_TEXT), new ParserListener() {
@@ -63,6 +67,22 @@ public final class JSONPerfTest {
       }
       @Override public void onReduce(@NonNull Production production) {
         // empty
+      }
+    });
+  }
+
+  @Test
+  public void jsonLexerAndParserEvaluatorPerfTest() {
+    var lexer = Lexer.createLexer(JSONData.TOKENS);
+    var parser = Parser.createParser(JSONData.GRAMMAR, Map.of());
+    parser.parse(lexer.tokenize(JSON_TEXT), new Evaluator<>() {
+      @Override
+      public Object evaluate(@NonNull Terminal terminal) {
+        return null;
+      }
+      @Override
+      public Object evaluate(@NonNull Production production, @NonNull List<Object> arguments) {
+        return null;
       }
     });
   }
