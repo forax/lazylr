@@ -45,6 +45,9 @@ public final class GuideTest {
     var result = parser.parse(lexer.tokenize(input), new IntEvaluator());
 
     assertEquals(42, result);
+
+    // seen terminal: num = 42
+    // seen production: E : num with args [42]
   }
 
   // ---------------------------------------------------------------------------
@@ -148,6 +151,7 @@ public final class GuideTest {
 
       @ProductionName("E : E + E")
       public int add(int left, int right) {
+        System.out.println("reducing " + left + " + " + right);
         return left + right;
       }
     }
@@ -156,6 +160,9 @@ public final class GuideTest {
     var result = mg.parse(input, new IntVisitor());
 
     assertEquals(6, result);
+
+    // reducing 1 + 2
+    // reducing 3 + 3
   }
 
   // -------------------------------------------------------------------------
@@ -187,16 +194,25 @@ public final class GuideTest {
       }
 
       @ProductionName("E : E + E")
-      public int add(int left, int right) { return left + right; }
+      public int add(int left, int right) {
+        System.out.println("reducing " + left + " + " + right);
+        return left + right;
+      }
 
       @ProductionName("E : E * E")
-      public int mul(int left, int right) { return left * right; }
+      public int mul(int left, int right) {
+        System.out.println("reducing " + left + " * " + right);
+        return left * right;
+      }
     }
 
     var input  = "2 + 3 * 4";
     var result = mg.parse(input, new IntVisitor());
 
     assertEquals(14, result);
+
+    // reducing 3 * 4
+    // reducing 2 + 12
   }
 
   // -------------------------------------------------------------------------
@@ -230,19 +246,29 @@ public final class GuideTest {
       }
 
       @ProductionName("E : E + E")
-      public int add(int left, int right) { return left + right; }
+      public int add(int left, int right) {
+        return left + right;
+      }
 
       @ProductionName("E : E * E")
-      public int mul(int left, int right) { return left * right; }
+      public int mul(int left, int right) {
+        return left * right;
+      }
 
       @ProductionName("E : E ^ E")
-      public int pow(int left, int right) { return (int) Math.pow(left, right); }
+      public int pow(int left, int right) {
+        System.out.println("reducing " + left + " ^ " + right);
+        return (int) Math.pow(left, right);
+      }
     }
 
     var input  = "2 ^ 3 ^ 2";
     var result = mg.parse(input,new IntVisitor());
 
     assertEquals(512, result);
+
+    // reducing 3 ^ 2
+    // reducing 2 ^ 9
   }
 
   // -------------------------------------------------------------------------

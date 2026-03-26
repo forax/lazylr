@@ -131,7 +131,7 @@ The lexer uses a **longest-match** rule: when multiple patterns match at the sam
 position, the one that consumes the most characters wins. Ties are broken by
 declaration order, so if two patterns match the same length of input, the earlier
 one wins. This is why keywords like `sum` must be listed before
-the general `ident` pattern — they match exactly as many characters, so the
+the general `ident` pattern, they match exactly as many characters, so the
 keyword wins only because it is declared first.
 
 ```java
@@ -346,8 +346,8 @@ System.out.println(result);
 
 The rule `E : E + E` is inherently **ambiguous**. Does `1 + 2 + 3` mean `(1 + 2) + 3` or `1 + (2 + 3)`?
 For addition, the result is the same either way, but the parser still needs to commit to one interpretation.
-Without guidance, it complains:
 
+Without guidance, it complains:
 ```java
 var mg = MetaGrammar.load("""
     tokens {
@@ -360,7 +360,6 @@ var mg = MetaGrammar.load("""
     }
     """);
 ```
-
 ```
 // Output:
 // Unresolved Shift/Reduce conflict in state 4 on terminal '+' between
@@ -392,9 +391,10 @@ var mg = MetaGrammar.load("""
 >    of its rightmost terminal.
 >    Since that's already `'+'`, the precedence map does the right thing automatically.
 
-Instead of using an `Evaluator`, we use a `Visitor` instead, which is slower but offer a typed API.
-
-
+Instead of using an `Evaluator` directly as we did in Step 1, we now use a `Visitor`.
+The `Visitor` interface offers a more convenient, typed API: you write one plain Java method
+per terminal or production instead of a `switch` dispatch, and those methods are called
+during parsing.
 ```java
 class IntVisitor implements Visitor<Integer> {
   public int num(Terminal t) {
@@ -403,26 +403,46 @@ class IntVisitor implements Visitor<Integer> {
 
   @ProductionName("E : E + E")
   public int add(int left, int right) {
+    System.out.println(left + " + " + right);
     return left + right;
   }
 }
+```
 
+There are two kinds of methods:
+
+**Terminal methods** are matched by name: a method named `num` is called whenever the `num`
+terminal is shifted. The method must take exactly one `Terminal` parameter. The `Terminal`
+carries the matched text via `t.value()`, which is how we extract the number here.
+If no method is defined for a terminal, the terminal value will be ignored, which is fine
+for punctuation like `'+'` that carries no semantic value.
+
+**Production methods** are matched by the `@ProductionName` annotation, whose value must
+be the exact string returned by `Production#name()`, in the format `head : symbol1 symbol2 ...`.
+The method parameters correspond to the evaluated values of the production body symbols,
+in left-to-right order. Because `'+'` has no terminal method, it is filtered out,
+and `add` receives only the two `int` values for the left and right operands.
+
+> 💡 **Single-body pass-through:** if a production has exactly one symbol in its body and
+>    no `@ProductionName` method is defined for it, its single argument is passed through
+>    automatically. This means you do not need to write a method for chain productions
+>    like `E : num`, the `int` returned by `num(Terminal)` is forwarded up the tree
+>    without any extra code.
+
+```java
 var input  = "1 + 2 + 3";
 var result = mg.parse(input, new IntVisitor());
 System.out.println(result);
 ```
-
 ```
 // Output:
-// Reducing E : E + E with args [1, 0, 2]
-// Reducing E : E + E with args [3, 0, 3]
+// reducing 1 + 2
+// reducing 3 + 3
 // 6
 ```
 
 > 💡 **Read the trace:** `1 + 2` reduces *first* (producing 3), then `3 + 3` is evaluated.
 >    That's left-associativity in action.
->    Notice also that the middle element of `args` (index 1) is always `0`,
->    that's the `'+'` terminal, whose evaluated value comes from the `default -> 0` branch.
 
 ---
 
@@ -465,10 +485,16 @@ class IntVisitor implements Visitor<Integer> {
   }
 
   @ProductionName("E : E + E")
-  public int add(int left, int right) { return left + right; }
+  public int add(int left, int right) {
+    System.out.println("reducing " + left + " + " + right);
+    return left + right;
+  }
 
   @ProductionName("E : E * E")
-  public int mul(int left, int right) { return left * right; }
+  public int mul(int left, int right) {
+    System.out.println("reducing " + left + " * " + right);
+    return left * right;
+  }
 }
 
 var input  = "2 + 3 * 4";
@@ -478,12 +504,13 @@ System.out.println(result);
 
 ```
 // Output:
-// * with [3, 0, 4]
-// + with [2, 0, 12]
+// reducing 3 * 4
+// reducing 2 + 12
 // 14
 ```
 
-> 💡 `*` fires before `+`: `3 * 4` becomes 12 first, then `2 + 12` is evaluated. Multiplication wins.
+> 💡 `mul` fires before `add`: `3 * 4` becomes 12 first, then `2 + 12` is evaluated.
+>    Multiplication wins.
 
 ---
 
@@ -491,10 +518,10 @@ System.out.println(result);
 
 > **Goal:** Evaluate `2 ^ 3 ^ 2` to `512`.
 
-Exponentiation is **right-associative**: `2 ^ 3 ^ 2` = `2 ^ (3 ^ 2)` = `2 ^ 9` = 512, not `(2 ^ 3) ^ 2` = 64.
+Exponentiation is **right-associative**: `2 ^ 3 ^ 2` = `2 ^ (3 ^ 2)` = `2 ^ 9` = 512,
+not `(2 ^ 3) ^ 2` = 64.
 
 To declare this, use `right:` instead of `left:` in the precedence section:
-
 ```java
 var mg = MetaGrammar.load("""
     tokens {
@@ -524,22 +551,24 @@ class IntVisitor implements Visitor<Integer> {
   //...
 
   @ProductionName("E : E ^ E")
-  public int pow(int left, int right) { return (int) Math.pow(left, right); }
+  public int pow(int left, int right) {
+    System.out.println("reducing " + left + " ^ " + right);
+    return (int) Math.pow(left, right);
+  }
 }
 
-var result = mg.parse("2 ^ 3 ^ 2", new IntEval());
+var result = mg.parse("2 ^ 3 ^ 2", new IntVisitor());
 System.out.println(result);
 ```
-
 ```
 // Output:
-// Reducing E : E ^ E with args [3, 0, 2]   ← 3^2 = 9 first
-// Reducing E : E ^ E with args [2, 0, 9]   ← then 2^9 = 512
+// reducing 3 ^ 2
+// reducing 2 ^ 9
 // 512
 ```
 
-> 💡 The trace reveals right-associativity in action: `3 ^ 2` reduces
->    *before* `2 ^ ...`, which is exactly the grouping we want.
+> 💡 Right-associativity in action: `3 ^ 2` reduces *before* `2 ^ ...`,
+>    which is exactly the grouping `2 ^ (3 ^ 2)` we want.
 
 ---
 
@@ -587,8 +616,8 @@ var mg = MetaGrammar.load("""
 mg.verify();
 ```
 
-> 💡 **What's the conflict?** When the parser sees `if E then E` on its stack and an `else` lookahead,
->    it must choose: reduce (using `E: if E then E`) or shift the `else`.
+> 💡 **What's the conflict?** When the parser sees `if E then E` on its stack and an `else`
+>    lookahead, it must choose: reduce (using `E: if E then E`) or shift the `else`.
 >    By giving `else` higher precedence than `then`, we force a **shift**:
 >    the `else` always binds to the nearest (innermost) `if`.
 
@@ -603,13 +632,12 @@ class IntVisitor implements Visitor<Integer> {
   public int if_(int condition, int then_, int else_) { return condition != 0 ? then_ : else_; }
 }
 
-var evaluator = Evaluator.reflect(new IntVisitor());
+var visitor = new IntVisitor();
 
-System.out.println(parser.parse("if 1 then 10 else 20", evaluator));
-System.out.println(parser.parse("if 0 then 10 else 20", evaluator));
-System.out.println(parser.parse("if 1 then if 0 then 99 else 42", evaluator));
+System.out.println(mg.parse("if 1 then 10 else 20", visitor));
+System.out.println(mg.parse("if 0 then 10 else 20", visitor));
+System.out.println(mg.parse("if 1 then if 0 then 99 else 42", visitor));
 ```
-
 ```
 // Output:
 // 10
@@ -621,13 +649,20 @@ System.out.println(parser.parse("if 1 then if 0 then 99 else 42", evaluator));
 >    The outer condition was true, so we entered the inner `if`; the inner condition was false,
 >    so we took the `else`.
 
+> 💡 **Keyword terminal methods:** the visitor has no methods named `if`, `then`, or `else`
+>    because those keywords carry no semantic value, they are structural markers consumed
+>    by the grammar. Since no terminal method is defined for them, they are filtered out
+>    before the production method is called. That is why `if_` receives only the integer
+>    values for the condition and branches, not the keyword tokens.
+
 ---
 
 ## Step 8: Unary Operators and `%prec`
 
-> **Goal:** Parse `- 4 * 5` as `(-4) * 5`, not `-(4 * 5)`, and record each number's source position.
+> **Goal:** Parse `- 4 * 5` as `(-4) * 5`, not `-(4 * 5)`, and build an AST.
 
 All our operators so far have been binary. Let's add a **unary minus**.
+We also switch from evaluating directly to building an AST, to make the parse structure explicit.
 
 ```java
 var mg = MetaGrammar.load("""
@@ -655,9 +690,8 @@ Since `*` wins, the parser **shifts**, producing `-(4 * 5)` instead of the corre
 
 The fix is a **virtual precedence token**: a name declared in the `precedence` section
 that has no corresponding entry in the `tokens` section and is never emitted by the lexer.
-It exists purely as a named precedence level that a production can opt into via `%prec`,
-overriding the default precedence.
-
+It exists purely as a named precedence level that a production can opt into via the `%prec`
+directive, overriding its default precedence.
 
 ```java
 var mg = MetaGrammar.load("""
@@ -680,12 +714,10 @@ var mg = MetaGrammar.load("""
 ```
 
 > 💡 `UNARY` is declared after `*`, giving it higher priority than any binary operator.
->    The `%prec UNARY` annotation on `E: '-' E` overrides the default precedence (which would inherit from `-`)
->    with the `UNARY` level. Now when the parser has `'-' E` on its stack and sees `*`, `UNARY` outranks `*`,
->    so it reduces, binding the unary minus tightly to its operand before any binary operator can interfere.
-
-Here, instead of computing the result directly, we use a `Visitor` to create an AST,
-a tree that represent the input without the details that are not necessary.
+>    The `%prec UNARY` directive on `E: '-' E` overrides the default precedence (which would
+>    inherit from `-`) with the `UNARY` level. Now when the parser has `'-' E` on its stack
+>    and sees `*`, `UNARY` outranks `*`, so it reduces, binding the unary minus tightly
+>    to its operand before any binary operator can interfere.
 
 ```java
 sealed interface Node {}
@@ -703,10 +735,12 @@ class NodeVisitor implements Visitor<Node> {
   public Node sub(Node left, Node right) {
     return new Sub(left, right);
   }
+
   @ProductionName("E : E * E")
   public Node mul(Node left, Node right) {
     return new Mul(left, right);
   }
+
   @ProductionName("E : - E")
   public Node unary(Node node) {
     return new UnaryMinus(node);
@@ -714,13 +748,15 @@ class NodeVisitor implements Visitor<Node> {
 }
 ```
 
-Putting it all together:
+> 💡 **AST vs direct evaluation:** `NodeVisitor` returns `Node` objects rather than
+>    computing integers directly. This is useful when you need to inspect, transform,
+>    or serialize the parse result before evaluating it , or when the same AST will be
+>    evaluated multiple times.
 
 ```java
 var node = mg.parse("- 4 * 5", new NodeVisitor());
 System.out.println(node);
 ```
-
 ```
 // Output:
 // Mul[left=UnaryMinus[node=Num[value=4]], right=Num[value=5]]
@@ -734,8 +770,8 @@ System.out.println(node);
 
 To summarize, if there is a reduce/reduce conflict, the grammar has to be simplified.
 If there is a shift/reduce conflict, the precedence map can be used to declare
-which terminal is more important than the other and what is the associativity (LEFT vs RIGHT).
+which terminal is more important than the other and what is the associativity (`LEFT` vs `RIGHT`).
 
-In doubt: run `MetaGrammar.verify()` early and often :)
+In doubt: run `mg.verify()` early and often :)
 
 Happy parsing ...
