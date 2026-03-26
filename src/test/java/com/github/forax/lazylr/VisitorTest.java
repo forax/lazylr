@@ -9,7 +9,8 @@ import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
-public final class EvaluatorReflectTest {
+@SuppressWarnings("unused")
+public final class VisitorTest {
 
   @Test
   public void reflectObject() {
@@ -35,7 +36,7 @@ public final class EvaluatorReflectTest {
     ));
     var parser = Parser.createParser(grammar, precedence);
 
-    var evaluator = Evaluator.reflect(new Object() {
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), new Visitor<Integer>() {
       public int num(Terminal terminal) {
         return Integer.parseInt(terminal.value());
       }
@@ -59,12 +60,14 @@ public final class EvaluatorReflectTest {
         new Production(E, List.of(num))));
     var parser = Parser.createParser(grammar, Map.of());
 
-    var eval = new Object() {
+    var visitor = new Visitor<Integer>() {
       public int num(Terminal t) { return Integer.parseInt(t.value()); }
     };
-    var ev = Evaluator.reflect(eval);
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), visitor);
 
-    var result = parser.parse(List.of(new Terminal("num", "42")).iterator(), ev);
+    var result = parser.parse(
+        List.of(new Terminal("num", "42")).iterator(),
+        evaluator);
     assertEquals(42, result);
   }
 
@@ -76,12 +79,14 @@ public final class EvaluatorReflectTest {
         new Production(E, List.of(num))));
     var parser = Parser.createParser(grammar, Map.of());
 
-    var eval = new Object() {
+    var visitor = new Visitor<String>() {
       public String num(Terminal t) { return t.value(); }
     };
-    var ev = Evaluator.reflect(eval);
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), visitor);
 
-    var result = parser.parse(List.of(new Terminal("num", "hello")).iterator(), ev);
+    var result = parser.parse(
+        List.of(new Terminal("num", "hello")).iterator(),
+        evaluator);
     assertEquals("hello", result);
   }
 
@@ -93,13 +98,15 @@ public final class EvaluatorReflectTest {
         new Production(E, List.of(id))));
     var parser = Parser.createParser(grammar, Map.of());
 
-    // eval has no method named "id", so evaluate(Terminal) should return null
-    var eval = new Object() {
+    // visitor has no method named "id", so evaluate(Terminal) should return null
+    var visitor = new Visitor<Integer>() {
       public int num(Terminal t) { return Integer.parseInt(t.value()); }
     };
-    var ev = Evaluator.reflect(eval);
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), visitor);
 
-    var result = parser.parse(List.of(new Terminal("id", "x")).iterator(), ev);
+    var result = parser.parse(
+        List.of(new Terminal("id", "x")).iterator(),
+        evaluator);
     assertNull(result);
   }
 
@@ -115,16 +122,19 @@ public final class EvaluatorReflectTest {
     var parser = Parser.createParser(grammar,
         Map.of(plus, new Precedence(10, Precedence.Associativity.LEFT)));
 
-    var eval = new Object() {
+    var visitor = new Visitor<Integer>() {
       public int num(Terminal t) { return Integer.parseInt(t.value()); }
 
       @ProductionName("E : E + E")
       public int add(int a, int b) { return a + b; }
     };
-    var ev = Evaluator.reflect(eval);
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), visitor);
 
     var result = parser.parse(
-        List.of(new Terminal("num", "3"), new Terminal("+", "+"), new Terminal("num", "4")).iterator(), ev);
+        List.of(
+            new Terminal("num", "3"), new Terminal("+", "+"),
+            new Terminal("num", "4")
+        ).iterator(), evaluator);
     assertEquals(7, result);
   }
 
@@ -139,18 +149,20 @@ public final class EvaluatorReflectTest {
     var parser = Parser.createParser(grammar,
         Map.of(plus, new Precedence(10, Precedence.Associativity.LEFT)));
 
-    var eval = new Object() {
+    var visitor = new Visitor<Integer>() {
       public int num(Terminal t) { return Integer.parseInt(t.value()); }
 
       @ProductionName("E : E + E")
       public int add(int a, int b) { return a + b; }
     };
-    var ev = Evaluator.reflect(eval);
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), visitor);
 
     var result = parser.parse(
-        List.of(new Terminal("num", "1"), new Terminal("+", "+"),
-                new Terminal("num", "2"), new Terminal("+", "+"),
-                new Terminal("num", "3")).iterator(), ev);
+        List.of(
+            new Terminal("num", "1"), new Terminal("+", "+"),
+            new Terminal("num", "2"), new Terminal("+", "+"),
+            new Terminal("num", "3")
+        ).iterator(), evaluator);
     assertEquals(6, result);
   }
 
@@ -168,7 +180,7 @@ public final class EvaluatorReflectTest {
         plus, new Precedence(10, Precedence.Associativity.LEFT),
         mul,  new Precedence(20, Precedence.Associativity.LEFT)));
 
-    var eval = new Object() {
+    var visitor = new Visitor<Integer>() {
       public int num(Terminal t) { return Integer.parseInt(t.value()); }
 
       @ProductionName("E : E + E")
@@ -177,13 +189,15 @@ public final class EvaluatorReflectTest {
       @ProductionName("E : E * E")
       public int mul(int a, int b) { return a * b; }
     };
-    var ev = Evaluator.reflect(eval);
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), visitor);
 
     // 2 + 3 * 4 = 14, not 20
     var result = parser.parse(
-        List.of(new Terminal("num", "2"), new Terminal("+", "+"),
-                new Terminal("num", "3"), new Terminal("*", "*"),
-                new Terminal("num", "4")).iterator(), ev);
+        List.of(
+            new Terminal("num", "2"), new Terminal("+", "+"),
+            new Terminal("num", "3"), new Terminal("*", "*"),
+            new Terminal("num", "4")
+        ).iterator(), evaluator);
     assertEquals(14, result);
   }
 
@@ -198,19 +212,19 @@ public final class EvaluatorReflectTest {
     var parser = Parser.createParser(grammar,
         Map.of(pow, new Precedence(30, Precedence.Associativity.RIGHT)));
 
-    var eval = new Object() {
+    var visitor = new Visitor<Integer>() {
       public int num(Terminal t) { return Integer.parseInt(t.value()); }
 
       @ProductionName("E : E ^ E")
       public int pow(int base, int exp) { return (int) Math.pow(base, exp); }
     };
-    var ev = Evaluator.reflect(eval);
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), visitor);
 
     // 2 ^ 3 ^ 2 = 2 ^ (3 ^ 2) = 2 ^ 9 = 512
     var result = parser.parse(
         List.of(new Terminal("num", "2"), new Terminal("^", "^"),
                 new Terminal("num", "3"), new Terminal("^", "^"),
-                new Terminal("num", "2")).iterator(), ev);
+                new Terminal("num", "2")).iterator(), evaluator);
     assertEquals(512, result);
   }
 
@@ -226,17 +240,21 @@ public final class EvaluatorReflectTest {
     var parser = Parser.createParser(grammar,
         Map.of(plus, new Precedence(10, Precedence.Associativity.LEFT)));
 
-    var eval = new Object() {
+    var visitor = new Visitor<Integer>() {
       public @Nullable Object plus(Terminal t) { return null; }
       public int num(Terminal t) { return Integer.parseInt(t.value()); }
 
       @ProductionName("E : E + E")
       public int add(int a, int b) { return a + b; }
     };
-    var ev = Evaluator.reflect(eval);
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), visitor);
 
     var result = parser.parse(
-        List.of(new Terminal("num", "10"), new Terminal("+", "+"), new Terminal("num", "5")).iterator(), ev);
+        List.of(
+            new Terminal("num", "10"),
+            new Terminal("+", "+"),
+            new Terminal("num", "5")
+        ).iterator(), evaluator);
     assertEquals(15, result);
   }
 
@@ -252,44 +270,48 @@ public final class EvaluatorReflectTest {
         new Production(A, List.of(num))));
     var parser = Parser.createParser(grammar, Map.of());
 
-    var eval = new Object() {
+    var visitor = new Visitor<Integer>() {
       public int num(Terminal t) { return Integer.parseInt(t.value()); }
     };
-    var ev = Evaluator.reflect(eval);
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), visitor);
 
-    var result = parser.parse(List.of(new Terminal("num", "99")).iterator(), ev);
+    var result = parser.parse(List.of(new Terminal("num", "99")).iterator(), evaluator);
     assertEquals(99, result);
   }
 
 
   @Test
   public void reflectObjectNullThrows() {
-    assertThrows(NullPointerException.class, () -> Evaluator.reflect((Object) null));
+    assertThrows(NullPointerException.class,
+        () -> Visitor.reflect(MethodHandles.lookup(), (Visitor<?>) null));
   }
 
   @Test
   public void reflectObjectMethodWithNoArgumentsThrows() {
-    var bad = new Object() {
+    var bad = new Visitor<Integer>() {
       public int noArgs() { return 0; }
     };
-    assertThrows(IllegalStateException.class, () -> Evaluator.reflect(bad));
+    assertThrows(IllegalStateException.class,
+        () -> Visitor.reflect(MethodHandles.lookup(), bad));
   }
 
   @Test
   public void reflectObjectVoidReturnTypeThrows() {
-    var bad = new Object() {
+    var bad = new Visitor<Object>() {
       public void num(Terminal t) { /* intentionally void */ }
     };
-    assertThrows(IllegalStateException.class, () -> Evaluator.reflect(bad));
+    assertThrows(IllegalStateException.class,
+        () -> Visitor.reflect(MethodHandles.lookup(), bad));
   }
 
   @Test
   public void reflectObjectTerminalMethodWrongParameterTypeThrows() {
     // Method takes int instead of Terminal
-    var bad = new Object() {
+    var bad = new Visitor<Integer>() {
       public int num(int i) { return i; }
     };
-    assertThrows(IllegalStateException.class, () -> Evaluator.reflect(bad));
+    assertThrows(IllegalStateException.class,
+        () -> Visitor.reflect(MethodHandles.lookup(), bad));
   }
 
   @Test
@@ -304,15 +326,19 @@ public final class EvaluatorReflectTest {
     var parser = Parser.createParser(grammar,
         Map.of(plus, new Precedence(1, Precedence.Associativity.LEFT)));
 
-    var eval = new Object() {
+    var visitor = new Visitor<Integer>() {
       public int num(Terminal t) { return Integer.parseInt(t.value()); }
       // deliberately no @ProductionName for "E : E + E"
     };
-    var ev = Evaluator.reflect(eval);
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), visitor);
 
     assertThrows(IllegalStateException.class,
         () -> parser.parse(
-            List.of(new Terminal("num", "1"), new Terminal("+", "+"), new Terminal("num", "2")).iterator(), ev));
+            List.of(
+                new Terminal("num", "1"),
+                new Terminal("+", "+"),
+                new Terminal("num", "2")
+            ).iterator(), evaluator));
   }
 
 
@@ -324,12 +350,12 @@ public final class EvaluatorReflectTest {
         new Production(E, List.of(num))));
     var parser = Parser.createParser(grammar, Map.of());
 
-    var eval = new Object() {
+    var visitor = new Visitor<Integer>() {
       public int num(Terminal t) { return Integer.parseInt(t.value()); }
     };
-    var ev = Evaluator.reflect(MethodHandles.lookup(), eval);
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), visitor);
 
-    var result = parser.parse(List.of(new Terminal("num", "7")).iterator(), ev);
+    var result = parser.parse(List.of(new Terminal("num", "7")).iterator(), evaluator);
     assertEquals(7, result);
   }
 
@@ -344,16 +370,18 @@ public final class EvaluatorReflectTest {
     var parser = Parser.createParser(grammar,
         Map.of(plus, new Precedence(10, Precedence.Associativity.LEFT)));
 
-    var eval = new Object() {
+    var visitor = new Visitor<Integer>() {
       public int num(Terminal t) { return Integer.parseInt(t.value()); }
 
       @ProductionName("E : E + E")
       public int add(int a, int b) { return a + b; }
     };
-    var ev = Evaluator.reflect(MethodHandles.lookup(), eval);
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), visitor);
 
     var result = parser.parse(
-        List.of(new Terminal("num", "8"), new Terminal("+", "+"), new Terminal("num", "9")).iterator(), ev);
+        List.of(
+            new Terminal("num", "8"), new Terminal("+", "+"), new Terminal("num", "9")
+        ).iterator(), evaluator);
     assertEquals(17, result);
   }
 
@@ -371,7 +399,7 @@ public final class EvaluatorReflectTest {
         plus, new Precedence(10, Precedence.Associativity.LEFT),
         mul,  new Precedence(20, Precedence.Associativity.LEFT)));
 
-    var eval = new Object() {
+    var visitor = new Visitor<Integer>() {
       public int num(Terminal t) { return Integer.parseInt(t.value()); }
 
       @ProductionName("E : E + E")
@@ -380,49 +408,50 @@ public final class EvaluatorReflectTest {
       @ProductionName("E : E * E")
       public int mul(int a, int b) { return a * b; }
     };
-    var ev = Evaluator.reflect(MethodHandles.lookup(), eval);
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), visitor);
 
     // 3 * 3 = 9
     var result = parser.parse(
-        List.of(new Terminal("num", "3"), new Terminal("*", "*"), new Terminal("num", "3")).iterator(), ev);
+        List.of(new Terminal("num", "3"), new Terminal("*", "*"), new Terminal("num", "3")).iterator(), evaluator);
     assertEquals(9, result);
   }
 
   @Test
   public void reflectLookupNullLookupThrows() {
-    var eval = new Object() {
+    var visitor = new Visitor<Integer> () {
       public int num(Terminal t) { return 0; }
     };
-    assertThrows(NullPointerException.class, () -> Evaluator.reflect(null, eval));
+    assertThrows(NullPointerException.class,
+        () -> Visitor.reflect(null, visitor));
   }
 
   @Test
   public void reflectLookupNullObjectThrows() {
     assertThrows(NullPointerException.class,
-        () -> Evaluator.reflect(MethodHandles.lookup(), null));
+        () -> Visitor.reflect(MethodHandles.lookup(), null));
   }
 
   @Test
   public void reflectLookupBothNullThrows() {
     assertThrows(NullPointerException.class,
-        () -> Evaluator.reflect(null, null));
+        () -> Visitor.reflect(null, null));
   }
 
   @Test
   public void reflectLookupMethodWithNoArgumentsThrows() {
-    var bad = new Object() {
+    var bad = new Visitor<Integer>() {
       public int noArgs() { return 0; }
     };
     assertThrows(IllegalStateException.class,
-        () -> Evaluator.reflect(MethodHandles.lookup(), bad));
+        () -> Visitor.reflect(MethodHandles.lookup(), bad));
   }
 
   @Test
   public void reflectLookupVoidReturnTypeThrows() {
-    var bad = new Object() {
+    var bad = new Visitor<Object>() {
       public void num(Terminal t) { /* intentionally void */ }
     };
     assertThrows(IllegalStateException.class,
-        () -> Evaluator.reflect(MethodHandles.lookup(), bad));
+        () -> Visitor.reflect(MethodHandles.lookup(), bad));
   }
 }

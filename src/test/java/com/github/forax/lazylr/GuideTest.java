@@ -141,7 +141,7 @@ public final class GuideTest {
 
     mg.verifySilently(msg -> fail("Unexpected conflict: " + msg));
 
-    class IntEval {
+    class IntVisitor implements Visitor<Integer> {
       public int num(Terminal t) {
         return Integer.parseInt(t.value());
       }
@@ -153,7 +153,7 @@ public final class GuideTest {
     }
 
     var input  = "1 + 2 + 3";
-    var result = mg.parse(input, new IntEval());
+    var result = mg.parse(input, new IntVisitor());
 
     assertEquals(6, result);
   }
@@ -181,7 +181,7 @@ public final class GuideTest {
 
     mg.verifySilently(msg -> fail("Unexpected conflict: " + msg));
 
-    class IntEval {
+    class IntVisitor implements Visitor<Integer> {
       public int num(Terminal t) {
         return Integer.parseInt(t.value());
       }
@@ -194,7 +194,7 @@ public final class GuideTest {
     }
 
     var input  = "2 + 3 * 4";
-    var result = mg.parse(input, new IntEval());
+    var result = mg.parse(input, new IntVisitor());
 
     assertEquals(14, result);
   }
@@ -224,7 +224,7 @@ public final class GuideTest {
 
     mg.verifySilently(msg -> fail("Unexpected conflict: " + msg));
 
-    class IntEval {
+    class IntVisitor implements Visitor<Integer> {
       public int num(Terminal t) {
         return Integer.parseInt(t.value());
       }
@@ -240,7 +240,7 @@ public final class GuideTest {
     }
 
     var input  = "2 ^ 3 ^ 2";
-    var result = mg.parse(input,new IntEval());
+    var result = mg.parse(input,new IntVisitor());
 
     assertEquals(512, result);
   }
@@ -277,7 +277,7 @@ public final class GuideTest {
 
     mg.verifySilently(msg -> fail("Unexpected conflict: " + msg));
 
-    class IntEval {
+    class IntVisitor implements Visitor<Integer>{
       public int num(Terminal t) {
         return Integer.parseInt(t.value());
       }
@@ -298,11 +298,11 @@ public final class GuideTest {
       public int if_(int condition, int then_, int else_) { return condition != 0 ? then_ : else_; }
     }
 
-    var evaluator = Evaluator.<Integer>reflect(new IntEval());
+    var visitor = new IntVisitor();
 
-    assertEquals(10, mg.parse("if 1 then 10 else 20", evaluator));
-    assertEquals(20, mg.parse("if 0 then 10 else 20", evaluator));
-    assertEquals(42, mg.parse("if 1 then if 0 then 99 else 42", evaluator));
+    assertEquals(10, mg.parse("if 1 then 10 else 20", visitor));
+    assertEquals(20, mg.parse("if 0 then 10 else 20", visitor));
+    assertEquals(42, mg.parse("if 1 then if 0 then 99 else 42", visitor));
   }
 
   // -------------------------------------------------------------------------
@@ -316,7 +316,7 @@ public final class GuideTest {
     record UnaryMinus(Node node) implements Node {}
     record Num(int value) implements Node {}
 
-    class NodeEval {
+    class NodeVisitor implements Visitor<Node> {
       public Node num(Terminal t) {
         return new Num(Integer.parseInt(t.value()));
       }
@@ -334,7 +334,7 @@ public final class GuideTest {
         return new UnaryMinus(node);
       }
     }
-    var evaluator = Evaluator.<Node>reflect(new NodeEval());
+    var visitor = new NodeVisitor();
 
     // This is not a correct grammar, precedence of the unary minus is wrong
     var badMg = MetaGrammar.load("""
@@ -355,7 +355,7 @@ public final class GuideTest {
         """);
 
     var input = "- 4 * 5";
-    var node = badMg.parse(input, evaluator);
+    var node = badMg.parse(input, visitor);
     assertEquals("UnaryMinus[node=Mul[left=Num[value=4], right=Num[value=5]]]", node.toString());
 
     // Use a virtual token UNARY to fix the precedence of the unary minus
@@ -377,7 +377,7 @@ public final class GuideTest {
         }
     """);
 
-    node = mg.parse(input, evaluator);
+    node = mg.parse(input, visitor);
     assertEquals("Mul[left=UnaryMinus[node=Num[value=4]], right=Num[value=5]]", node.toString());
   }
 }

@@ -235,6 +235,13 @@ LALRVerifier.verify(grammar, Map.of());
 // Output:
 // Unresolved reduce/reduce conflict in state 4 on terminal '$'
 //   between reduce A : num, reduce B : num
+// ...
+// ── State 4 ─────────────────────────────────
+//    A :  num •
+//    B :  num •
+//   ······································
+//    reduce( A : num            ) on [$ 🔥]
+//    reduce( B : num            ) on [$ 🔥]
 ```
 
 > ⚠️ **What happened?** After reading a `num`, the parser knows

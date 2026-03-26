@@ -34,7 +34,7 @@ public final class ReadmeExampleTest {
     record UnaryOp(String op, Node node) implements Node {}
     record BinaryOp(String op, Node left, Node right) implements Node {}
 
-    class NodeEval {
+    class NodeVisitor implements Visitor<Node>{
       public Node num(Terminal term) {
         return new NumLit(Integer.parseInt(term.value()));
       }
@@ -61,7 +61,7 @@ public final class ReadmeExampleTest {
     String input = "2 + - 3 * 4";
 
     // Parse and create the AST
-    Node ast = mg.parse(input, new NodeEval());
+    Node ast = mg.parse(input, new NodeVisitor());
 
     // Profit!
     System.out.println(ast);

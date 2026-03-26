@@ -2,6 +2,7 @@ package com.github.forax.lazylr;
 
 import org.jspecify.annotations.Nullable;
 
+import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
@@ -170,23 +171,36 @@ public final class MetaGrammar {
     return parser.parse(lexer.tokenize(input), evaluator);
   }
 
-  /// Parses the given input using this meta-grammar and a reflection-based evaluator.
+  /// Parses the given input using this meta-grammar and a reflection-based visitor.
   ///
-  /// This equivalen to calling `parse(input, Evaluator.reflect(evaluator))`.
+  /// This equivalent to calling `parse(input, Evaluator.reflect(MethodHandles.lookup(), visitor))`.
   ///
   /// @param input the input text to tokenize and parse
-  /// @param evaluator an object defining the evaluator methods to use during parsing.
-  /// @param <V> the type of the evaluation result
-  /// @return the result produced by the evaluator
+  /// @param visitor an object defining the visit methods called during parsing
+  ///        by reflection.
+  /// @param <V> the type of the visitor result
+  /// @return the result produced by the visitor
   /// @throws IllegalStateException if no grammar section is defined in this meta-grammar
   /// @throws ParsingException if a lexing or parsing error occurs
   ///
   /// @see #parse(CharSequence, Evaluator)
-  /// @see Evaluator#reflect(Object)
-  public <V extends @Nullable Object> V parse(CharSequence input, Object evaluator) throws ParsingException {
+  /// @see Visitor#reflect(java.lang.invoke.MethodHandles.Lookup, Visitor)
+  public <V extends @Nullable Object> V parse(CharSequence input, Visitor<V> visitor) throws ParsingException {
     Objects.requireNonNull(input);
-    Objects.requireNonNull(evaluator);
-    return parse(input, Evaluator.reflect(evaluator));
+    Objects.requireNonNull(visitor);
+    Objects.requireNonNull(visitor);
+    final class Holder {
+      private static final StackWalker WALKER =
+          StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
+    }
+    var callerClass = Holder.WALKER.getCallerClass();
+    MethodHandles.Lookup lookup;
+    try {
+      lookup = MethodHandles.privateLookupIn(callerClass, MethodHandles.lookup());
+    } catch (IllegalAccessException e) {
+      throw new IllegalStateException(e);
+    }
+    return parse(input, Visitor.reflect(lookup, visitor));
   }
 
   // grammar definition
