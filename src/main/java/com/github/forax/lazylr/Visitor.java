@@ -6,12 +6,14 @@ import java.lang.invoke.MethodHandle;
 import java.lang.invoke.MethodHandles;
 import java.lang.invoke.MethodType;
 import java.lang.invoke.WrongMethodTypeException;
+import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
+import java.util.stream.IntStream;
 
 /// A typed, reflection-based alternative to [com.github.forax.lazylr.Evaluator]
 /// for transforming a parse into a domain-specific result.
@@ -40,8 +42,9 @@ import java.util.Objects;
 /// A public method annotated with \@[ProductionName] whose value
 /// matches the name of a [Production] is called whenever that production
 /// is reduced.
-/// Parameters correspond to the non-`null` evaluated values
+/// Parameters correspond to the evaluated values
 /// of the production body symbols, in left-to-right order.
+/// If a symbol is a terminal and has no terminal method, its value is ignored.
 ///
 /// ```java
 /// @ProductionName("E : E + E")
@@ -65,8 +68,7 @@ import java.util.Objects;
 /// [#reflect(MethodHandles.Lookup, Visitor)] validates all public methods declared
 /// on the visitor's class (excluding those inherited from [Object]) at the time
 /// it is called.
-/// A method is rejected immediately with [IllegalStateException] if:
-/// - it has no parameters,
+/// A public method is rejected immediately with [IllegalStateException] if:
 /// - its return type is `void`,
 /// - it has a single parameter that is not [Terminal] and carries no
 ///   [ProductionName] annotation.
@@ -129,9 +131,6 @@ public interface Visitor<V extends @Nullable Object> {
       if (method.getDeclaringClass() == Object.class || Modifier.isStatic(method.getModifiers())) {
         continue;
       }
-      if (method.getParameterCount() == 0) {
-        throw new IllegalStateException("method " + method + " has no arguments");
-      }
       if (method.getReturnType() == void.class) {
         throw new IllegalStateException("method " + method + " has no return type");
       }
@@ -141,18 +140,23 @@ public interface Visitor<V extends @Nullable Object> {
       } catch (IllegalAccessException e) {
         throw new IllegalStateException(e);
       }
-      var productionName = method.getAnnotation(ProductionName.class);
-      if (productionName != null) {
-        productionMap.put(productionName.value(),
-            mh.asSpreader(Object[].class, method.getParameterCount())
-                .asType(MethodType.methodType(Object.class, Object.class, Object[].class)));
+      var productionNames = productionNames(method);
+      if (!productionNames.isEmpty()) {
+        var target = mh.asSpreader(Object[].class, method.getParameterCount())
+            .asType(MethodType.methodType(Object.class, Object.class, Object[].class));
+        for(var productionName : productionNames) {
+          var duplicate = productionMap.putIfAbsent(productionName.value(), target);
+          if (duplicate != null) {
+            throw new IllegalStateException("duplicate production name: " + productionName.value());
+          }
+        }
         continue;
       }
       if (method.getParameterCount() != 1 || method.getParameterTypes()[0] != Terminal.class) {
         throw new IllegalStateException("terminal method " + method + " should take a single Terminal argument");
       }
-      terminalMap.put(method.getName(),
-          mh.asType(MethodType.methodType(Object.class, Object.class,Terminal.class)));
+      var target = mh.asType(MethodType.methodType(Object.class, Object.class, Terminal.class));
+      terminalMap.put(method.getName(), target);
     }
     return new Evaluator<>() {
       @Override
@@ -184,8 +188,10 @@ public interface Visitor<V extends @Nullable Object> {
           }
           throw new IllegalStateException("production " + production.name() + " has no evaluator");
         }
-        var values = arguments.stream()
-            .filter(Objects::nonNull)
+        var values = IntStream.range(0, production.body().size())
+            .filter(i ->
+                !(production.body().get(i) instanceof Terminal terminal) || terminalMap.containsKey(terminal.name()))
+            .mapToObj(arguments::get)
             .toArray();
         try {
           return (V) mh.invokeExact((Object) visitor, values);
@@ -199,5 +205,17 @@ public interface Visitor<V extends @Nullable Object> {
         }
       }
     };
+  }
+
+  private static List<ProductionName> productionNames(Method method) {
+    var productionName = method.getAnnotation(ProductionName.class);
+    if (productionName != null) {
+      return List.of(productionName);
+    }
+    var productionNameContainer = method.getAnnotation(ProductionName.Container.class);
+    if (productionNameContainer != null) {
+      return List.of(productionNameContainer.value());
+    }
+    return List.of();
   }
 }

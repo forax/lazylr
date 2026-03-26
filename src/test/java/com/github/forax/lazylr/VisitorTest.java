@@ -417,6 +417,45 @@ public final class VisitorTest {
   }
 
   @Test
+  public void reflectObjectRepeatedProductionNameTwoProductions() {
+    // A single method handles both E : E + E and E : E - E
+    var E    = new NonTerminal("E");
+    var num  = new Terminal("num");
+    var plus = new Terminal("plus");
+    var sub  = new Terminal("minus");
+    var grammar = new Grammar(E, List.of(
+        new Production(E, List.of(num)),
+        new Production(E, List.of(E, plus, E)),
+        new Production(E, List.of(E, sub,  E))));
+    var parser = Parser.createParser(grammar, Map.of(
+        plus, new Precedence(10, Precedence.Associativity.LEFT),
+        sub,  new Precedence(10, Precedence.Associativity.LEFT)));
+
+    var visitor = new Visitor<Integer>() {
+      public int num(Terminal t) { return Integer.parseInt(t.value()); }
+      public boolean plus(Terminal t) { return true; }
+      public boolean minus(Terminal t) { return false; }
+
+      @ProductionName("E : E plus E")
+      @ProductionName("E : E minus E")
+      public int addOrSub(int a, boolean isPlus, int b) {
+        return isPlus ? a + b : a - b;
+      }
+    };
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), visitor);
+
+    // 3 + 4  → addOrSub(3, 4) = 7
+    assertEquals(7, parser.parse(
+        List.of(new Terminal("num", "3"), new Terminal("plus", "+"), new Terminal("num", "4"))
+            .iterator(), evaluator));
+
+    // 10 - 3  → addOrSub(10, 3) = 7
+    assertEquals(7, parser.parse(
+        List.of(new Terminal("num", "10"), new Terminal("minus", "-"), new Terminal("num", "3"))
+            .iterator(), evaluator));
+  }
+
+  @Test
   public void reflectLookupNullLookupThrows() {
     var visitor = new Visitor<Integer> () {
       public int num(Terminal t) { return 0; }
@@ -453,5 +492,29 @@ public final class VisitorTest {
     };
     assertThrows(IllegalStateException.class,
         () -> Visitor.reflect(MethodHandles.lookup(), bad));
+  }
+
+  @Test
+  public void reflectProductionNameSameProductionNotSameMethodThrows() {
+    var visitor = new Visitor<Integer>() {
+      @ProductionName("E : E + E")
+      public int add(int a, int b) { return a + b; }
+
+      @ProductionName("E : E + E")
+      public int add2(int a, int b) { return a + b; }
+    };
+    assertThrows(IllegalStateException.class,
+        () -> Visitor.reflect(MethodHandles.lookup(), visitor));
+  }
+
+  @Test
+  public void reflectRepeatedProductionNameSameProductionTwiceOnSameMethodThrows() {
+    var visitor = new Visitor<Integer>() {
+      @ProductionName("E : E + E")
+      @ProductionName("E : E + E")
+      public int add(int a, int b) { return a + b; }
+    };
+    assertThrows(IllegalStateException.class,
+        () -> Visitor.reflect(MethodHandles.lookup(), visitor));
   }
 }

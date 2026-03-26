@@ -1,6 +1,7 @@
 package com.github.forax.lazylr;
 
 import java.lang.annotation.Documented;
+import java.lang.annotation.Repeatable;
 import java.lang.annotation.Retention;
 import java.lang.annotation.Target;
 
@@ -33,10 +34,21 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 @Retention(RUNTIME)
 @Target(METHOD)
 @Documented
+@Repeatable(ProductionName.Container.class)
 public @interface ProductionName {
   /// The name of the production this method handles, in the format
   /// `head : symbol1 symbol2 ...` as returned by [Production#name()].
   ///
   /// @return the production name.
   String value();
+
+  /// Repeatable container of [ProductionName].
+  @Retention(RUNTIME)
+  @Target(METHOD)
+  @Documented
+  @interface Container {
+    /// Returns the production names
+    /// @return the production names
+    ProductionName[] value();
+  }
 }
