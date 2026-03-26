@@ -392,8 +392,11 @@ var mg = MetaGrammar.load("""
 >    of its rightmost terminal.
 >    Since that's already `'+'`, the precedence map does the right thing automatically.
 
+Instead of using an `Evaluator`, we use a `Visitor` instead, which is slower but offer a typed API.
+
+
 ```java
-class IntEval {
+class IntVisitor implements Visitor<Integer> {
   public int num(Terminal t) {
     return Integer.parseInt(t.value());
   }
@@ -405,7 +408,7 @@ class IntEval {
 }
 
 var input  = "1 + 2 + 3";
-var result = mg.parse(input, new IntEval());
+var result = mg.parse(input, new IntVisitor());
 System.out.println(result);
 ```
 
@@ -456,7 +459,7 @@ var mg = MetaGrammar.load("""
 >    so the parser **shifts** (reads more input) rather than reducing `E + E` early.
 
 ```java
-class IntEval {
+class IntVisitor implements Visitor<Integer> {
   public int num(Terminal t) {
     return Integer.parseInt(t.value());
   }
@@ -469,7 +472,7 @@ class IntEval {
 }
 
 var input  = "2 + 3 * 4";
-var result = mg.parse(input, new IntEval());
+var result = mg.parse(input, new IntVisitor());
 System.out.println(result);
 ```
 
@@ -517,7 +520,7 @@ var mg = MetaGrammar.load("""
 >    makes it **shift** instead, deferring the reduction and grouping from the right.
 
 ```java
-class IntEval {
+class IntVisitor implements Visitor<Integer> {
   //...
 
   @ProductionName("E : E ^ E")
@@ -590,7 +593,7 @@ mg.verify();
 >    the `else` always binds to the nearest (innermost) `if`.
 
 ```java
-class IntEval {
+class IntVisitor implements Visitor<Integer> {
   // ...
 
   @ProductionName("E : if E then E")
@@ -600,7 +603,7 @@ class IntEval {
   public int if_(int condition, int then_, int else_) { return condition != 0 ? then_ : else_; }
 }
 
-var evaluator = Evaluator.reflect(new IntEval());
+var evaluator = Evaluator.reflect(new IntVisitor());
 
 System.out.println(parser.parse("if 1 then 10 else 20", evaluator));
 System.out.println(parser.parse("if 0 then 10 else 20", evaluator));
@@ -681,14 +684,17 @@ var mg = MetaGrammar.load("""
 >    with the `UNARY` level. Now when the parser has `'-' E` on its stack and sees `*`, `UNARY` outranks `*`,
 >    so it reduces, binding the unary minus tightly to its operand before any binary operator can interfere.
 
+Here, instead of computing the result directly, we use a `Visitor` to create an AST,
+a tree that represent the input without the details that are not necessary.
+
 ```java
 sealed interface Node {}
 record Sub(Node left, Node right) implements Node {}
 record Mul(Node left, Node right) implements Node {}
 record UnaryMinus(Node node) implements Node {}
-record Num(int value, int pos) implements Node {}
+record Num(int value) implements Node {}
 
-class NodeEval {
+class NodeVisitor implements Visitor<Node> {
   public Node num(Terminal t) {
     return new Num(Integer.parseInt(t.value()));
   }
@@ -706,13 +712,12 @@ class NodeEval {
     return new UnaryMinus(node);
   }
 }
-var evaluator = Evaluator.reflect(new NodeEval());
 ```
 
 Putting it all together:
 
 ```java
-var node = mg.parse("- 4 * 5", evaluator);
+var node = mg.parse("- 4 * 5", new NodeVisitor());
 System.out.println(node);
 ```
 
