@@ -83,8 +83,8 @@ public final class LALRVerifier {
   /// @param errorReporter called once per unresolved conflict with a human-readable
   ///                      description of the conflict.
   /// @throws NullPointerException if `grammar`, `precedenceMap` or `errorReporter` is null.
-  public static void verifySilently(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap,
-                                    Consumer<? super String> errorReporter) {
+  public static void verify(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap,
+                            Consumer<? super String> errorReporter) {
     verify(grammar, precedenceMap, null, false, errorReporter);
   }
 

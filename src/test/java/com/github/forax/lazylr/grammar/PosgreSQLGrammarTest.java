@@ -896,7 +896,7 @@ public final class PosgreSQLGrammarTest {
   }
 
   static {
-    LALRVerifier.verifySilently(MG.grammar(), MG.precedenceMap(), System.err::println);
+    LALRVerifier.verify(MG.grammar(), MG.precedenceMap(), System.err::println);
   }
 
 

@@ -20,7 +20,7 @@ public final class GuideTest {
     var pNum    = new Production(E, List.of(NUM));
     var grammar = new Grammar(E, List.of(pNum));
 
-    LALRVerifier.verifySilently(grammar, Map.of(), msg -> fail("Unexpected conflict: " + msg));
+    LALRVerifier.verify(grammar, Map.of(), msg -> fail("Unexpected conflict: " + msg));
 
     var lexer = Lexer.createLexer(List.of(
         new Token("num", "[0-9]+"),
@@ -91,7 +91,7 @@ public final class GuideTest {
         """);
 
     // Optional: verify the grammar
-    mg.verifySilently(msg -> fail("Unexpected conflict: " + msg));
+    mg.verify(msg -> fail("Unexpected conflict: " + msg));
 
     class IntEvaluator implements Evaluator<Integer> {
       @Override
@@ -139,7 +139,7 @@ public final class GuideTest {
         }
         """);
 
-    mg.verifySilently(msg -> fail("Unexpected conflict: " + msg));
+    mg.verify(msg -> fail("Unexpected conflict: " + msg));
 
     class IntVisitor implements Visitor<Integer> {
       public int num(Terminal t) {
@@ -179,7 +179,7 @@ public final class GuideTest {
         }
         """);
 
-    mg.verifySilently(msg -> fail("Unexpected conflict: " + msg));
+    mg.verify(msg -> fail("Unexpected conflict: " + msg));
 
     class IntVisitor implements Visitor<Integer> {
       public int num(Terminal t) {
@@ -222,7 +222,7 @@ public final class GuideTest {
         }
         """);
 
-    mg.verifySilently(msg -> fail("Unexpected conflict: " + msg));
+    mg.verify(msg -> fail("Unexpected conflict: " + msg));
 
     class IntVisitor implements Visitor<Integer> {
       public int num(Terminal t) {
@@ -275,7 +275,7 @@ public final class GuideTest {
         }
         """);
 
-    mg.verifySilently(msg -> fail("Unexpected conflict: " + msg));
+    mg.verify(msg -> fail("Unexpected conflict: " + msg));
 
     class IntVisitor implements Visitor<Integer>{
       public int num(Terminal t) {

@@ -129,6 +129,15 @@ public final class MetaGrammar {
     return precedenceMap;
   }
 
+  /// Verifies that the grammar is LALR(1), using the precedence map to resolve
+  /// shift/reduce conflicts where possible. If unresolved conflicts remain,
+  /// they are described on stderr along with the full LALR(1) automaton
+  /// to help diagnose them.
+  ///
+  /// Use [#verify(Consumer)] instead if you want to handle conflict
+  /// messages programmatically rather than printing them to stderr.
+  ///
+  /// @throws IllegalStateException if no grammar section is defined.
   public void verify() {
     if (grammar == null) {
       throw new IllegalStateException("no grammar section is defined");
@@ -136,11 +145,22 @@ public final class MetaGrammar {
     LALRVerifier.verify(grammar, precedenceMap);
   }
 
-  public void verifySilently(Consumer<? super String> errorReporter) {
+  // Verifies that the grammar is LALR(1), using the precedence map to resolve
+  /// shift/reduce conflicts where possible. If unresolved conflicts remain,
+  /// the error reporter is called once per conflict with a human-readable
+  /// description.
+  ///
+  /// Use [#verify()] instead if you simply want conflicts printed to stderr.
+  ///
+  /// @param errorReporter called once per unresolved conflict with a
+  ///                      human-readable description.
+  /// @throws NullPointerException  if `errorReporter` is `null`.
+  /// @throws IllegalStateException if no grammar section is defined.
+  public void verify(Consumer<? super String> errorReporter) {
     if (grammar == null) {
       throw new IllegalStateException("no grammar section is defined");
     }
-    LALRVerifier.verifySilently(grammar, precedenceMap, errorReporter);
+    LALRVerifier.verify(grammar, precedenceMap, errorReporter);
   }
 
   /// Parses the given input using this meta-grammar and evaluates it using the provided evaluator.
