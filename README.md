@@ -98,7 +98,7 @@ mg.verify();
 
 ### Transforming to an AST using an Evaluator
 
-Lazy LR uses an `Evaluator` to transform the parse tree into your desired result,
+Lazy LR uses an `Visitor` to transform the parse tree into your desired result,
 usually an AST (Abstract Syntax Tree), but you can also evaluate productions directly.
 
 Using Java Records makes for a concise AST:
@@ -110,11 +110,11 @@ record UnaryOp(String op, Node node) implements Node {}
 record BinaryOp(String op, Node left, Node right) implements Node {}
 ```
 
-Implement the evaluate methods to map terminals and productions to your AST nodes.
-Because `Terminal` carries the matched value, you can extract the raw text here:
+Implement one method per terminal that have a semantiocs value and one method per production
+to create your AST nodes. Because `Terminal` carries the matched value, you can extract the raw text here:
 
 ```java
-class NodeEval {
+class NodeVisitor implements Visitor<Node> {
   public Node num(Terminal term) {
     return new NumLit(Integer.parseInt(term.value()));
   }
@@ -145,7 +145,7 @@ Parse a text and create the AST:
 ```java
 String input = "2 + - 3 * 4";
 
-Node ast = mg.parse(input, new NodeEval());
+Node ast = mg.parse(input, new NodeVisitor());
 
 // Profit!
 System.out.println(ast);
