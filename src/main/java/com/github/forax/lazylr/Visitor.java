@@ -13,38 +13,100 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Objects;
 
+/// A typed, reflection-based alternative to [com.github.forax.lazylr.Evaluator]
+/// for transforming a parse into a domain-specific result.
+///
+/// Where [Evaluator] requires a single `switch`-based dispatch method
+/// per kind of symbol, `Visitor` lets you write one plain Java method
+/// per terminal or production, with typed parameters and return values.
+///
+/// The static method [#reflect(MethodHandles.Lookup, Visitor)],
+/// inspects the visitor's public methods and builds an [Evaluator]
+/// from them.
+///
+/// ### Terminal methods
+/// A public method whose name matches a terminal name is called
+/// whenever that terminal is shifted.
+/// The method must take exactly one [Terminal] parameter.
+/// If no method matches a given terminal, `null` is returned for it.
+///
+/// ```java
+/// public Node num(Terminal terminal) {
+///   return new NumLit(Integer.parseInt(terminal.value()));
+/// }
+/// ```
+///
+/// ### Production methods
+/// A public method annotated with \@[ProductionName] whose value
+/// matches the name of a [Production] is called whenever that production
+/// is reduced.
+/// Parameters correspond to the non-`null` evaluated values
+/// of the production body symbols, in left-to-right order.
+///
+/// ```java
+/// @ProductionName("E : E + E")
+/// public Node add(Node left, Node right) {
+///   return new BinaryOp("+", left, right);
+/// }
+/// ```
+///
+/// ### Single-body pass-through
+/// If a production has exactly one symbol in its body and no `@ProductionName`
+/// method is defined for it, the single argument is returned as-is without
+/// calling any method. This is convenient for chain productions like `E : num`
+/// that simply forward a value up the tree.
+///
+/// ### Primitive types in method declaration
+/// Primitive types are accepted as parameter and return value and are handled
+/// transparently via boxing/unboxing.
+/// Methods must not return `void`.
+///
+/// ### Validation
+/// [#reflect(MethodHandles.Lookup, Visitor)] validates all public methods declared
+/// on the visitor's class (excluding those inherited from [Object]) at the time
+/// it is called.
+/// A method is rejected immediately with [IllegalStateException] if:
+/// - it has no parameters,
+/// - its return type is `void`,
+/// - it has a single parameter that is not [Terminal] and carries no
+///   [ProductionName] annotation.
+///
+/// ### Usage
+/// The simple way to use a `Visitor` is through [MetaGrammar#parse(CharSequence, Visitor)],
+/// which handles the reflection call internally:
+///
+/// ```java
+/// var result = mg.parse(input, new NodeVisitor());
+/// ```
+///
+/// When working directly with a [Parser], call [#reflect(MethodHandles.Lookup, Visitor)]
+/// explicitly and pass the resulting [Evaluator] to [Parser#parse(java.util.Iterator, Evaluator)]:
+///
+/// ```java
+/// var evaluator = Visitor.reflect(MethodHandles.lookup(), new NodeVisitor());
+/// var result    = parser.parse(lexer.tokenize(input), evaluator);
+/// ```
+///
+/// Note that [MethodHandles#lookup()] must be called from the same class that
+/// defines (or has access to) the visitor, so that the lookup has sufficient
+/// access rights to reach the visitor's methods.
+///
+/// @param <V> the type of value produced by the visitor.
+///
+/// @see Evaluator
+/// @see ProductionName
+/// @see MetaGrammar#parse(CharSequence, Visitor)
+/// @see Parser#parse(java.util.Iterator, Evaluator)
 public interface Visitor<V extends @Nullable Object> {
-  /// Creates an [Evaluator] by inspecting the public methods of
-  /// the 'visitor' using 'lookup' access.
+
+  // Creates an [Evaluator] by inspecting the public methods of the visitor
+  /// using the given lookup.
   ///
-  /// ### Terminal methods
-  /// A public method named using the name of a [Terminal].
-  /// The method return type must be non-`void`.
-  /// If no method matches a given terminal name, `null` is returned
-  /// for that terminal.
+  /// See the [Visitor] documentation above for the full rules governing
+  /// terminal methods, production methods, and validation.
   ///
-  /// ### Production methods
-  /// A public method annotated with \@[ProductionName] whose value
-  /// matches the name of a [Production].
-  /// The method must have exactly one parameter for each
-  /// non-`null` [Symbol] in the production body.
-  ///
-  /// ### Single-body pass-through
-  /// If a production has exactly one symbol in its body and no
-  /// `@ProductionName` method is found, the single argument
-  /// is returned as-is without calling any method.
-  ///
-  /// Primitive parameter types are accepted; boxing and unboxing
-  /// are handled transparently.
-  ///
-  /// ### Validation
-  /// All public methods declared on the `visitor`'s class (excluding those
-  /// inherited from [Object]) are inspected when calling 'reflect()'.
-  /// A method is rejected immediately with [IllegalStateException] if:
-  /// - It has no parameters,
-  /// - Its return type is `void`,
-  /// - It has a single parameter that is not [Terminal] and carries no
-  ///   \@[ProductionName] annotation.
+  /// The lookup must be obtained by the caller with [MethodHandles#lookup()] so
+  /// that it has sufficient access rights to reach the visitor's methods.
   ///
   /// @param <V> the type of the visitor result
   /// @param lookup the lookup to use when creating method handles; its access
