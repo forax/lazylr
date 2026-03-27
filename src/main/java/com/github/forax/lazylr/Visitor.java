@@ -8,10 +8,12 @@ import java.lang.invoke.MethodType;
 import java.lang.invoke.WrongMethodTypeException;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.lang.reflect.ParameterizedType;
 import java.lang.reflect.UndeclaredThrowableException;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.IntStream;
 
@@ -186,7 +188,7 @@ public interface Visitor<V extends @Nullable Object> {
           if (production.body().size() == 1) {
             return arguments.getFirst();
           }
-          throw new IllegalStateException("production " + production.name() + " has no evaluator");
+          throw new IllegalStateException(missingProductionEvaluator(production, terminalMap, visitor));
         }
         var values = IntStream.range(0, production.body().size())
             .filter(i ->
@@ -217,5 +219,86 @@ public interface Visitor<V extends @Nullable Object> {
       return List.of(productionNameContainer.value());
     }
     return List.of();
+  }
+
+  private static Map<String, Class<?>> inferNonTerminals(Class<?> visitorClass) {
+    var nonTerminalMap = new HashMap<String, Class<?>>();
+    for(var method : visitorClass.getMethods()) {
+      var returnType = method.getReturnType();
+      var productionNames = productionNames(method);
+      for(var productionName : productionNames) {
+        var name = productionName.value();
+        var spaceIndex = name.indexOf(' ');
+        if (spaceIndex == -1) {
+          continue;   // skip malformed @ProductionName
+        }
+        var nonTerminalName = name.substring(0, spaceIndex);
+        nonTerminalMap.putIfAbsent(nonTerminalName, returnType);
+      }
+    }
+    return nonTerminalMap;
+  }
+
+  private static Class<?> inferFromVisitorDeclaration(Class<?> visitorClass) {
+    for (var interfaces : visitorClass.getGenericInterfaces()) {
+      if (interfaces instanceof ParameterizedType parameterizedType) {
+        var rawClass = (Class<?>) parameterizedType.getRawType();
+        if (Visitor.class.isAssignableFrom(rawClass)) {
+          var argument = parameterizedType.getActualTypeArguments()[0];
+          if (argument instanceof Class<?> clazz) {
+            final class Holder {
+              private static final Map<Class<?>, Class<?>> TO_PRIMITIVE_MAP = Map.of(
+                  Byte.class, byte.class,
+                  Short.class, short.class,
+                  Character.class, char.class,
+                  Integer.class, int.class,
+                  Long.class, long.class,
+                  Float.class, float.class,
+                  Double.class, double.class
+              );
+            }
+            var primitive = Holder.TO_PRIMITIVE_MAP.get(clazz);
+            return primitive != null ? primitive : clazz;
+          }
+        }
+      }
+    }
+    return Object.class;
+  }
+
+  private static String missingProductionEvaluator(Production production, Map<String, MethodHandle> terminalMap, Visitor<?> visitor) {
+    var visitorClass = visitor.getClass();
+    var nonTerminalMap = inferNonTerminals(visitorClass);
+    var visitorType = inferFromVisitorDeclaration(visitorClass);
+    var builder = new StringBuilder();
+    var returnType = nonTerminalMap.getOrDefault(production.head().name(), visitorType);
+    builder.append("@ProductionName(\"").append(production.name()).append("\")\n");
+    builder.append("public ").append(returnType.getSimpleName()).append(" method(");
+    var i = 0;
+    for(var symbol : production.body()) {
+      switch (symbol) {
+        case Terminal terminal -> {
+          var parameterType =  terminalMap.get(terminal.name());
+          if (parameterType == null) {
+            continue;
+          }
+          if (i != 0) {
+            builder.append(", ");
+          }
+          builder.append(parameterType.type().returnType().getName()).append(" ").append(terminal.name());
+          i++;
+        }
+        case NonTerminal nonTerminal -> {
+          if (i != 0) {
+            builder.append(", ");
+          }
+          var parameterType =  nonTerminalMap.getOrDefault(nonTerminal.name(), visitorType);
+          builder.append(parameterType.getSimpleName()).append(" param").append(i++);
+        }
+      }
+    }
+    builder.append(") {\n  throw new UnsupportedOperationException(\"TODO\");\n}\n");
+
+    return "production \"" + production.name() + "\" has no evaluator method,  proposed code:\n" + builder;
   }
 }
