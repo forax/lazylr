@@ -1,4 +1,4 @@
-# LazyLR Demo Tour
+# 🦥 LazyLR Demo Tour
 
 This folder contains a series of small, self-contained programs that introduce
 the LazyLR library step by step.
