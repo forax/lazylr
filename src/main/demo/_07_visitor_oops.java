@@ -8,7 +8,7 @@ void main() {
   var mg = MetaGrammar.load("""
       tokens {
         number: /[0-9]+/
-        /[ \\t]+/
+        /[ \t]+/
       }
       grammar {
         E : number
@@ -20,7 +20,7 @@ void main() {
   var value = mg.parse("(32)", new IntVisitor());
   IO.println(value);
 
-  
+
   // Exception in thread "main" java.lang.IllegalStateException: production "E : ( E )" has no evaluator method,  proposed code:
   // @ProductionName("E : ( E )")
   // public int method(int param0) {

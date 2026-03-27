@@ -16,7 +16,7 @@ void main() {
   var mg = MetaGrammar.load("""
       tokens {
         number: /[0-9]+/
-        /[ \\t]+/
+        /[ \t]+/
       }
       grammar {
         E : number
@@ -25,6 +25,6 @@ void main() {
       """);
   mg.verify();
 
-  var expr = mg.parse("(32)", new ExprVisitor());
+  var expr = mg.parse("( 32 )", new ExprVisitor());
   IO.println(expr);
 }
