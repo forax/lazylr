@@ -102,7 +102,7 @@ or evaluate the parse result later.
 
 ---
 
-### 10. [Reduce/Reduce Conflict](_10_conflict_shift_reduce.java)
+### 10. [Reduce/Reduce Conflict](_10_conflict_reduce_reduce.java)
 
 A grammar where two non-terminals `A` and `B` can both derive `number`. After shifting
 `number`, the parser has two equally valid reductions and doesn't know which to pick.
