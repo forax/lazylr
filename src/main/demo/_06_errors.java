@@ -20,4 +20,17 @@ void main() {
 
   // end of file reached -> parser error
   mg.parse("(32", new PrintEvaluator());
+
+
+  // Exception in thread "main" com.github.forax.lazylr.ParsingException: Lexing error at line 1, column 1: unexpected character '@'
+  // @
+  // ^
+
+  // Exception in thread "main" com.github.forax.lazylr.ParsingException: Parsing error at line 1, column 2: unexpected terminal ')', expected '(', number
+  // ()
+  //  ^
+
+  // Exception in thread "main" com.github.forax.lazylr.ParsingException: Parsing error at line 1, column 2: unexpected terminal '$', expected ')'
+  // (32
+  //  ^
 }

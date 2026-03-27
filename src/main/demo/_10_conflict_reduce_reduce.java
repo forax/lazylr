@@ -15,4 +15,12 @@ void main() {
       """);
 
   mg.verify();
+
+
+  // ── State 4 ─────────────────────────────────
+  //   A :  number •
+  //   B :  number •
+  //  ······································
+  //   reduce( A : number         ) on [$ 🔥]
+  //   reduce( B : number         ) on [$ 🔥]
 }
