@@ -44,9 +44,9 @@ void main() {
 
   mg.verify();
 
-  //var expr = mg.parse("2 ^ 3 ^ 4", new ExprVisitor());
-  //IO.println(expr);
-
-  var expr = mg.parse("2 + 3 ^ 4", new ExprVisitor());
+  var expr = mg.parse("2 ^ 3 ^ 4", new ExprVisitor());
   IO.println(expr);
+
+  var expr2 = mg.parse("2 + 3 ^ 4", new ExprVisitor());
+  //IO.println(expr2);
 }
