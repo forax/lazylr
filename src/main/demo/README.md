@@ -82,7 +82,7 @@ of the production method to implement.
 
 ---
 
-### 08. [The Visitor Interface (Correct Version)(_08_visitor.java)
+### 08. [The Visitor Interface (Correct Version)](_08_visitor.java)
 
 The corrected version of the previous demo.
 Adds an explicit `@ProductionName("E : ( E )")` method named `parens`that
