@@ -16,6 +16,9 @@ void main() {
 
   var lexer = Lexer.createLexer(tokens);
   var iterator = lexer.tokenize("32 12 14");
-  //iterator.forEachRemaining(
-  //    terminal -> IO.println(terminal.name() + " " + terminal.value()));
+
+  while (iterator.hasNext()) {
+    var terminal = iterator.next();
+    // IO.println(terminal.name() + " " + terminal.value()));
+  }
 }
