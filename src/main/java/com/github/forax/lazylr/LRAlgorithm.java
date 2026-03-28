@@ -197,14 +197,14 @@ final class LRAlgorithm {
         if (allCanBeEpsilon) {
           targetSet.add(Terminal.EPSILON);
         }
+      }
 
-        // If this non-terminal's FIRST set grew, schedule all non-terminals
-        // that depend on it — they may gain new terminals too.
-        if (targetSet.size() > beforeSize) {
-          for (var dependent : dependents.get(head)) {
-            if (inWorklist.add(dependent)) {
-              worklist.add(dependent);
-            }
+      // If this non-terminal's FIRST set grew, schedule all non-terminals
+      // that depend on it — they may gain new terminals too.
+      if (targetSet.size() > beforeSize) {
+        for (var dependent : dependents.get(head)) {
+          if (inWorklist.add(dependent)) {
+            worklist.add(dependent);
           }
         }
       }
