@@ -45,8 +45,8 @@ public final class Grammar {
     super();
   }
 
-  // This method should be private but is accessed from the Javadoc of LRTransitionEngine
-  static void checkDuplicationOrOrphanNonTerminals(LinkedHashMap<NonTerminal, List<Production>> productionMap) {
+  /// Checks for duplicated productions and non-terminals with no production.
+  private static void checkDuplicationOrOrphanNonTerminals(LinkedHashMap<NonTerminal, List<Production>> productionMap) {
     for(var productions : productionMap.values()) {
       var set = new HashSet<List<Symbol>>();
       for (var production : productions) {

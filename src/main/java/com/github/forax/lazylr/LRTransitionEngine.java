@@ -68,7 +68,7 @@ final class LRTransitionEngine {
     /// is expensive.
     ///
     /// The code of [Grammar] deduplicates productions at construction time,
-    /// see [Grammar#checkDuplicationOrOrphanNonTerminals(LinkedHashMap)].
+    /// see [Grammar].checkDuplicationOrOrphanNonTerminals(LinkedHashMap).
     /// Items must never be constructed with productions from outside
     /// a [Grammar] instance.
     @Override
