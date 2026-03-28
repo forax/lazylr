@@ -100,17 +100,10 @@
 /// once per thread.
 ///
 /// @see com.github.forax.lazylr.Terminal
-/// @see com.github.forax.lazylr.NonTerminal
 /// @see com.github.forax.lazylr.Production
 /// @see com.github.forax.lazylr.Grammar
 /// @see com.github.forax.lazylr.MetaGrammar
-/// @see com.github.forax.lazylr.Lexer
-/// @see com.github.forax.lazylr.Parser
-/// @see com.github.forax.lazylr.ParserFactory
-/// @see com.github.forax.lazylr.Evaluator
-/// @see com.github.forax.lazylr.ParserListener
-/// @see com.github.forax.lazylr.Precedence
-/// @see com.github.forax.lazylr.LALRVerifier
+/// @see com.github.forax.lazylr.Visitor
 @NullMarked
 package com.github.forax.lazylr;
 
