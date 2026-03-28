@@ -15,7 +15,8 @@ import java.util.Set;
 ///
 /// ```java
 /// // Shared across threads — create once
-/// private static final FACTORY = ParserFactory.createFactory(GRAMMAR, PRECEDENCE_MAP);
+/// private static final ParserFactory FACTORY = ParserFactory.createFactory(GRAMMAR, PRECEDENCE_MAP);
+/// private static final Evaluator<Result> EVALUATOR = ...
 ///
 /// // Per-thread — call createParser() on the thread that will parse the input
 /// var parser = FACTORY.createParser();
