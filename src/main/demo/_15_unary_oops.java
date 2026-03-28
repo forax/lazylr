@@ -26,7 +26,7 @@ class ExprVisitor implements Visitor<Expr> {
   public Expr sub(Expr left, Expr right) { return new Binary('-', left, right); }
 
   @ProductionName("E : - E")
-  public Expr minus(Expr expr) { return new Unary('-', expr); }
+  public Expr unary(Expr expr) { return new Unary('-', expr); }
 }
 
 void main() {
@@ -44,6 +44,7 @@ void main() {
         E : number
         E : '(' E ')'
         E : E '+' E
+        E : E '-' E
         E : E '*' E
         E : E '^' E
         E : '-' E

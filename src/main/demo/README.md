@@ -814,6 +814,7 @@ void main() {
         E : number
         E : '(' E ')'
         E : E '+' E
+        E : E '-' E
         E : E '*' E
         E : E '^' E
         E : '-' E
@@ -893,6 +894,7 @@ void main() {
         E : number
         E : '(' E ')'
         E : E '+' E
+        E : E '-' E
         E : E '*' E
         E : E '^' E
         E : '-' E    %prec UNARY
