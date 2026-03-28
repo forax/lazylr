@@ -188,7 +188,7 @@ public interface Visitor<V extends @Nullable Object> {
           if (production.body().size() == 1) {
             return arguments.getFirst();
           }
-          throw new IllegalStateException(missingProductionEvaluator(production, terminalMap, visitor));
+          throw new IllegalStateException(missingProductionEvaluator(production, visitor));
         }
         var values = IntStream.range(0, production.body().size())
             .filter(i ->
@@ -219,6 +219,21 @@ public interface Visitor<V extends @Nullable Object> {
       return List.of(productionNameContainer.value());
     }
     return List.of();
+  }
+
+  private static Map<String, Class<?>> inferTerminals(Class<?> visitorClass) {
+    var terminalMap = new HashMap<String, Class<?>>();
+    for(var method : visitorClass.getMethods()) {
+      var returnType = method.getReturnType();
+      if (returnType == void.class) {
+        continue;
+      }
+      var parameterTypes = method.getParameterTypes();
+      if (parameterTypes.length == 1 && parameterTypes[0] == Terminal.class) {
+        terminalMap.putIfAbsent(method.getName(), returnType);
+      }
+    }
+    return terminalMap;
   }
 
   private static Map<String, Class<?>> inferNonTerminals(Class<?> visitorClass) {
@@ -266,8 +281,9 @@ public interface Visitor<V extends @Nullable Object> {
     return Object.class;
   }
 
-  private static String missingProductionEvaluator(Production production, Map<String, MethodHandle> terminalMap, Visitor<?> visitor) {
+  private static String missingProductionEvaluator(Production production, Visitor<?> visitor) {
     var visitorClass = visitor.getClass();
+    var terminalMap = inferTerminals(visitorClass);
     var nonTerminalMap = inferNonTerminals(visitorClass);
     var visitorType = inferFromVisitorDeclaration(visitorClass);
     var builder = new StringBuilder();
@@ -285,7 +301,7 @@ public interface Visitor<V extends @Nullable Object> {
           if (i != 0) {
             builder.append(", ");
           }
-          builder.append(parameterType.type().returnType().getName()).append(" ").append(terminal.name());
+          builder.append(parameterType.getSimpleName()).append(" ").append(terminal.name());
           i++;
         }
         case NonTerminal nonTerminal -> {
