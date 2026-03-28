@@ -25,14 +25,9 @@ with the agility of a modern library.
 
 ## Tutorial
 
-If you have already used a Parser, you can discover the API
-by taking a look to the [demo README](src/main/demo/README.md).
-
-[GUIDE.md](GUIDE.md) walks you through building grammars from scratch in steps,
-starting from a single-number parser and progressing through recursion,
-operator precedence, associativity, and unary operators with `%prec`.
-The runnable code is in
-[GuideTest.java](src/test/java/com/github/forax/lazylr/GuideTest.java).
+The [demo](src/main/demo/README.md)s walks you through using LazyLR to build a grammar
+from scratch in steps, starting from a single-number parser and progressing through recursion,
+operator precedence, associativity, and production precedence with `%prec`.
 
 For the [Javadoc Reference](https://jitpack.io/com/github/forax/lazylr/latest/javadoc/).
 
