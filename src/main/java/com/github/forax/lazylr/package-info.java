@@ -11,7 +11,7 @@
 /// start [com.github.forax.lazylr.NonTerminal].
 /// Productions are built from two kinds of [com.github.forax.lazylr.Symbol]s:
 /// [com.github.forax.lazylr.Terminal] (a concrete token, e.g. `"+"` or `"num"`)
-///  and [com.github.forax.lazylr.NonTerminal] (an abstract construct, e.g. `"E"`).
+/// and [com.github.forax.lazylr.NonTerminal] (an abstract construct, e.g. `"E"`).
 ///
 /// [com.github.forax.lazylr.MetaGrammar] lets you describe tokens, precedence,
 /// and productions in a compact text DSL instead of building Java objects by hand:
@@ -50,22 +50,20 @@
 ///
 /// ```java
 /// // 1. Load the grammar
-/// var mg = MetaGrammar.load(grammarText);
+/// MetaGrammar mg = MetaGrammar.load(grammarText);
 ///
 /// // 2. Optionally verify for conflicts
-/// LALRVerifier.verify(mg.grammar(), mg.precedenceMap(), System.err::println);
+/// mg.verify();
 ///
-/// // 3. Create a lexer and a parser
-/// var lexer  = Lexer.createLexer(mg.tokens());
-/// var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
-///
-/// // 4. Parse and evaluate
-/// var result = parser.parse(lexer.tokenize(input), new MyEvaluator());
+/// // 3. Parse and evaluate
+/// String input = ...
+/// var result = mg.parse(input, new MyVisitor());
 /// ```
 ///
 /// ## Key Classes
 /// [com.github.forax.lazylr.LALRVerifier] performs a full offline LALR(1)
 /// analysis and can print the complete state automaton with conflict markers.
+/// This is the class used by [com.github.forax.lazylr.MetaGrammar#verify()].
 ///
 /// [com.github.forax.lazylr.Lexer] converts a `CharSequence` into
 /// a lazy `Iterator<Terminal>` using a longest-match rule, ties
@@ -76,6 +74,15 @@
 /// Shift/reduce conflicts are resolved via a [com.github.forax.lazylr.Precedence] map;
 /// unresolved conflicts cause a [com.github.forax.lazylr.ParsingException]
 /// during parsing.
+/// A call to [com.github.forax.lazylr.MetaGrammar#parse(java.lang.CharSequence, com.github.forax.lazylr.Visitor)()]
+/// creates a lexer and a parser.
+///
+/// [com.github.forax.lazylr.Visitor] maps terminal and productions to typechecked methods.
+/// When a terminal is shifted, the corresponding terminal method is called.
+/// When a production is reduced, the production method is called with the values
+/// of the symbols of the production in left-to-right order.
+// [com.github.forax.lazylr.Visitor#reflect(java.lang.invoke.MethodHandles.Lookup, com.github.forax.lazylr.Visitor)]
+/// creates an evaluator from a visitor using reflection.
 ///
 /// [com.github.forax.lazylr.Evaluator] maps parse events to a result
 /// of type `T`: `evaluate(Terminal)` is called on every shift,
@@ -84,8 +91,11 @@
 ///
 /// ## Thread Safety
 /// All classes are immutable and thread-safe except [com.github.forax.lazylr.Parser],
-///  which is bound to the thread that created it.
-/// For concurrent workloads, share a [com.github.forax.lazylr.ParserFactory]
+/// which is stateful and bound to the thread that uses it.
+///
+/// [com.github.forax.lazylr.MetaGrammar] is thread-safe and can be shared globally.
+//
+/// For concurrent workloads, you can share a [com.github.forax.lazylr.ParserFactory]
 /// and call [com.github.forax.lazylr.ParserFactory#createParser()]
 /// once per thread.
 ///

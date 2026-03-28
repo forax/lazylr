@@ -18,7 +18,7 @@ import java.util.Objects;
 import java.util.stream.IntStream;
 
 /// A typed, reflection-based alternative to [com.github.forax.lazylr.Evaluator]
-/// for transforming a parse into a domain-specific result.
+/// for visiting a parse into a domain-specific result.
 ///
 /// Where [Evaluator] requires a single `switch`-based dispatch method
 /// per kind of symbol, `Visitor` lets you write one plain Java method
