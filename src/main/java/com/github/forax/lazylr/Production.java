@@ -86,7 +86,8 @@ public final class Production implements PrecedenceEntity {
     if (name != null) {
       return name;
     }
-    // benign race condition, the result is stable, thus thread safe
+    // Benign race condition, the result can be computed by several threads,
+    // but they will converge to the same value.
     if (body.isEmpty()) {
       return name = head.name() + " : ε";
     }
