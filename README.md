@@ -13,7 +13,7 @@ with the agility of a modern library.
   ensuring fast startup times even for complex grammars.
 * **Developer Velocity:**
   Built for a fast feedback loop with no code-gen steps.
-* **Grammar Developer comfort:**
+* **Developer Comfort:**
   Remove grammar ambiguities with a simple precedence map (no complex restructuring),
   contextual lexing (the lexer uses the parser’s current state to decide which token regexes are allowed to match),
   and type-checked visitors for specifying evaluation.
