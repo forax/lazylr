@@ -68,6 +68,7 @@ import java.util.List;
 ///
 /// @param <V> The type of the value produced by the evaluation.
 ///
+/// @see Visitor
 /// @see Parser#parse(java.util.Iterator, Evaluator)
 public interface Evaluator<V extends @Nullable Object> {
   /// Transforms a matched [Terminal] into a value.
@@ -86,10 +87,10 @@ public interface Evaluator<V extends @Nullable Object> {
   /// components.
   ///
   /// The `arguments` list corresponds to the [Production#body()] in order.
-  /// For example, in a production `expr : expr + expr`, the list will contain:
-  /// * `arguments[0]`: Result of the first `expr`.
+  /// For example, in a production `expr : E + E`, the list will contain:
+  /// * `arguments[0]`: Result of the first `E`.
   /// * `arguments[1]`: Result of the `+` terminal.
-  /// * `arguments[2]`: Result of the second `expr`.
+  /// * `arguments[2]`: Result of the second `E`.
   ///
   /// @param production The derivation rule being reduced.
   /// @param arguments The evaluated results of each [Symbol] in the production's body.
