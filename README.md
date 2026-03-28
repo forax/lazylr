@@ -177,7 +177,7 @@ System.out.println(ast);
 // BinaryOp[op=+, left=NumLit[value=2], right=BinaryOp[op=*, left=UnaryOp[op=-, node=NumLit[value=3]], right=NumLit[value=4]]]
 ```
 
-For more detail on grammar design, see the step-by-step [GUIDE.md](GUIDE.md).
+For more detail on grammar design, see the step-by-step [tutorial](src/main/demo/README.md).
 
 
 ## Using with Maven
@@ -196,7 +196,7 @@ First, add jitpack.io as a repository in your POM file:
 
 Then add Lazy LR as a dependency:
 ```xml
-  <dependencies>
+<dependencies>
   ...
   <dependency>
     <groupId>com.github.forax</groupId>
