@@ -3,6 +3,7 @@ package com.github.forax.lazylr;
 import com.github.forax.lazylr.LRTransitionEngine.State;
 import org.jspecify.annotations.Nullable;
 
+import java.lang.invoke.MethodHandles;
 import java.util.AbstractList;
 import java.util.ArrayDeque;
 import java.util.Arrays;
@@ -19,8 +20,10 @@ import java.util.Set;
 ///
 /// ### Evaluation
 /// The parser supports two ways to process the input:
-/// 1. **Functional**: Using [#parse(Iterator, Evaluator)] to directly produce a result.
-/// 2. **Event-driven**: Using [#parse(Iterator, ParserListener)] to observe transitions
+/// 1. **TypeChecked**: Using [Visitor#reflect(MethodHandles.Lookup, Visitor)] to create
+///    an evaluator and [#parse(Iterator, Evaluator)] to parse it.
+/// 2. **Functional**: Using [#parse(Iterator, Evaluator)] to directly produce a result.
+/// 3. **Event-driven**: Using [#parse(Iterator, ParserListener)] to observe transitions
 ///    as they occur.
 ///
 /// This class is not thread-safe. Each instance is permanently bound to the thread
