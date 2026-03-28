@@ -29,7 +29,7 @@ public final class Token {
     }
   }
 
-   final @Nullable String name;
+   private final @Nullable String name;
    final Pattern pattern;
 
    private Token(@Nullable String name, Pattern pattern, boolean unused) {
@@ -71,6 +71,13 @@ public final class Token {
   /// @return The symbolic name of the token or `null`.
   public @Nullable String name() {
     return name;
+  }
+
+  /// Return The pattern automata.
+  /// @return The pattern automata.
+  Pattern pattern() {
+    // Design Note: this method is used only in the constructor of Tokenizer
+    return pattern;
   }
 
   /// Returns The regular expression pattern used to match input text.

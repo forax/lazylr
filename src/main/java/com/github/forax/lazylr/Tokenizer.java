@@ -37,7 +37,7 @@ final class Tokenizer implements Iterator<Terminal> {
     this.input = input;
     this.tokens = tokens;
     this.matchers = tokens.stream()
-        .map(token -> token.pattern.matcher(input))
+        .map(token -> token.pattern().matcher(input))
         .toArray(Matcher[]::new);
     activatedCache = new HashMap<>();
     super();
@@ -85,7 +85,7 @@ final class Tokenizer implements Iterator<Terminal> {
           return error(index, input);
         }
       }
-      var name = tokens.get(tokenIndex).name;
+      var name = tokens.get(tokenIndex).name();
       var matcher = matchers[tokenIndex];
       if (name == null) {
         // ignorable token: skip over and continue.
@@ -150,7 +150,7 @@ final class Tokenizer implements Iterator<Terminal> {
     var activated = new BitSet(tokens.size());
     for (var i = 0; i < tokens.size(); i++) {
       var token = tokens.get(i);
-      var name = token.name;
+      var name = token.name();
       activated.set(i, name == null || terminalNames.contains(name));
     }
     return activated;
