@@ -28,10 +28,9 @@ Because it is a library and not a code generator, it enables a rapid development
 * **No Build Step:**
   Skip the Maven/Gradle plugin execution.
   There are no generated `.java` files to manage, compile, or debug.
-* **Instant Grammar Validation:**
   Changes to your grammar are effective immediately.
 * **Unit-Test Friendly:**
-  Since grammars are just objects, you can define a grammar, parse a string,
+  Since grammars are just Java objects, you can define a grammar, parse a string,
   and assert the AST structure all within a single JUnit test method.
 
 > **Comparison of Development Cycles:**
@@ -39,7 +38,7 @@ Because it is a library and not a code generator, it enables a rapid development
 > * **Lazy LR:** Edit Grammar -> Run App
 
 This is especially useful when:
-* **Iterating fast on a grammar:**
+* **Iterating on a grammar:**
   Experimenting with new syntax without context switching.
 * **Teaching:**
   Perfect for classrooms where students need to see the impact of grammar changes instantly.
@@ -172,7 +171,6 @@ String input = "2 + - 3 * 4";
 
 Node ast = mg.parse(input, new NodeVisitor());
 
-// Profit!
 System.out.println(ast);
 // BinaryOp[op=+, left=NumLit[value=2], right=BinaryOp[op=*, left=UnaryOp[op=-, node=NumLit[value=3]], right=NumLit[value=4]]]
 ```
