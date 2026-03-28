@@ -11,6 +11,5 @@ void main() {
       }
       """);
 
-  var tree = mg.parse("32", new PrintEvaluator());
-  IO.println(tree);
+  mg.parse("32", new PrintEvaluator());
 }
