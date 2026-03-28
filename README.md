@@ -11,25 +11,49 @@ with the agility of a modern library.
 * **Lazy State Generation:**
   Parser states are computed only as they are encountered in the terminal stream,
   ensuring fast startup times even for complex grammars.
-* **True LR(1) Power:**
-  More powerful than LL(1) and even LALR(1) parsers, handles a strictly larger class of grammars.
-* **Context-Sensitive Lexing:**
-  When used by the parser, the lexer activates only the token patterns that are
-  syntactically valid in the current state, removing ambiguities between tokens
-  with the same value such as keywords and identifiers.
-* **Declarative Precedence:**
-  Resolve shift/reduce conflicts (like the "dangling else" or operator precedence) using a simple `Precedence` map
-  rather than complex grammar restructuring.
+* **Developer Velocity:**
+  Built for a fast feedback loop with no code-gen steps.
+* **Grammar Developer comfort:**
+  Remove grammar ambiguities with a simple precedence map (no complex restructuring),
+  contextual lexing (the lexer uses the parser’s current state to decide which token regexes are allowed to match),
+  and type-checked visitors for specifying evaluation.
 * **Built for Modern Java:**
   Designed to work seamlessly with records, sealed types, and pattern matching (Java 25+).
 
+### Fast Feedback Loop
+
+The core philosophy of **Lazy LR** is to eliminate the "stop-and-wait" nature of traditional parser generators.
+
+Because it is a library and not a code generator, it enables a rapid development cycle:
+* **No Build Step:**
+  Skip the Maven/Gradle plugin execution.
+  There are no generated `.java` files to manage, compile, or debug.
+* **Instant Grammar Validation:**
+  Changes to your grammar are effective immediately.
+* **Unit-Test Friendly:**
+  Since grammars are just objects, you can define a grammar, parse a string,
+  and assert the AST structure all within a single JUnit test method.
+
+> **Comparison of Development Cycles:**
+> * **Traditional:** Edit Grammar -> Run Plugin -> Compile Generated Code -> Run App
+> * **Lazy LR:** Edit Grammar -> Run App
+
+This is especially useful when:
+* **Iterating fast on a grammar:**
+  Experimenting with new syntax without context switching.
+* **Teaching:**
+  Perfect for classrooms where students need to see the impact of grammar changes instantly.
+* **Partial Parsing:**
+  Efficient handling of large grammars (like SQL) where only a specific subset
+  of productions is needed for a given task.
+
 ## Tutorial
 
-The [demo](src/main/demo/README.md)s walks you through using LazyLR to build a grammar
+The [demo](src/main/demo/README.md) walks you through using LazyLR to build a grammar
 from scratch in steps, starting from a single-number parser and progressing through recursion,
 operator precedence, associativity, and production precedence with `%prec`.
 
-For the [Javadoc Reference](https://jitpack.io/com/github/forax/lazylr/latest/javadoc/).
+See the [Javadoc Reference](https://jitpack.io/com/github/forax/lazylr/latest/javadoc/).
 
 ## Getting Started
 
@@ -74,7 +98,7 @@ The parser needs to know:
 - for `2 + 3 * 4`, should it be `(2 + 3) * 4` or `2 + (3 * 4)`?
 - for `2 + 3 + 4`, should it be `(2 + 3) + 4` or `2 + (3 + 4)`?
 
-The `precedence` section resolves this: later lines have higher precedence (`'*'` binds more tightly than `'+'`),
+The `precedence` section resolves this: later lines have higher precedence (so `'*'` binds more tightly than `'+'`),
 and `left` associativity means `1 + 2 + 3` groups as `(1 + 2) + 3`.
 
 By default, a production inherits the precedence of its rightmost terminal.
@@ -235,4 +259,4 @@ java -jar lazylr.jar --generate grammar.txt
 ```
 
 Emits Java source containing a static method `createGrammar()` that reconstructs
-the grammar programmatically, useful for embedding a grammar without the DSL at runtime.
+the grammar programmatically, useful for embedding a grammar in a non-textual form.
