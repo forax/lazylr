@@ -40,7 +40,7 @@ import java.util.stream.Stream;
 /// }                                         // empty right-hand side is epsilon
 /// ```
 ///
-/// - **tokens** — defines named and anonymous terminal symbols as regular expressions.
+/// - **tokens** — defines named and anonymous terminal symbols as Java regular expressions.
 ///   The declaration order controls lexer token priority.
 ///   Named terminals (e.g. `ident: /[a-z]+/`) become lexer tokens; anonymous ones
 ///   (e.g. `/[ \t]+/`) are matched and silently discarded.
