@@ -12,13 +12,13 @@ import static org.junit.jupiter.api.Assertions.*;
 
 public final class LALRVerifierTest {
 
-  private final Terminal PLUS = new Terminal("+");
-  private final Terminal MUL = new Terminal("*");
-  private final Terminal NUM = new Terminal("num");
-  private final Terminal IF = new Terminal("if");
-  private final Terminal ELSE = new Terminal("else");
-  private final NonTerminal E = new NonTerminal("E");
-  private final NonTerminal S = new NonTerminal("S");
+  private static final Terminal PLUS = new Terminal("+");
+  private static final Terminal MUL = new Terminal("*");
+  private static final Terminal NUM = new Terminal("num");
+  private static final Terminal IF = new Terminal("if");
+  private static final Terminal ELSE = new Terminal("else");
+  private static final NonTerminal E = new NonTerminal("E");
+  private static final NonTerminal S = new NonTerminal("S");
 
   private static final Consumer<String> ERROR_REPORTER = error -> {
     throw new IllegalStateException(error);

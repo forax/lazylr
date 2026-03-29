@@ -281,6 +281,7 @@ public final class VisitorTest {
 
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void reflectObjectNullThrows() {
     assertThrows(NullPointerException.class,
         () -> Visitor.reflect(MethodHandles.lookup(), (Visitor<?>) null));
@@ -456,6 +457,7 @@ public final class VisitorTest {
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void reflectLookupNullLookupThrows() {
     var visitor = new Visitor<Integer> () {
       public int num(Terminal t) { return 0; }
@@ -465,12 +467,14 @@ public final class VisitorTest {
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void reflectLookupNullObjectThrows() {
     assertThrows(NullPointerException.class,
         () -> Visitor.reflect(MethodHandles.lookup(), null));
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void reflectLookupBothNullThrows() {
     assertThrows(NullPointerException.class,
         () -> Visitor.reflect(null, null));

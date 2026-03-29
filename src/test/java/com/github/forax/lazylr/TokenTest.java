@@ -7,18 +7,21 @@ import static org.junit.jupiter.api.Assertions.*;
 public final class TokenTest {
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void constructorIgnorableNullRegex() {
     assertThrows(NullPointerException.class, () ->
         new Token(null));
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void constructorNamedNullName() {
     assertThrows(NullPointerException.class, () ->
         new Token(null, "[0-9]+"));
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void constructorNamedNullRegex() {
     assertThrows(NullPointerException.class, () ->
         new Token("id", null));

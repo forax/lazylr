@@ -12,6 +12,7 @@ public final class NonTerminalTest {
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void constructorNameNull() {
     assertThrows(NullPointerException.class, () ->
         new NonTerminal(null));

@@ -12,6 +12,7 @@ public final class PrecedenceTest {
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void constructorAssocNull() {
     assertThrows(NullPointerException.class, () ->
         new Precedence(1, null));

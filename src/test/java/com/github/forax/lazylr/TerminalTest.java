@@ -2,25 +2,26 @@ package com.github.forax.lazylr;
 
 import org.junit.jupiter.api.Test;
 
-import java.util.NoSuchElementException;
-
 import static org.junit.jupiter.api.Assertions.*;
 
 public final class TerminalTest {
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void constructorNameOnlyNull() {
     assertThrows(NullPointerException.class, () ->
         new Terminal(null));
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void constructorNameNull() {
     assertThrows(NullPointerException.class, () ->
         new Terminal(null, "value"));
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void constructorValueNull() {
     assertThrows(NullPointerException.class, () ->
         new Terminal("name", null));
@@ -85,12 +86,12 @@ public final class TerminalTest {
 
   @Test
   public void notEqualsNull() {
-    assertNotEquals(new Terminal("num"), null);
+    assertNotEquals(null, new Terminal("num"));
   }
 
   @Test
   public void notEqualsOtherType() {
-    assertNotEquals(new Terminal("num"), "num");
+    assertNotEquals("num", new Terminal("num"));
   }
 
   @Test

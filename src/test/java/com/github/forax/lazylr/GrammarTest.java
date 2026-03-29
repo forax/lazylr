@@ -11,12 +11,14 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class GrammarTest {
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void constructorStartSymbolNull() {
     assertThrows(NullPointerException.class, () ->
         new Grammar(null, List.of()));
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void constructorProductionsNull() {
     var start = new NonTerminal("S");
     assertThrows(NullPointerException.class, () ->
@@ -33,6 +35,7 @@ public final class GrammarTest {
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void productionsForNull() {
     var start = new NonTerminal("S");
     var grammar = new Grammar(start, List.of(new Production(start, List.of())));

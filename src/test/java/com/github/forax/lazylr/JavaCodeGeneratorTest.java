@@ -2,7 +2,6 @@ package com.github.forax.lazylr;
 
 import org.junit.jupiter.api.Test;
 
-import javax.tools.Diagnostic;
 import javax.tools.DiagnosticCollector;
 import javax.tools.FileObject;
 import javax.tools.ForwardingJavaFileManager;
@@ -75,6 +74,7 @@ public final class JavaCodeGeneratorTest {
 
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void generateThrowsOnNullMetaGrammar() {
     assertThrows(NullPointerException.class, () -> JavaCodeGenerator.generate(null));
   }

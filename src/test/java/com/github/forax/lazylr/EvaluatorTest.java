@@ -52,7 +52,7 @@ public class EvaluatorTest {
 
     class IntEvaluator implements Evaluator<Integer> {
       @Override
-      public Integer evaluate(@NonNull Terminal terminal) {
+      public Integer evaluate(Terminal terminal) {
         return switch (terminal.name()) {
           case "num" -> Integer.parseInt(terminal.value());
           default    -> 0;
@@ -60,7 +60,7 @@ public class EvaluatorTest {
       }
 
       @Override
-      public Integer evaluate(@NonNull Production production, @NonNull List<Integer> arguments) {
+      public Integer evaluate(Production production, List<Integer> arguments) {
         return switch (production.name()) {
           case "E : E + E" -> arguments.get(0) + arguments.get(2);
           case "E : E * E" -> arguments.get(0) * arguments.get(2);

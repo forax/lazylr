@@ -10,12 +10,14 @@ import static org.junit.jupiter.api.Assertions.*;
 public final class ProductionTest {
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void constructorHeadNull() {
     assertThrows(NullPointerException.class, () ->
         new Production(null, List.of()));
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void constructorBodyNull() {
     var head = new NonTerminal("S");
     assertThrows(NullPointerException.class, () ->

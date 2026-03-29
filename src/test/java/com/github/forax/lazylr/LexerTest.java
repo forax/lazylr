@@ -12,12 +12,14 @@ import static org.junit.jupiter.api.Assertions.*;
 public final class LexerTest {
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void createLexerTokensNull() {
     assertThrows(NullPointerException.class, () ->
         Lexer.createLexer(null));
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void tokenizeInputNull() {
     var lexer = Lexer.createLexer(List.of(new Token("ID", "[a-z]+")));
     assertThrows(NullPointerException.class, () ->
@@ -472,6 +474,7 @@ public final class LexerTest {
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void positionNullIteratorThrows() {
     assertThrows(NullPointerException.class, () -> Lexer.position(null));
   }

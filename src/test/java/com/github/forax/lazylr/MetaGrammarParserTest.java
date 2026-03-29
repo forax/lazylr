@@ -1,6 +1,5 @@
 package com.github.forax.lazylr;
 
-import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -23,23 +22,26 @@ public final class MetaGrammarParserTest {
     var parser = Parser.createParser(grammar, precedence);
     var result = new StringBuilder();
     parser.parse(input.iterator(), new ParserListener() {
-      @Override public void onShift(@NonNull Terminal token) {
+      @Override public void onShift(Terminal token) {
         result.append("Shift ").append(token.name()).append('\n');
       }
-      @Override public void onReduce(@NonNull Production production) {
+      @Override public void onReduce(Production production) {
         result.append("Reduce ").append(production.name()).append('\n');
       }
     });
     return result.toString();
   }
 
+
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void createParserGrammarNull() {
     assertThrows(NullPointerException.class, () ->
         Parser.createParser(null, Map.of()));
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void createParserPrecedenceNull() {
     var mg = MetaGrammar.load("""
         grammar {
@@ -52,6 +54,7 @@ public final class MetaGrammarParserTest {
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void parseEvaluatorInputNull() {
     var mg = MetaGrammar.load("""
         grammar {
@@ -62,12 +65,12 @@ public final class MetaGrammarParserTest {
     var parser = Parser.createParser(grammar, Map.of());
     var evaluator = new Evaluator<>() {
       @Override
-      public Object evaluate(@NonNull Terminal terminal) {
+      public Object evaluate(Terminal terminal) {
         return fail();
       }
 
       @Override
-      public Object evaluate(@NonNull Production production, @NonNull List<Object> args) {
+      public Object evaluate(Production production, List<Object> args) {
         return fail();
       }
     };
@@ -76,6 +79,7 @@ public final class MetaGrammarParserTest {
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void parseEvaluatorNull() {
     var mg = MetaGrammar.load("""
         grammar {
@@ -90,6 +94,7 @@ public final class MetaGrammarParserTest {
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void parseListenerInputNull() {
     var mg = MetaGrammar.load("""
         grammar {
@@ -100,12 +105,12 @@ public final class MetaGrammarParserTest {
     var parser = Parser.createParser(grammar, Map.of());
     ParserListener listener = new ParserListener() {
       @Override
-      public void onShift(@NonNull Terminal token) {
+      public void onShift(Terminal token) {
         fail();
       }
 
       @Override
-      public void onReduce(@NonNull Production production) {
+      public void onReduce(Production production) {
         fail();
       }
     };
@@ -114,6 +119,7 @@ public final class MetaGrammarParserTest {
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void parseListenerNull() {
     var mg = MetaGrammar.load("""
         grammar {
@@ -754,12 +760,12 @@ public final class MetaGrammarParserTest {
     var parser = Parser.createParser(grammar, precedence);
     var evaluator = new Evaluator<String>() {
       @Override
-      public String evaluate(@NonNull Terminal token) {
+      public String evaluate(Terminal token) {
         return token.name();
       }
 
       @Override
-      public String evaluate(@NonNull Production production, @NonNull List<String> args) {
+      public String evaluate(Production production, List<String> args) {
         return production.head().name() + "(" + String.join(", ", args) + ")";
       }
     };
@@ -853,8 +859,8 @@ public final class MetaGrammarParserTest {
 
     var exception = assertThrows(ParsingException.class, () ->
       parser.parse(terminals, new ParserListener() {
-        @Override public void onShift(@NonNull Terminal token) {}
-        @Override public void onReduce(@NonNull Production production) {}
+        @Override public void onShift(Terminal token) {}
+        @Override public void onReduce(Production production) {}
       })
     );
 
@@ -894,8 +900,8 @@ public final class MetaGrammarParserTest {
 
     var exception = assertThrows(ParsingException.class, () ->
       parser.parse(terminals, new ParserListener() {
-        @Override public void onShift(@NonNull Terminal token) {}
-        @Override public void onReduce(@NonNull Production production) {}
+        @Override public void onShift(Terminal token) {}
+        @Override public void onReduce(Production production) {}
       })
     );
 
@@ -937,8 +943,8 @@ public final class MetaGrammarParserTest {
 
     var exception = assertThrows(ParsingException.class, () ->
       parser.parse(terminals, new ParserListener() {
-        @Override public void onShift(@NonNull Terminal token) {}
-        @Override public void onReduce(@NonNull Production production) {}
+        @Override public void onShift(Terminal token) {}
+        @Override public void onReduce(Production production) {}
       })
     );
 
@@ -984,8 +990,8 @@ public final class MetaGrammarParserTest {
 
     var exception = assertThrows(ParsingException.class, () ->
       parser.parse(terminals, new ParserListener() {
-        @Override public void onShift(@NonNull Terminal token) {}
-        @Override public void onReduce(@NonNull Production production) {}
+        @Override public void onShift(Terminal token) {}
+        @Override public void onReduce(Production production) {}
       })
     );
 
@@ -1018,8 +1024,8 @@ public final class MetaGrammarParserTest {
 
     assertThrows(ParsingException.class, () ->
         parser.parse(List.of(id).iterator(), new ParserListener() {
-          @Override public void onShift(@NonNull Terminal token) {}
-          @Override public void onReduce(@NonNull Production production) {}
+          @Override public void onShift(Terminal token) {}
+          @Override public void onReduce(Production production) {}
         }));
   }
 
@@ -1042,8 +1048,8 @@ public final class MetaGrammarParserTest {
 
     assertThrows(ParsingException.class, () ->
         parser.parse(List.of(id, plus, id, plus, id).iterator(), new ParserListener() {
-          @Override public void onShift(@NonNull Terminal token) {}
-          @Override public void onReduce(@NonNull Production production) {}
+          @Override public void onShift(Terminal token) {}
+          @Override public void onReduce(Production production) {}
         }));
   }
 }

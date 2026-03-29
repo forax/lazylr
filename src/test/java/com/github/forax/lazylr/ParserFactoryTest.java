@@ -1,6 +1,5 @@
 package com.github.forax.lazylr;
 
-import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -95,7 +94,7 @@ public final class ParserFactoryTest {
   private static Evaluator<Integer> arithmeticEvaluator() {
     return new Evaluator<>() {
       @Override
-      public Integer evaluate(@NonNull Terminal terminal) {
+      public Integer evaluate(Terminal terminal) {
         return switch (terminal.name()) {
           case "num" -> Integer.parseInt(terminal.value());
           default    -> 0;
@@ -103,7 +102,7 @@ public final class ParserFactoryTest {
       }
 
       @Override
-      public Integer evaluate(@NonNull Production production, @NonNull List<Integer> args) {
+      public Integer evaluate(Production production, List<Integer> args) {
         return switch (production.name()) {
           case "E : num"   -> args.get(0);
           case "E : E + E" -> args.get(0) + args.get(2);
@@ -114,7 +113,7 @@ public final class ParserFactoryTest {
     };
   }
 
-  // Value -> Object | Array | STRING | NUMBER | true | false | null  (minimal JSON)
+  // Value -> Object | Array | STRING | NUMBER | true | false | null (minimal JSON)
   private static MetaGrammar jsonMetaGrammar() {
     var Value    = new NonTerminal("Value");
     var Object_  = new NonTerminal("Object");
@@ -157,8 +156,8 @@ public final class ParserFactoryTest {
   }
 
   private static final ParserListener NOOP_LISTENER = new ParserListener() {
-    @Override public void onShift(@NonNull Terminal token) {}
-    @Override public void onReduce(@NonNull Production production) {}
+    @Override public void onShift(Terminal token) {}
+    @Override public void onReduce(Production production) {}
   };
 
 
@@ -187,7 +186,7 @@ public final class ParserFactoryTest {
   }
 
   @Test
-  public void parserBoundToCreatingPlateformThread() throws Exception {
+  public void parserBoundToCreatingPlatformThread() throws Exception {
     var mg = arithmeticMetaGrammar();
     var factory = ParserFactory.createFactory(mg.grammar(), mg.precedenceMap());
     var parser = factory.createParser();
@@ -212,7 +211,7 @@ public final class ParserFactoryTest {
     var mg = arithmeticMetaGrammar();
     var factory = ParserFactory.createFactory(mg.grammar(), mg.precedenceMap());
     var parser = factory.createParser();
-    // 2 + 3 * 4 = 14  (multiplication binds tighter)
+    // 2 + 3 * 4 = 14 (multiplication binds tighter)
     var input = List.of(
         new Terminal("num", "2"), new Terminal("+", "+"),
         new Terminal("num", "3"), new Terminal("*", "*"),
@@ -261,7 +260,7 @@ public final class ParserFactoryTest {
     var mg = arithmeticMetaGrammar();
     var factory = ParserFactory.createFactory(mg.grammar(), mg.precedenceMap());
 
-    // Even callables: 2 + 3 * 4 = 14,  odd callables: 10 * 3 + 2 = 32
+    // Even callables: 2 + 3 * 4 = 14, odd callables: 10 * 3 + 2 = 32
     var evenInput = List.of(
         new Terminal("num", "2"), new Terminal("+", "+"),
         new Terminal("num", "3"), new Terminal("*", "*"),
@@ -356,7 +355,7 @@ public final class ParserFactoryTest {
     var recoveryInput = List.of(
         new Terminal("num", "3"), new Terminal("+", "+"), new Terminal("num", "4"));
 
-    // Callable 0: triggers a ParsingException then parses correctly afterwards.
+    // Callable 0: triggers a ParsingException then parses correctly afterward.
     var faultyCallable = (Callable<Integer>) () -> {
       var parser = factory.createParser();
       try {

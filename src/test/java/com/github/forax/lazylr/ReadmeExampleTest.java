@@ -25,7 +25,7 @@ public final class ReadmeExampleTest {
         }
         """);
 
-    // Verifie the grammar for conflicts (optional)
+    // Verifies the grammar for conflicts (optional)
     mg.verify();
 
     //Transforming to an AST using an Evaluator
@@ -34,6 +34,7 @@ public final class ReadmeExampleTest {
     record UnaryOp(String op, Node node) implements Node {}
     record BinaryOp(String op, Node left, Node right) implements Node {}
 
+    @SuppressWarnings("unused")
     class NodeVisitor implements Visitor<Node>{
       public Node num(Terminal term) {
         return new NumLit(Integer.parseInt(term.value()));

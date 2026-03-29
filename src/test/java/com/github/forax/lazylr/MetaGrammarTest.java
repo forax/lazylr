@@ -1,6 +1,5 @@
 package com.github.forax.lazylr;
 
-import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -797,11 +796,11 @@ public final class MetaGrammarTest {
 
     var result = mg.parse("42", new Evaluator<Integer>() {
       @Override
-      public Integer evaluate(@NonNull Terminal terminal) {
+      public Integer evaluate(Terminal terminal) {
         return Integer.parseInt(terminal.value());
       }
       @Override
-      public Integer evaluate(@NonNull Production production, @NonNull List<Integer> args) {
+      public Integer evaluate(Production production, List<Integer> args) {
         return args.getFirst();
       }
     });
@@ -827,14 +826,14 @@ public final class MetaGrammarTest {
 
     var result = mg.parse("1 + 2", new Evaluator<Integer>() {
       @Override
-      public Integer evaluate(@NonNull Terminal terminal) {
+      public Integer evaluate(Terminal terminal) {
         return switch (terminal.name()) {
           case "num" -> Integer.parseInt(terminal.value());
           default -> null;
         };
       }
       @Override
-      public Integer evaluate(@NonNull Production production, @NonNull List<Integer> args) {
+      public Integer evaluate(Production production, List<Integer> args) {
         return switch (production.name()) {
           case "E : E + E" -> args.get(0) + args.get(2);
           case "E : num"   -> args.getFirst();
@@ -856,8 +855,8 @@ public final class MetaGrammarTest {
         """);
 
     Evaluator<Object> evaluator = new Evaluator<>() {
-      @Override public Object evaluate(@NonNull Terminal t) { return null; }
-      @Override public Object evaluate(@NonNull Production p, @NonNull List<Object> args) { return null; }
+      @Override public Object evaluate(Terminal t) { return null; }
+      @Override public Object evaluate(Production p, List<Object> args) { return null; }
     };
 
     assertThrows(NullPointerException.class,
@@ -882,8 +881,8 @@ public final class MetaGrammarTest {
     var mg = MetaGrammar.load("");
 
     Evaluator<Object> evaluator = new Evaluator<>() {
-      @Override public Object evaluate(@NonNull Terminal t) { return null; }
-      @Override public Object evaluate(@NonNull Production p, @NonNull List<Object> args) { return null; }
+      @Override public Object evaluate(Terminal t) { return null; }
+      @Override public Object evaluate(Production p, List<Object> args) { return null; }
     };
 
     assertThrows(IllegalStateException.class, () -> mg.parse("42", evaluator));
@@ -901,8 +900,8 @@ public final class MetaGrammarTest {
         """);
 
     Evaluator<Object> evaluator = new Evaluator<>() {
-      @Override public Object evaluate(@NonNull Terminal t) { return null; }
-      @Override public Object evaluate(@NonNull Production p, @NonNull List<Object> args) { return null; }
+      @Override public Object evaluate(Terminal t) { return null; }
+      @Override public Object evaluate(Production p, List<Object> args) { return null; }
     };
 
     assertThrows(ParsingException.class, () -> mg.parse("@@@", evaluator));
