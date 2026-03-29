@@ -939,9 +939,9 @@ import com.github.forax.lazylr.*;
 sealed interface Expr {
   int pos();
 }
-record Value(int value, int pos) implements Expr { ... }
-record Binary(char op, Expr left, Expr right, int pos) implements Expr { ... }
-record Unary(char op, Expr expr, int pos) implements Expr { ... }
+record Value(int value, int pos) implements Expr {}
+record Binary(char op, Expr left, Expr right, int pos) implements Expr {}
+record Unary(char op, Expr expr, int pos) implements Expr {}
 
 class ExprVisitor implements Visitor<Expr> {
   final Iterator<Terminal> input;
