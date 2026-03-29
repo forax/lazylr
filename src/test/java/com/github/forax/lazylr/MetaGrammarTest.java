@@ -8,6 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
@@ -779,6 +780,92 @@ public final class MetaGrammarTest {
     var mg = new MetaGrammar(List.of(), precedenceMap, grammar);
 
     assertEquals(List.of(plus, star, pow), List.copyOf(mg.precedenceMap().keySet()));
+  }
+
+
+  @Test
+  public void verifyWithNoConflictDoesNotCallErrorReporter() {
+    var mg = MetaGrammar.load("""
+            tokens {
+              num: /[0-9]+/
+            }
+            precedence {
+              left: '+'
+            }
+            grammar {
+              E: E '+' E
+              E: num
+            }
+            """);
+
+    var errors = new ArrayList<String>();
+    mg.verify(errors::add);
+
+    assertTrue(errors.isEmpty());
+  }
+
+  @Test
+  public void verifyWithUnresolvedConflictCallsErrorReporter() {
+    var mg = MetaGrammar.load("""
+            tokens {
+              num: /[0-9]+/
+            }
+            grammar {
+              E: E '+' E
+              E: num
+            }
+            """);
+
+    var errors = new ArrayList<String>();
+    mg.verify(errors::add);
+
+    assertFalse(errors.isEmpty());
+  }
+
+  @Test
+  @SuppressWarnings("DataFlowIssue")
+  public void verifyWithErrorReporterNullReporterThrowsNullPointerException() {
+    var mg = MetaGrammar.load("""
+            grammar {
+              E: num
+            }
+            """);
+
+    assertThrows(NullPointerException.class,
+        () -> mg.verify(null));
+  }
+
+  @Test
+  public void verifyWithErrorReporterNoGrammarThrowsIllegalStateException() {
+    var mg = MetaGrammar.load("");
+
+    assertThrows(IllegalStateException.class,
+        () -> mg.verify(_ -> {}));
+  }
+
+  @Test
+  public void verifyNoArgNoConflictDoesNotThrow() {
+    var mg = MetaGrammar.load("""
+            tokens {
+              num: /[0-9]+/
+            }
+            precedence {
+              left: '+'
+            }
+            grammar {
+              E: E '+' E
+              E: num
+            }
+            """);
+
+    assertDoesNotThrow(() -> mg.verify());
+  }
+
+  @Test
+  public void verifyNoArgNoGrammarThrowsIllegalStateException() {
+    var mg = MetaGrammar.load("");
+
+    assertThrows(IllegalStateException.class, mg::verify);
   }
 
 
