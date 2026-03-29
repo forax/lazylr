@@ -3,6 +3,13 @@
 This tutorial walks you through the LazyLR library step by step, using a series of small,
 self-contained programs. Each demo builds on the previous one — read them in order for the best experience.
 
+## Before You Start
+
+**Prerequisites**
+- JDK 25+ (for LazyLR and the modern syntax used in demos).
+- Ability to run single-file Java snippets (for example, with `java --source 25 src/main/demo/file.java`)
+  or any Java IDEs (IntelliJ, Eclipse, VSCode), open LazyLR as a Maven project.
+
 ---
 
 ## What is LazyLR?
@@ -117,7 +124,7 @@ void main() {
 The `MetaGrammar` extracts the token list for you via `mg.tokens()`, so you rarely need to build it by hand.
 
 > 💡 **Tie-breaking Rules:** The lexer always prefers the **longest match** first.
->    If you have twp tokens, `if: /if/` and `identifier: /[a-z]+/` and your input is `ifnot`,
+>    If you have two tokens, `if: /if/` and `identifier: /[a-z]+/` and your input is `ifnot`,
 >    it will always match `ifnot` as an identifier.
 >    However, if two patterns match the **same** number of characters (a tie), the **earlier declaration wins**.
 >    This is why `if: /if/` must be declared before `ident: /[a-z]+/` in the `tokens` section.
@@ -153,7 +160,7 @@ void main() {
 }
 ```
 
-Because LazyLr is a lazy parser, internal state is mutated during parsing,
+Because LazyLR is a lazy parser, internal state is mutated during parsing,
 the class **`Parser` is not thread-safe**; use one per thread (or share a `ParserFactory`).
 
 > 💡 **Notice the order:** terminals fire *before* the production that contains them.
@@ -990,7 +997,7 @@ receives the position directly as an `int` parameter.
 
 Second, the method `mg.parse(input, visitorFactory)` overload is used instead of
 `mg.parse(input, visitor)`. This is necessary because `Lexer.position(Iterator)`
-requires the **exact same iterator object** than the parser is pulling from.
+requires the **exact same iterator object** as the parser is pulling from.
 The factory hands that iterator to the visitor before the first token
 is consumed, allowing the visitor to hold a reference to it.
 
