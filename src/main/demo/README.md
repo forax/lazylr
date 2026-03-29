@@ -919,6 +919,86 @@ so it reduces — binding the unary minus tightly to its operand before any bina
 >     In general, whenever a production should not inherit its precedence from its rightmost terminal,
 >     `%prec` is the right tool.
 
+---
+
+## 17 — Tracking Terminal Positions [_17_AST_position.java](_17_AST_position.java)
+
+**Goal:** Record the source position of each token in the AST, so that later
+phases (type-checkers, interpreters, error reporters) can point back to the
+original input.
+
+`Lexer#position(Iterator)` returns the character offset of the **most recently
+shifted terminal** in the input string. The trick is that the visitor needs a
+reference to the live iterator, which is why this demo uses the
+`mg.parse(input, visitorFactory)` overload: the factory receives the iterator
+before parsing starts, and the visitor stores it as a field.
+
+```java
+import com.github.forax.lazylr.*;
+
+sealed interface Expr {
+  int pos();
+}
+record Value(int value, int pos) implements Expr { ... }
+record Binary(char op, Expr left, Expr right, int pos) implements Expr { ... }
+record Unary(char op, Expr expr, int pos) implements Expr { ... }
+
+class ExprVisitor implements Visitor<Expr> {
+  final Iterator<Terminal> input;
+
+  ExprVisitor(Iterator<Terminal> input) {
+    this.input = input;
+    super();
+  }
+
+  public Expr number(Terminal terminal) {
+    var pos = Lexer.position(input);
+    return new Value(Integer.parseInt(terminal.value()), pos);
+  }
+
+  public int minus(Terminal unusedTerminal) {
+    return Lexer.position(input);
+  }
+
+  ...
+
+  @ProductionName("E : E minus E")
+  public Expr sub(Expr left, int unusedPos, Expr right) { return new Binary('-', left, right, left.pos()); }
+
+  @ProductionName("E : minus E")
+  public Expr unary(int minusPos, Expr expr) { return new Unary('-', expr, minusPos); }
+}
+
+void main() {
+  var mg = MetaGrammar.load(...);
+
+  mg.verify();
+
+  var expr = mg.parse("3 + - 2 * 4", ExprVisitor::new);
+  IO.println(expr);
+}
+```
+
+Output: `Binary[op=+, left=Value[value=3, pos=0], right=Binary[op=*, left=Unary[op=-, expr=Value[value=2, pos=6], pos=4], right=Value[value=4, pos=10], pos=4], pos=0]`
+
+There are two things worth noticing:
+
+First, the `minus` terminal method returns `int` rather than `Expr`. Because
+terminal methods are matched by name and can return any non-void type, you can
+return a plain position integer instead of an AST node. The production method
+receives the position directly as an `int` parameter.
+
+Second, the method `mg.parse(input, visitorFactory)` overload is used instead of
+`mg.parse(input, visitor)`. This is necessary because `Lexer.position(Iterator)`
+requires the **exact same iterator object** than the parser is pulling from.
+The factory hands that iterator to the visitor before the first token
+is consumed, allowing the visitor to hold a reference to it.
+
+> 💡 `Lexer.position(iterator)` returns the start offset (zero-based character index)
+>    of the last terminal returned by the iterator.
+>    Call it inside a terminal method right when the shift is done.
+
+---
 
 ## That's all
 
