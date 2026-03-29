@@ -7,8 +7,8 @@ package com.github.forax.lazylr;
 /// structure (a [NonTerminal]).
 ///
 /// ### Implementations
-/// * [Terminal]: Represents raw tokens matched by the [Lexer] (e.g., `"num"`, `"+"`).
-/// * [NonTerminal]: Represents abstract grammatical constructs (e.g., `"expr"`, `"stmt"`).
+/// - [Terminal]: Represents raw tokens matched by the [Lexer] (e.g., `"num"`, `"+"`).
+/// - [NonTerminal]: Represents abstract grammatical constructs (e.g., `"expr"`, `"stmt"`).
 public sealed interface Symbol permits Terminal, NonTerminal {
 
   /// Returns the unique identifying name of this symbol.
