@@ -261,19 +261,16 @@ public interface Visitor<V extends @Nullable Object> {
         if (Visitor.class.isAssignableFrom(rawClass)) {
           var argument = parameterizedType.getActualTypeArguments()[0];
           if (argument instanceof Class<?> clazz) {
-            final class Holder {
-              private static final Map<Class<?>, Class<?>> TO_PRIMITIVE_MAP = Map.of(
-                  Byte.class, byte.class,
-                  Short.class, short.class,
-                  Character.class, char.class,
-                  Integer.class, int.class,
-                  Long.class, long.class,
-                  Float.class, float.class,
-                  Double.class, double.class
-              );
-            }
-            var primitive = Holder.TO_PRIMITIVE_MAP.get(clazz);
-            return primitive != null ? primitive : clazz;
+            return switch (clazz.getName()) {
+              case "java.lang.Byte" -> byte.class;
+              case "java.lang.Short" -> short.class;
+              case "java.lang.Character" -> char.class;
+              case "java.lang.Integer" -> int.class;
+              case "java.lang.Long" -> long.class;
+              case "java.lang.Float" -> float.class;
+              case "java.lang.Double" -> double.class;
+              default -> clazz;
+            };
           }
         }
       }

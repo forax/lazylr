@@ -621,6 +621,183 @@ public final class VisitorTest {
   }
 
   @Test
+  public void missingProductionMessageReturnTypeFromVisitorTypeParameter() {
+    var E    = new NonTerminal("E");
+    var num  = new Terminal("num");
+    var plus = new Terminal("+");
+    var grammar = new Grammar(E, List.of(
+        new Production(E, List.of(num)),
+        new Production(E, List.of(E, plus, E))));
+    var parser = Parser.createParser(grammar,
+        Map.of(plus, new Precedence(1, Precedence.Associativity.LEFT)));
+
+    // Visitor<Byte> declared explicitly so the type of E should be byte
+    class IntVisitor implements Visitor<Byte> {
+      public int num(Terminal t) { return Integer.parseInt(t.value()); }
+    }
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), new IntVisitor());
+
+    var ex = assertThrows(IllegalStateException.class,
+        () -> parser.parse(
+            List.of(new Terminal("num", "1"), new Terminal("+", "+"), new Terminal("num", "2"))
+                .iterator(), evaluator));
+    assertEquals("""
+        production "E : E + E" has no evaluator method,  proposed code:
+        @ProductionName("E : E + E")
+        public byte method(byte param0, byte param1) {
+          throw new UnsupportedOperationException("TODO");
+        }
+        """, ex.getMessage());
+  }
+
+  @Test
+  @SuppressWarnings({"rawtypes", "unchecked"})
+  public void missingProductionMessageReturnTypeFallsBackToObjectWhenNoTypeParameter() {
+    var E    = new NonTerminal("E");
+    var num  = new Terminal("num");
+    var plus = new Terminal("+");
+    var grammar = new Grammar(E, List.of(
+        new Production(E, List.of(num)),
+        new Production(E, List.of(E, plus, E))));
+    var parser = Parser.createParser(grammar,
+        Map.of(plus, new Precedence(1, Precedence.Associativity.LEFT)));
+
+    // Anonymous class uses a raw type, so it should fall back to Object
+    var visitor = new Visitor() {
+      public String num(Terminal t) { return t.value(); }
+    };
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), visitor);
+
+    var ex = assertThrows(IllegalStateException.class,
+        () -> parser.parse(
+            List.of(new Terminal("num", "1"), new Terminal("+", "+"), new Terminal("num", "2"))
+                .iterator(), evaluator));
+    assertEquals("""
+        production "E : E + E" has no evaluator method,  proposed code:
+        @ProductionName("E : E + E")
+        public Object method(Object param0, Object param1) {
+          throw new UnsupportedOperationException("TODO");
+        }
+        """, ex.getMessage());
+  }
+
+  @Test
+  public void missingProductionMessageTerminalWithHandlerAppearsAsParameter() {
+    var E    = new NonTerminal("E");
+    var num  = new Terminal("num");
+    var plus = new Terminal("plus");
+    var grammar = new Grammar(E, List.of(
+        new Production(E, List.of(num)),
+        new Production(E, List.of(E, plus, E))));
+    var parser = Parser.createParser(grammar,
+        Map.of(plus, new Precedence(1, Precedence.Associativity.LEFT)));
+
+    class MyVisitor implements Visitor<Integer> {
+      public int num(Terminal t) { return Integer.parseInt(t.value()); }
+      // "+" has a handler that returns boolean
+      public boolean plus(Terminal t) { return true; }
+      // no @ProductionName for "E : E + E"
+    }
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), new MyVisitor());
+
+    var ex = assertThrows(IllegalStateException.class,
+        () -> parser.parse(
+            List.of(new Terminal("num", "1"), new Terminal("plus", "+"), new Terminal("num", "2"))
+                .iterator(), evaluator));
+    assertEquals("""
+        production "E : E plus E" has no evaluator method,  proposed code:
+        @ProductionName("E : E plus E")
+        public int method(int param0, boolean plus, int param2) {
+          throw new UnsupportedOperationException("TODO");
+        }
+        """, ex.getMessage());
+  }
+
+  @Test
+  public void missingProductionMessageNonTerminalParameterUsesInferredType() {
+    var E    = new NonTerminal("E");
+    var num  = new Terminal("num");
+    var plus = new Terminal("+");
+    var minus = new Terminal("-");
+    var grammar = new Grammar(E, List.of(
+        new Production(E, List.of(num)),
+        new Production(E, List.of(E, plus, E)),
+        new Production(E, List.of(E, minus, E))));
+    var parser = Parser.createParser(grammar,
+        Map.of(plus, new Precedence(1, Precedence.Associativity.LEFT)));
+
+    class MyVisitor implements Visitor<Integer> {
+      public int num(Terminal t) { return Integer.parseInt(t.value()); }
+
+      @ProductionName("E : E + E")
+      public double add(double a, double b) { return a + b; }
+    }
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), new MyVisitor());
+
+    var ex = assertThrows(IllegalStateException.class,
+        () -> parser.parse(
+            List.of(new Terminal("num", "1"), new Terminal("-", "-"), new Terminal("num", "2"))
+                .iterator(), evaluator));
+    assertEquals("""
+        production "E : E - E" has no evaluator method,  proposed code:
+        @ProductionName("E : E - E")
+        public double method(double param0, double param1) {
+          throw new UnsupportedOperationException("TODO");
+        }
+        """, ex.getMessage());
+  }
+
+  @Test
+  public void missingProductionMessageProposedCodeContainsProductionNameAnnotation() {
+    // The proposed code must open with @ProductionName("E : E + E")
+    var E    = new NonTerminal("E");
+    var num  = new Terminal("num");
+    var plus = new Terminal("+");
+    var grammar = new Grammar(E, List.of(
+        new Production(E, List.of(num)),
+        new Production(E, List.of(E, plus, E))));
+    var parser = Parser.createParser(grammar,
+        Map.of(plus, new Precedence(1, Precedence.Associativity.LEFT)));
+
+    class MyVisitor implements Visitor<Integer> {
+      public int num(Terminal t) { return Integer.parseInt(t.value()); }
+    }
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), new MyVisitor());
+
+    var ex = assertThrows(IllegalStateException.class,
+        () -> parser.parse(
+            List.of(new Terminal("num", "1"), new Terminal("+", "+"), new Terminal("num", "2"))
+                .iterator(), evaluator));
+    assertTrue(ex.getMessage().contains("@ProductionName(\"E : E + E\")"),
+        "proposed code must start with the correct @ProductionName annotation");
+  }
+
+  @Test
+  public void missingProductionMessageProposedCodeContainsTodoBody() {
+    // The proposed method body must contain the TODO placeholder
+    var E    = new NonTerminal("E");
+    var num  = new Terminal("num");
+    var plus = new Terminal("+");
+    var grammar = new Grammar(E, List.of(
+        new Production(E, List.of(num)),
+        new Production(E, List.of(E, plus, E))));
+    var parser = Parser.createParser(grammar,
+        Map.of(plus, new Precedence(1, Precedence.Associativity.LEFT)));
+
+    class MyVisitor implements Visitor<Integer> {
+      public int num(Terminal t) { return Integer.parseInt(t.value()); }
+    }
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), new MyVisitor());
+
+    var ex = assertThrows(IllegalStateException.class,
+        () -> parser.parse(
+            List.of(new Terminal("num", "1"), new Terminal("+", "+"), new Terminal("num", "2"))
+                .iterator(), evaluator));
+    assertTrue(ex.getMessage().contains("throw new UnsupportedOperationException(\"TODO\")"),
+        "proposed code body must contain the TODO unsupported-operation throw");
+  }
+
+  @Test
   public void reflectStaticMethodsAreIgnored() {
     // Static methods on the visitor class must be silently skipped during reflection
     var E   = new NonTerminal("E");
