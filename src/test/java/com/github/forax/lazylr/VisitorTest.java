@@ -4,6 +4,7 @@ import org.jspecify.annotations.Nullable;
 import org.junit.jupiter.api.Test;
 
 import java.lang.invoke.MethodHandles;
+import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
 import java.util.Map;
 
@@ -520,5 +521,141 @@ public final class VisitorTest {
     };
     assertThrows(IllegalStateException.class,
         () -> Visitor.reflect(MethodHandles.lookup(), visitor));
+  }
+
+  @Test
+  public void reflectTerminalMethodRuntimeExceptionIsRethrown() {
+    // RuntimeException thrown inside a terminal method must propagate as-is
+    var E   = new NonTerminal("E");
+    var num = new Terminal("num");
+    var grammar = new Grammar(E, List.of(new Production(E, List.of(num))));
+    var parser = Parser.createParser(grammar, Map.of());
+
+    var visitor = new Visitor<Integer>() {
+      public int num(Terminal t) { throw new ArithmeticException("boom"); }
+    };
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), visitor);
+
+    assertThrows(ArithmeticException.class,
+        () -> parser.parse(List.of(new Terminal("num", "1")).iterator(), evaluator));
+  }
+
+  @Test
+  public void reflectProductionMethodRuntimeExceptionIsRethrown() {
+    // RuntimeException thrown inside a production method must propagate as-is
+    var E    = new NonTerminal("E");
+    var num  = new Terminal("num");
+    var plus = new Terminal("+");
+    var grammar = new Grammar(E, List.of(
+        new Production(E, List.of(num)),
+        new Production(E, List.of(E, plus, E))));
+    var parser = Parser.createParser(grammar,
+        Map.of(plus, new Precedence(10, Precedence.Associativity.LEFT)));
+
+    var visitor = new Visitor<Integer>() {
+      public int num(Terminal t) { return Integer.parseInt(t.value()); }
+
+      @ProductionName("E : E + E")
+      public int add(int a, int b) { throw new ArithmeticException("boom"); }
+    };
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), visitor);
+
+    assertThrows(ArithmeticException.class,
+        () -> parser.parse(
+            List.of(new Terminal("num", "1"), new Terminal("+", "+"), new Terminal("num", "2"))
+                .iterator(), evaluator));
+  }
+
+  @Test
+  public void reflectTerminalMethodCheckedExceptionIsWrappedInUndeclaredThrowable() {
+    // A checked exception thrown inside a terminal method must be wrapped in UndeclaredThrowableException
+    var E   = new NonTerminal("E");
+    var num = new Terminal("num");
+    var grammar = new Grammar(E, List.of(new Production(E, List.of(num))));
+    var parser = Parser.createParser(grammar, Map.of());
+
+    // Use a MethodHandle-based visitor that throws a checked exception by sneaky throw
+    var visitor = new Visitor<Integer>() {
+      @SuppressWarnings("unchecked")
+      public <T extends Throwable> int num(Terminal t) throws T {
+        throw (T) new Exception("checked");
+      }
+    };
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), visitor);
+
+    var ex = assertThrows(UndeclaredThrowableException.class,
+        () -> parser.parse(List.of(new Terminal("num", "1")).iterator(), evaluator));
+    assertInstanceOf(Exception.class, ex.getCause());
+    assertEquals("checked", ex.getCause().getMessage());
+  }
+
+  @Test
+  public void reflectProductionMethodCheckedExceptionIsWrappedInUndeclaredThrowable() {
+    // A checked exception thrown inside a production method must be wrapped in UndeclaredThrowableException
+    var E    = new NonTerminal("E");
+    var num  = new Terminal("num");
+    var plus = new Terminal("+");
+    var grammar = new Grammar(E, List.of(
+        new Production(E, List.of(num)),
+        new Production(E, List.of(E, plus, E))));
+    var parser = Parser.createParser(grammar,
+        Map.of(plus, new Precedence(10, Precedence.Associativity.LEFT)));
+
+    var visitor = new Visitor<Integer>() {
+      public int num(Terminal t) { return Integer.parseInt(t.value()); }
+
+      @SuppressWarnings("unchecked")
+      @ProductionName("E : E + E")
+      public <T extends Throwable> int add(int a, int b) throws T {
+        throw (T) new Exception("checked");
+      }
+    };
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), visitor);
+
+    var ex = assertThrows(UndeclaredThrowableException.class,
+        () -> parser.parse(
+            List.of(new Terminal("num", "1"), new Terminal("+", "+"), new Terminal("num", "2"))
+                .iterator(), evaluator));
+    assertInstanceOf(Exception.class, ex.getCause());
+    assertEquals("checked", ex.getCause().getMessage());
+  }
+
+  @Test
+  public void reflectStaticMethodsAreIgnored() {
+    // Static methods on the visitor class must be silently skipped during reflection
+    var E   = new NonTerminal("E");
+    var num = new Terminal("num");
+    var grammar = new Grammar(E, List.of(new Production(E, List.of(num))));
+    var parser = Parser.createParser(grammar, Map.of());
+
+    // The static helper method should not cause IllegalStateException
+    class MyVisitor implements Visitor<Integer> {
+      public int num(Terminal t) { return Integer.parseInt(t.value()); }
+      public static int staticHelper() { return 42; }  // must be ignored
+    }
+
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), new MyVisitor());
+    var result = parser.parse(List.of(new Terminal("num", "5")).iterator(), evaluator);
+    assertEquals(5, result);
+  }
+
+  @Test
+  public void reflectProductionNameMethodWithZeroParametersWorks() {
+    // A @ProductionName method with zero parameters is valid when all body symbols
+    // are terminals that have no terminal handler, so all args are filtered out.
+    var E    = new NonTerminal("E");
+    var plus = new Terminal("+");
+    var grammar = new Grammar(E, List.of(new Production(E, List.of(plus))));
+    var parser = Parser.createParser(grammar, Map.of());
+
+    var visitor = new Visitor<String>() {
+      // No terminal method for "+", so it is filtered out before add() is called
+      @ProductionName("E : +")
+      public String constant() { return "plus"; }
+    };
+    var evaluator = Visitor.reflect(MethodHandles.lookup(), visitor);
+
+    var result = parser.parse(List.of(new Terminal("+", "+")).iterator(), evaluator);
+    assertEquals("plus", result);
   }
 }
