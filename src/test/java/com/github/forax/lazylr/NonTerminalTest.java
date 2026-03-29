@@ -19,6 +19,12 @@ public final class NonTerminalTest {
   }
 
   @Test
+  public void constructorNameEmpty() {
+    assertThrows(IllegalArgumentException.class, () ->
+        new NonTerminal(""));
+  }
+
+  @Test
   public void equalsSameName() {
     assertEquals(new NonTerminal("expr"), new NonTerminal("expr"));
   }

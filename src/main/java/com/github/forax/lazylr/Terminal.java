@@ -50,6 +50,9 @@ public final class Terminal implements Symbol, PrecedenceEntity {
   /// @throws NullPointerException if `name` is null or `value` is null.
   public Terminal(String name, String value) {
     Objects.requireNonNull(name);
+    if (name.isEmpty()) {
+      throw new IllegalArgumentException("name must not be empty");
+    }
     Objects.requireNonNull(value);
     this(name, value, false);
   }
@@ -66,6 +69,9 @@ public final class Terminal implements Symbol, PrecedenceEntity {
   /// @param name The unique identifier for the terminal.
   public Terminal(String name) {
     Objects.requireNonNull(name);
+    if (name.isEmpty()) {
+      throw new IllegalArgumentException("name must not be empty");
+    }
     this(name, null, false);
   }
 

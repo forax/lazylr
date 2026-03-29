@@ -21,6 +21,18 @@ public final class TerminalTest {
   }
 
   @Test
+  public void constructorNameOnlyEmpty() {
+    assertThrows(IllegalArgumentException.class, () ->
+        new Terminal(""));
+  }
+
+  @Test
+  public void constructorNameEmpty() {
+    assertThrows(IllegalArgumentException.class, () ->
+        new Terminal("", "value"));
+  }
+
+  @Test
   @SuppressWarnings("DataFlowIssue")
   public void constructorValueNull() {
     assertThrows(NullPointerException.class, () ->

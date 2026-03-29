@@ -25,6 +25,9 @@ public final class NonTerminal implements Symbol {
   /// @throws NullPointerException if the `name` is null.
   public NonTerminal(String name) {
     Objects.requireNonNull(name);
+    if (name.isEmpty()) {
+      throw new IllegalArgumentException("name must not be empty");
+    }
     this.name = name;
     super();
   }
