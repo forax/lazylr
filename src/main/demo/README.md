@@ -921,7 +921,7 @@ so it reduces — binding the unary minus tightly to its operand before any bina
 
 ---
 
-## 17 — Tracking Terminal Positions [_17_AST_position.java](_17_AST_position.java)
+## 17 — Tracking Terminal Positions [_17_position_AST.java](_17_position_AST.java)
 
 **Goal:** Record the source position of each token in the AST, so that later
 phases (type-checkers, interpreters, error reporters) can point back to the
