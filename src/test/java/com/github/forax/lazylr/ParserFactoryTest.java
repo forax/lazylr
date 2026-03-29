@@ -1,5 +1,6 @@
 package com.github.forax.lazylr;
 
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
@@ -94,7 +95,7 @@ public final class ParserFactoryTest {
   private static Evaluator<Integer> arithmeticEvaluator() {
     return new Evaluator<>() {
       @Override
-      public Integer evaluate(Terminal terminal) {
+      public Integer evaluate(@NonNull Terminal terminal) {
         return switch (terminal.name()) {
           case "num" -> Integer.parseInt(terminal.value());
           default    -> 0;
@@ -102,7 +103,7 @@ public final class ParserFactoryTest {
       }
 
       @Override
-      public Integer evaluate(Production production, List<Integer> args) {
+      public Integer evaluate(@NonNull Production production, @NonNull List<Integer> args) {
         return switch (production.name()) {
           case "E : num"   -> args.get(0);
           case "E : E + E" -> args.get(0) + args.get(2);
@@ -156,8 +157,8 @@ public final class ParserFactoryTest {
   }
 
   private static final ParserListener NOOP_LISTENER = new ParserListener() {
-    @Override public void onShift(Terminal token) {}
-    @Override public void onReduce(Production production) {}
+    @Override public void onShift(@NonNull Terminal token) {}
+    @Override public void onReduce(@NonNull Production production) {}
   };
 
 
@@ -304,7 +305,7 @@ public final class ParserFactoryTest {
 
     var threadCount = 10;
     var callables   = IntStream.range(0, threadCount)
-        .mapToObj(i -> (Callable<Integer>) () -> {
+        .mapToObj(_ -> (Callable<Integer>) () -> {
           var localFactory = ParserFactory.createFactory(mg.grammar(), mg.precedenceMap());
           return localFactory.createParser().parse(input.iterator(), arithmeticEvaluator());
         })
@@ -436,12 +437,14 @@ public final class ParserFactoryTest {
 
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void createFactoryNullGrammarThrows() {
     assertThrows(NullPointerException.class,
         () -> ParserFactory.createFactory(null, Map.of()));
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void createFactoryNullPrecedenceThrows() {
     var mg = arithmeticMetaGrammar();
     assertThrows(NullPointerException.class,
@@ -469,7 +472,7 @@ public final class ParserFactoryTest {
     // Each iteration creates a fresh parser, exercising factory-level caching
     // under concurrent load.
     var callables = IntStream.range(0, threadCount)
-        .mapToObj(t -> (Callable<Integer>) () -> {
+        .mapToObj(_ -> (Callable<Integer>) () -> {
           for (var i = 0; i < iterCount; i++) {
             var value = factory.createParser().parse(input.iterator(), arithmeticEvaluator());
             if (value != 32) {
@@ -510,7 +513,7 @@ public final class ParserFactoryTest {
     var parseCount  = 10;
 
     var callables = IntStream.range(0, threadCount)
-        .mapToObj(t -> (Callable<Integer>) () -> {
+        .mapToObj(_ -> (Callable<Integer>) () -> {
           var parser = factory.createParser();
           for (var i = 0; i < parseCount; i++) {
             parser.parse(input.iterator(), NOOP_LISTENER);

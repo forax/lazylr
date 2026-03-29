@@ -1,12 +1,15 @@
 package com.github.forax.lazylr;
 
+import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.Function;
 import java.util.regex.Pattern;
 
 import static com.github.forax.lazylr.Precedence.Associativity.LEFT;
@@ -573,6 +576,7 @@ public final class MetaGrammarTest {
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void nullInputThrowsNullPointerException() {
     assertThrows(NullPointerException.class, () -> MetaGrammar.load(null));
   }
@@ -675,6 +679,7 @@ public final class MetaGrammarTest {
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void constructorNullTokensThrowsNullPointerException() {
     var expr = new NonTerminal("Expr");
     var num = new Terminal("num");
@@ -685,6 +690,7 @@ public final class MetaGrammarTest {
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void constructorNullPrecedenceMapThrowsNullPointerException() {
     var expr = new NonTerminal("Expr");
     var num = new Terminal("num");
@@ -695,6 +701,7 @@ public final class MetaGrammarTest {
   }
 
   @Test
+  @SuppressWarnings("DataFlowIssue")
   public void constructorNullGrammarThrowsNullPointerException() {
     assertThrows(NullPointerException.class,
         () -> new MetaGrammar(List.of(), Map.of(), null));
@@ -773,5 +780,356 @@ public final class MetaGrammarTest {
     var mg = new MetaGrammar(List.of(), precedenceMap, grammar);
 
     assertEquals(List.of(plus, star, pow), List.copyOf(mg.precedenceMap().keySet()));
+  }
+
+
+  @Test
+  public void parseWithEvaluatorReturnsExpectedValue() {
+    var mg = MetaGrammar.load("""
+        tokens {
+          num: /[0-9]+/
+          /[ \\t]+/
+        }
+        grammar {
+          E: num
+        }
+        """);
+
+    var result = mg.parse("42", new Evaluator<Integer>() {
+      @Override
+      public Integer evaluate(@NonNull Terminal terminal) {
+        return Integer.parseInt(terminal.value());
+      }
+      @Override
+      public Integer evaluate(@NonNull Production production, @NonNull List<Integer> args) {
+        return args.getFirst();
+      }
+    });
+
+    assertEquals(42, result);
+  }
+
+  @Test
+  public void parseWithEvaluatorHandlesBinaryExpression() {
+    var mg = MetaGrammar.load("""
+        tokens {
+          num: /[0-9]+/
+          /[ \\t]+/
+        }
+        precedence {
+          left: '+'
+        }
+        grammar {
+          E: E '+' E
+          E: num
+        }
+        """);
+
+    var result = mg.parse("1 + 2", new Evaluator<Integer>() {
+      @Override
+      public Integer evaluate(@NonNull Terminal terminal) {
+        return switch (terminal.name()) {
+          case "num" -> Integer.parseInt(terminal.value());
+          default -> null;
+        };
+      }
+      @Override
+      public Integer evaluate(@NonNull Production production, @NonNull List<Integer> args) {
+        return switch (production.name()) {
+          case "E : E + E" -> args.get(0) + args.get(2);
+          case "E : num"   -> args.getFirst();
+          default -> throw new IllegalStateException("unknown: " + production.name());
+        };
+      }
+    });
+
+    assertEquals(3, result);
+  }
+
+  @Test
+  @SuppressWarnings("DataFlowIssue")
+  public void parseWithEvaluatorNullInputThrowsNullPointerException() {
+    var mg = MetaGrammar.load("""
+        grammar {
+          E: num
+        }
+        """);
+
+    Evaluator<Object> evaluator = new Evaluator<>() {
+      @Override public Object evaluate(@NonNull Terminal t) { return null; }
+      @Override public Object evaluate(@NonNull Production p, @NonNull List<Object> args) { return null; }
+    };
+
+    assertThrows(NullPointerException.class,
+        () -> mg.parse(null, evaluator));
+  }
+
+  @Test
+  @SuppressWarnings("DataFlowIssue")
+  public void parseWithEvaluatorNullEvaluatorThrowsNullPointerException() {
+    var mg = MetaGrammar.load("""
+        grammar {
+          E: num
+        }
+        """);
+
+    assertThrows(NullPointerException.class,
+        () -> mg.parse("42", (Evaluator<Object>) null));
+  }
+
+  @Test
+  public void parseWithEvaluatorNoGrammarThrowsIllegalStateException() {
+    var mg = MetaGrammar.load("");
+
+    Evaluator<Object> evaluator = new Evaluator<>() {
+      @Override public Object evaluate(@NonNull Terminal t) { return null; }
+      @Override public Object evaluate(@NonNull Production p, @NonNull List<Object> args) { return null; }
+    };
+
+    assertThrows(IllegalStateException.class, () -> mg.parse("42", evaluator));
+  }
+
+  @Test
+  public void parseWithEvaluatorInvalidInputThrowsParsingException() {
+    var mg = MetaGrammar.load("""
+        tokens {
+          num: /[0-9]+/
+        }
+        grammar {
+          E: num
+        }
+        """);
+
+    Evaluator<Object> evaluator = new Evaluator<>() {
+      @Override public Object evaluate(@NonNull Terminal t) { return null; }
+      @Override public Object evaluate(@NonNull Production p, @NonNull List<Object> args) { return null; }
+    };
+
+    assertThrows(ParsingException.class, () -> mg.parse("@@@", evaluator));
+  }
+
+  @Test
+  public void parseWithVisitorReturnsExpectedValue() {
+    var mg = MetaGrammar.load("""
+        tokens {
+          num: /[0-9]+/
+          /[ \\t]+/
+        }
+        grammar {
+          E: num
+        }
+        """);
+
+    class NumVisitor implements Visitor<Integer> {
+      @SuppressWarnings("unused")
+      public int num(Terminal terminal) { return Integer.parseInt(terminal.value()); }
+    }
+
+    var result = mg.parse("7", new NumVisitor());
+
+    assertEquals(7, result);
+  }
+
+  @Test
+  public void parseWithVisitorHandlesBinaryExpression() {
+    var mg = MetaGrammar.load("""
+        tokens {
+          num: /[0-9]+/
+          /[ \\t]+/
+        }
+        precedence {
+          left: '+'
+        }
+        grammar {
+          E: E '+' E
+          E: num
+        }
+        """);
+
+    @SuppressWarnings("unused")
+    class AddVisitor implements Visitor<Integer> {
+      public int num(Terminal terminal) { return Integer.parseInt(terminal.value()); }
+
+      @ProductionName("E : E + E")
+      public int add(int left, int right) { return left + right; }
+    }
+
+    var result = mg.parse("3 + 4", new AddVisitor());
+
+    assertEquals(7, result);
+  }
+
+  @Test
+  @SuppressWarnings("DataFlowIssue")
+  public void parseWithVisitorNullInputThrowsNullPointerException() {
+    var mg = MetaGrammar.load("""
+        grammar {
+          E: num
+        }
+        """);
+
+    class EmptyVisitor implements Visitor<Object> {}
+
+    assertThrows(NullPointerException.class,
+        () -> mg.parse(null, new EmptyVisitor()));
+  }
+
+  @Test
+  @SuppressWarnings("DataFlowIssue")
+  public void parseWithVisitorNullVisitorThrowsNullPointerException() {
+    var mg = MetaGrammar.load("""
+        grammar {
+          E: num
+        }
+        """);
+
+    assertThrows(NullPointerException.class,
+        () -> mg.parse("42", (Visitor<Object>) null));
+  }
+
+  @Test
+  public void parseWithVisitorNoGrammarThrowsIllegalStateException() {
+    var mg = MetaGrammar.load("");
+
+    class EmptyVisitor implements Visitor<Object> {}
+
+    assertThrows(IllegalStateException.class,
+        () -> mg.parse("42", new EmptyVisitor()));
+  }
+
+  @Test
+  public void parseWithVisitorInvalidInputThrowsParsingException() {
+    var mg = MetaGrammar.load("""
+        tokens {
+          num: /[0-9]+/
+        }
+        grammar {
+          E: num
+        }
+        """);
+
+    class EmptyVisitor implements Visitor<Object> {}
+
+    assertThrows(ParsingException.class,
+        () -> mg.parse("@@@", new EmptyVisitor()));
+  }
+
+  @Test
+  public void parseWithVisitorFactoryReceivesIterator() {
+    var mg = MetaGrammar.load("""
+        tokens {
+          num: /[0-9]+/
+          /[ \\t]+/
+        }
+        grammar {
+          E: num
+        }
+        """);
+
+    var iteratorRef = new Object() {
+      Iterator<Terminal> iterator;
+    };
+
+    class NumVisitor implements Visitor<Integer> {
+      final Iterator<Terminal> iterator;
+
+      NumVisitor(Iterator<Terminal> iterator) {
+        this.iterator = iterator;
+        iteratorRef.iterator = iterator;
+        super();
+      }
+
+      @SuppressWarnings("unused")
+      public int num(Terminal t) { return Integer.parseInt(t.value()); }
+    }
+
+    var result = mg.parse("5", NumVisitor::new);
+
+    assertEquals(5, result);
+    assertNotNull(iteratorRef.iterator);
+  }
+
+  @Test
+  public void parseWithVisitorFactoryHandlesBinaryExpression() {
+    var mg = MetaGrammar.load("""
+        tokens {
+          num: /[0-9]+/
+          /[ \\t]+/
+        }
+        precedence {
+          left: '+'
+        }
+        grammar {
+          E: E '+' E
+          E: num
+        }
+        """);
+
+    @SuppressWarnings("unused")
+    class AddVisitor implements Visitor<Integer> {
+      AddVisitor(Iterator<Terminal> iterator) { super(); }
+
+      public int num(Terminal t) { return Integer.parseInt(t.value()); }
+
+      @ProductionName("E : E + E")
+      public int add(int left, int right) { return left + right; }
+    }
+
+    var result = mg.parse("10 + 20", AddVisitor::new);
+
+    assertEquals(30, result);
+  }
+
+  @Test
+  @SuppressWarnings("DataFlowIssue")
+  public void parseWithVisitorFactoryNullInputThrowsNullPointerException() {
+    var mg = MetaGrammar.load("""
+        grammar {
+          E: num
+        }
+        """);
+
+    assertThrows(NullPointerException.class,
+        () -> mg.parse(null, _ -> new Visitor<>() {}));
+  }
+
+  @Test
+  @SuppressWarnings("DataFlowIssue")
+  public void parseWithVisitorFactoryNullFactoryThrowsNullPointerException() {
+    var mg = MetaGrammar.load("""
+        grammar {
+          E: num
+        }
+        """);
+
+    assertThrows(NullPointerException.class,
+        () -> mg.parse("42", (Function<Iterator<Terminal>, Visitor<Object>>) null));
+  }
+
+  @Test
+  public void parseWithVisitorFactoryNoGrammarThrowsIllegalStateException() {
+    var mg = MetaGrammar.load("");
+
+    assertThrows(IllegalStateException.class,
+        () -> mg.parse("42", _ -> new Visitor<>() {}));
+  }
+
+  @Test
+  public void parseWithVisitorFactoryInvalidInputThrowsParsingException() {
+    var mg = MetaGrammar.load("""
+        tokens {
+          num: /[0-9]+/
+        }
+        grammar {
+          E: num
+        }
+        """);
+
+    class EmptyVisitor implements Visitor<Object> {
+      EmptyVisitor(Iterator<Terminal> iterator) { }
+    }
+
+    assertThrows(ParsingException.class,
+        () -> mg.parse("@@@", EmptyVisitor::new));
   }
 }

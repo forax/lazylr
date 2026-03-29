@@ -6,11 +6,14 @@ import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
 import java.util.function.Consumer;
+import java.util.function.Function;
+import java.util.function.IntFunction;
 import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -145,7 +148,7 @@ public final class MetaGrammar {
     LALRVerifier.verify(grammar, precedenceMap);
   }
 
-  // Verifies that the grammar is LALR(1), using the precedence map to resolve
+  /// Verifies that the grammar is LALR(1), using the precedence map to resolve
   /// shift/reduce conflicts where possible. If unresolved conflicts remain,
   /// the error reporter is called once per conflict with a human-readable
   /// description.
@@ -163,65 +166,143 @@ public final class MetaGrammar {
     LALRVerifier.verify(grammar, precedenceMap, errorReporter);
   }
 
-  /// Parses the given input using this meta-grammar and evaluates it using the provided evaluator.
+  /// Parses the given input text using this meta-grammar and evaluates it using the provided evaluator.
   ///
   /// The parsing process is as follows:
   /// - A [Lexer] is created from the tokens section defined in this meta-grammar.
-  /// - The input is tokenized into an iterator of [Terminal].
+  /// - The input text is tokenized into an iterator of [Terminal].
   /// - A [Parser] is created from the grammar and precedence sections and
   ///   used to parse using the [Evaluator].
   ///
-  /// @param input the input text to tokenize and parse
-  /// @param evaluator the evaluator used to compute semantic values during parsing
-  /// @param <V> the type of the evaluation result
-  /// @return the result produced by the evaluator
-  /// @throws IllegalStateException if no grammar section is defined in this meta-grammar
-  /// @throws ParsingException if a lexing or parsing error occurs
+  /// This is equivalent to calling
+  /// ```java
+  /// var lexer = Lexer.createLexer(tokens);
+  /// var parser = Parser.createParser(grammar, precedenceMap);
+  /// parser.parse(lexer.tokenize(inputText), evaluator);
+  /// ```
+  ///
+  /// @param inputText the input text to tokenize and parse.
+  /// @param evaluator the evaluator used to compute semantic values during parsing.
+  /// @param <V> the type of the evaluation result.
+  /// @return the result produced by the evaluator.
+  /// @throws IllegalStateException if no grammar section is defined in this meta-grammar.
+  /// @throws ParsingException if a lexing or parsing error occurs.
   ///
   /// @see Lexer#createLexer(List)
   /// @see Parser#createParser(Grammar, Map)
-  public <V extends @Nullable Object> V parse(CharSequence input, Evaluator<V> evaluator) throws ParsingException{
-    Objects.requireNonNull(input);
+  public <V extends @Nullable Object> V parse(CharSequence inputText, Evaluator<V> evaluator) throws ParsingException{
+    Objects.requireNonNull(inputText);
     Objects.requireNonNull(evaluator);
     if (grammar == null) {
       throw new IllegalStateException("no grammar section is defined");
     }
     var lexer = Lexer.createLexer(tokens);
     var parser = Parser.createParser(grammar, precedenceMap);
-    return parser.parse(lexer.tokenize(input), evaluator);
+    return parser.parse(lexer.tokenize(inputText), evaluator);
   }
 
-  /// Parses the given input using this meta-grammar and a reflection-based visitor.
-  ///
-  /// This equivalent to calling `parse(input, Evaluator.reflect(MethodHandles.lookup(), visitor))`.
-  ///
-  /// @param input the input text to tokenize and parse
-  /// @param visitor an object defining the visit methods called during parsing
-  ///        by reflection.
-  /// @param <V> the type of the visitor result
-  /// @return the result produced by the visitor
-  /// @throws IllegalStateException if no grammar section is defined in this meta-grammar
-  /// @throws ParsingException if a lexing or parsing error occurs
-  ///
-  /// @see #parse(CharSequence, Evaluator)
-  /// @see Visitor#reflect(java.lang.invoke.MethodHandles.Lookup, Visitor)
-  public <V extends @Nullable Object> V parse(CharSequence input, Visitor<V> visitor) throws ParsingException {
-    Objects.requireNonNull(input);
-    Objects.requireNonNull(visitor);
-    Objects.requireNonNull(visitor);
+  private static StackWalker getStackWalker() {
     final class Holder {
       private static final StackWalker WALKER =
           StackWalker.getInstance(StackWalker.Option.RETAIN_CLASS_REFERENCE);
     }
-    var callerClass = Holder.WALKER.getCallerClass();
-    MethodHandles.Lookup lookup;
+    return Holder.WALKER;
+  }
+
+  private static MethodHandles.Lookup teleport(Class<?> callerClass) {
     try {
-      lookup = MethodHandles.privateLookupIn(callerClass, MethodHandles.lookup());
+      return MethodHandles.privateLookupIn(callerClass, MethodHandles.lookup());
     } catch (IllegalAccessException e) {
       throw new IllegalStateException(e);
     }
-    return parse(input, Visitor.reflect(lookup, visitor));
   }
+
+  /// Parses the given input text using this meta-grammar and a reflection-based visitor.
+  ///
+  /// This is equivalent to calling `parse(input, Evaluator.reflect(MethodHandles.lookup(), visitor))`.
+  ///
+  /// @param inputText the input text to tokenize and parse.
+  /// @param visitor an object defining the visit methods called during parsing
+  ///        by reflection.
+  /// @param <V> the type of the visitor result.
+  /// @return the result produced by the visitor.
+  /// @throws IllegalStateException if no grammar section is defined in this meta-grammar.
+  /// @throws ParsingException if a lexing or parsing error occurs.
+  ///
+  /// @see #parse(CharSequence, Evaluator)
+  /// @see Visitor#reflect(java.lang.invoke.MethodHandles.Lookup, Visitor)
+  public <V extends @Nullable Object> V parse(CharSequence inputText, Visitor<V> visitor) throws ParsingException {
+    Objects.requireNonNull(inputText);
+    Objects.requireNonNull(visitor);
+    if (grammar == null) {
+      throw new IllegalStateException("no grammar section is defined");
+    }
+    var callerClass = getStackWalker().getCallerClass();
+    var lookup = teleport(callerClass);
+    return parse(inputText, Visitor.reflect(lookup, visitor));
+  }
+
+  /// Parses the given input text using this meta-grammar and construct a reflection-based visitor
+  /// from the input iterator.
+  /// Use this method if you want to access the terminal position in the input inside
+  /// the visitor's terminal methods.
+  ///
+  /// For example
+  /// ```java
+  /// public class ExprVisitor implements Visitor<Expr> {
+  ///   private final Iterator<Terminal> inputIterator;
+  ///
+  ///   public ExprVisitor(Iterator<Terminal> inputIterator) {
+  ///     this.inputIterator = inputIterator;
+  ///     super();
+  ///   }
+  ///
+  ///   public Expr number(Terminal terminal) {
+  ///     // Get the terminal position in the input
+  ///     var pos = Lexer.position(inputIterator);
+  ///     return ...
+  ///   }
+  ///   ...
+  /// }
+  /// ...
+  /// var expr = mg.parse(inputText, ExprVisitor::new);
+  /// ```
+  ///
+  /// This is equivalent to calling
+  /// ```java
+  /// var lexer = Lexer.createLexer(tokens);
+  /// var parser = Parser.createParser(grammar, precedenceMap);
+  /// var iterator = lexer.tokenize(inputText);
+  /// var visitor = visitorFactory.apply(iterator);
+  /// parser.parse(iterator, Visitor.reflect(MethodHandles.lookup(), visitor));
+  /// ```
+  ///
+  /// @param inputText the input text to tokenize and parse.
+  /// @param visitorFactory a factory function that creates a visitor instance based on the input iterator.
+  /// @param <V> the type of the visitor result.
+  /// @return the result produced by the visitor.
+  /// @throws IllegalStateException if no grammar section is defined in this meta-grammar.
+  /// @throws ParsingException if a lexing or parsing error occurs.
+  ///
+  /// @see #parse(CharSequence, Visitor)
+  public <V extends @Nullable Object> V parse(CharSequence inputText,
+                                              Function<? super Iterator<Terminal>, ? extends Visitor<V>> visitorFactory)
+      throws ParsingException {
+
+    Objects.requireNonNull(inputText);
+    Objects.requireNonNull(visitorFactory);
+    if (grammar == null) {
+      throw new IllegalStateException("no grammar section is defined");
+    }
+    var callerClass = getStackWalker().getCallerClass();
+    var lookup = teleport(callerClass);
+    var lexer = Lexer.createLexer(tokens);
+    var parser = Parser.createParser(grammar, precedenceMap);
+    var iterator = lexer.tokenize(inputText);
+    var visitor = visitorFactory.apply(iterator);
+    return parser.parse(iterator, Visitor.reflect(lookup, visitor));
+  }
+
 
   // grammar definition
   private static Grammar createGrammar() {
