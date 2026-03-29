@@ -56,4 +56,7 @@ void main() {
 
   var expr = mg.parse("3 + - 2 * 4", new ExprVisitor());
   IO.println(expr);
+
+
+  // Binary[op=+, left=Value[value=3], right=Binary[op=*, left=Unary[op=-, expr=Value[value=2]], right=Value[value=4]]]
 }
