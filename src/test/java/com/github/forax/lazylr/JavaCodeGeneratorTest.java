@@ -104,11 +104,11 @@ public final class JavaCodeGeneratorTest {
           var t_num = new Terminal("num");
         
           // Productions
-          var p0 = new Production(nt_E, List.of(t_num));
+          var p_0 = new Production(nt_E, List.of(t_num));
         
           // Grammar
           var startSymbol = nt_E;
-          var grammar = new Grammar(startSymbol, List.of(p0));
+          var grammar = new Grammar(startSymbol, List.of(p_0));
         
           // Tokens
           var tokens = List.of(
@@ -154,12 +154,12 @@ public final class JavaCodeGeneratorTest {
           var t_num = new Terminal("num");
         
           // Productions
-          var p0 = new Production(nt_E, List.of(t_num));
-          var p1 = new Production(nt_E, List.of());
+          var p_0 = new Production(nt_E, List.of(t_num));
+          var p_1 = new Production(nt_E, List.of());
         
           // Grammar
           var startSymbol = nt_E;
-          var grammar = new Grammar(startSymbol, List.of(p0, p1));
+          var grammar = new Grammar(startSymbol, List.of(p_0, p_1));
         
           // Tokens
           var tokens = List.of(
@@ -205,11 +205,11 @@ public final class JavaCodeGeneratorTest {
           var t_num = new Terminal("num");
         
           // Productions
-          var p0 = new Production(nt_E, List.of(t_num));
+          var p_0 = new Production(nt_E, List.of(t_num));
         
           // Grammar
           var startSymbol = nt_E;
-          var grammar = new Grammar(startSymbol, List.of(p0));
+          var grammar = new Grammar(startSymbol, List.of(p_0));
         
           // Tokens
           var tokens = List.of(
@@ -261,12 +261,12 @@ public final class JavaCodeGeneratorTest {
           var t__ = new Terminal("+");
         
           // Productions
-          var p0 = new Production(nt_E, List.of(t_num));
-          var p1 = new Production(nt_E, List.of(nt_E, t__, nt_E));
+          var p_0 = new Production(nt_E, List.of(t_num));
+          var p_1 = new Production(nt_E, List.of(nt_E, t__, nt_E));
         
           // Grammar
           var startSymbol = nt_E;
-          var grammar = new Grammar(startSymbol, List.of(p0, p1));
+          var grammar = new Grammar(startSymbol, List.of(p_0, p_1));
         
           // Tokens
           var tokens = List.of(
@@ -323,13 +323,13 @@ public final class JavaCodeGeneratorTest {
           var t__1 = new Terminal("*");
         
           // Productions
-          var p0 = new Production(nt_E, List.of(t_num));
-          var p1 = new Production(nt_E, List.of(nt_E, t__, nt_E));
-          var p2 = new Production(nt_E, List.of(nt_E, t__1, nt_E));
+          var p_0 = new Production(nt_E, List.of(t_num));
+          var p_1 = new Production(nt_E, List.of(nt_E, t__, nt_E));
+          var p_2 = new Production(nt_E, List.of(nt_E, t__1, nt_E));
         
           // Grammar
           var startSymbol = nt_E;
-          var grammar = new Grammar(startSymbol, List.of(p0, p1, p2));
+          var grammar = new Grammar(startSymbol, List.of(p_0, p_1, p_2));
         
           // Tokens
           var tokens = List.of(
@@ -391,14 +391,14 @@ public final class JavaCodeGeneratorTest {
           var t__2 = new Terminal("^");
         
           // Productions
-          var p0 = new Production(nt_E, List.of(t_num));
-          var p1 = new Production(nt_E, List.of(nt_E, t__, nt_E));
-          var p2 = new Production(nt_E, List.of(nt_E, t__1, nt_E));
-          var p3 = new Production(nt_E, List.of(nt_E, t__2, nt_E));
+          var p_0 = new Production(nt_E, List.of(t_num));
+          var p_1 = new Production(nt_E, List.of(nt_E, t__, nt_E));
+          var p_2 = new Production(nt_E, List.of(nt_E, t__1, nt_E));
+          var p_3 = new Production(nt_E, List.of(nt_E, t__2, nt_E));
         
           // Grammar
           var startSymbol = nt_E;
-          var grammar = new Grammar(startSymbol, List.of(p0, p1, p2, p3));
+          var grammar = new Grammar(startSymbol, List.of(p_0, p_1, p_2, p_3));
         
           // Tokens
           var tokens = List.of(
@@ -461,15 +461,15 @@ public final class JavaCodeGeneratorTest {
           var t__2 = new Terminal(",");
         
           // Productions
-          var p0 = new Production(nt_E, List.of(t_num));
-          var p1 = new Production(nt_E, List.of(t_sum, t__, nt_ARGS, t__1));
-          var p2 = new Production(nt_ARGS, List.of(nt_E));
-          var p3 = new Production(nt_ARGS, List.of(nt_ARGS, t__2, nt_E));
-          var p4 = new Production(nt_ARGS, List.of());
+          var p_0 = new Production(nt_E, List.of(t_num));
+          var p_1 = new Production(nt_E, List.of(t_sum, t__, nt_ARGS, t__1));
+          var p_2 = new Production(nt_ARGS, List.of(nt_E));
+          var p_3 = new Production(nt_ARGS, List.of(nt_ARGS, t__2, nt_E));
+          var p_4 = new Production(nt_ARGS, List.of());
         
           // Grammar
           var startSymbol = nt_E;
-          var grammar = new Grammar(startSymbol, List.of(p0, p1, p2, p3, p4));
+          var grammar = new Grammar(startSymbol, List.of(p_0, p_1, p_2, p_3, p_4));
         
           // Tokens
           var tokens = List.of(
@@ -535,14 +535,14 @@ public final class JavaCodeGeneratorTest {
           var t_else = new Terminal("else");
         
           // Productions
-          var p0 = new Production(nt_E, List.of(t_num));
-          var p1 = new Production(nt_E, List.of(nt_E, t__, nt_E));
-          var p2 = new Production(nt_E, List.of(t_if, nt_E, t_then, nt_E));
-          var p3 = new Production(nt_E, List.of(t_if, nt_E, t_then, nt_E, t_else, nt_E));
+          var p_0 = new Production(nt_E, List.of(t_num));
+          var p_1 = new Production(nt_E, List.of(nt_E, t__, nt_E));
+          var p_2 = new Production(nt_E, List.of(t_if, nt_E, t_then, nt_E));
+          var p_3 = new Production(nt_E, List.of(t_if, nt_E, t_then, nt_E, t_else, nt_E));
         
           // Grammar
           var startSymbol = nt_E;
-          var grammar = new Grammar(startSymbol, List.of(p0, p1, p2, p3));
+          var grammar = new Grammar(startSymbol, List.of(p_0, p_1, p_2, p_3));
         
           // Tokens
           var tokens = List.of(

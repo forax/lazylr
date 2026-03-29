@@ -156,7 +156,7 @@ final class JavaCodeGenerator {
     sb.append("  // Productions\n");
     for (var i = 0; i < productions.size(); i++) {
       var production = productions.get(i);
-      sb.append("  var p").append(i).append(" = new Production(")
+      sb.append("  var p_").append(i).append(" = new Production(")
           .append("nt_").append(sanitizeId(production.head().name())).append(", ");
 
       var body = production.body();
@@ -186,7 +186,7 @@ final class JavaCodeGenerator {
     sb.append("  var grammar = new Grammar(startSymbol, List.of(");
     var separator = "";
     for (var i = 0; i < productions.size(); i++) {
-      sb.append(separator).append("p").append(i);
+      sb.append(separator).append("p_").append(i);
       separator = ", ";
     }
     sb.append("));\n\n");
@@ -221,7 +221,7 @@ final class JavaCodeGenerator {
         var prec = entry.getValue();
         var entityRef = switch (entity) {
           case Terminal t -> "t_" + terminalIdMap.id(t);
-          case Production p -> "p" + productionIndexMap.get(p);
+          case Production p -> "p_" + productionIndexMap.get(p);
         };
         sb.append("  precedenceMap.put(").append(entityRef).append(", ")
             .append("new Precedence(").append(prec.level()).append(", ")
