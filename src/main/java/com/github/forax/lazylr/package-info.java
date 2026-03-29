@@ -81,7 +81,7 @@
 /// When a terminal is shifted, the corresponding terminal method is called.
 /// When a production is reduced, the production method is called with the values
 /// of the symbols of the production in left-to-right order.
-// [com.github.forax.lazylr.Visitor#reflect(java.lang.invoke.MethodHandles.Lookup, com.github.forax.lazylr.Visitor)]
+/// [com.github.forax.lazylr.Visitor#reflect(java.lang.invoke.MethodHandles.Lookup, com.github.forax.lazylr.Visitor)]
 /// creates an evaluator from a visitor using reflection.
 ///
 /// [com.github.forax.lazylr.Evaluator] maps parse events to a result
