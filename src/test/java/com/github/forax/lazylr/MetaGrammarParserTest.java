@@ -1031,7 +1031,6 @@ public final class MetaGrammarParserTest {
         }));
 
     var message = exception.getMessage();
-    System.out.println(message);
     assertTrue(message.contains("Parsing error at line 1"));
     assertTrue(message.contains("unexpected terminal '='"));
     assertTrue(message.contains("expected '=='"));
@@ -1172,8 +1171,6 @@ public final class MetaGrammarParserTest {
         S: id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id
       }
       """);
-
-    LALRVerifier.verify(metaGrammar.grammar(), Map.of(), System.out, true, System.out::println);
 
     var grammar = metaGrammar.grammar();
     var parser = Parser.createParser(grammar, Map.of());

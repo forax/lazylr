@@ -161,7 +161,6 @@ public final class ProductionTest {
     var head = new NonTerminal("expr");
     var body = List.of(new NonTerminal("num"));
     var production = new Production(head, body);
-    System.out.println(production.name());
     assertEquals("expr : num", production.toString());
   }
 }
