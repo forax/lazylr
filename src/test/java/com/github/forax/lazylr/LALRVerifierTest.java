@@ -250,6 +250,81 @@ public final class LALRVerifierTest {
   }
 
 
+  @Test
+  public void verifyDefaultOverloadDoesNotPrintForConflictFreeGrammar() {
+    // E -> num
+    var pNum = new Production(E, List.of(NUM));
+    var grammar = new Grammar(E, List.of(pNum));
+
+    var oldErr = System.err;
+    var outputStream = new ByteArrayOutputStream();
+    try {
+      System.setErr(new PrintStream(outputStream));
+      LALRVerifier.verify(grammar, Map.of());
+    } finally {
+      System.setErr(oldErr);
+    }
+
+    assertEquals("", outputStream.toString());
+  }
+
+  @Test
+  public void verifyDefaultOverloadReportsConflictOnStderr() {
+    // E -> E + E | num (no precedence)
+    var pPlus = new Production(E, List.of(E, PLUS, E));
+    var pNum = new Production(E, List.of(NUM));
+    var grammar = new Grammar(E, List.of(pPlus, pNum));
+
+    var oldErr = System.err;
+    var outputStream = new ByteArrayOutputStream();
+    try {
+      System.setErr(new PrintStream(outputStream));
+      LALRVerifier.verify(grammar, Map.of());
+    } finally {
+      System.setErr(oldErr);
+    }
+    var result = outputStream.toString();
+
+    assertTrue(result.contains("Unresolved shift/reduce conflict"));
+  }
+
+  @Test
+  public void verifyBooleanOverloadAlwaysPrintsToStdoutWhenTrue() {
+    // E -> num
+    var pNum = new Production(E, List.of(NUM));
+    var grammar = new Grammar(E, List.of(pNum));
+
+    var oldOut = System.out;
+    var outputStream = new ByteArrayOutputStream();
+    try {
+      System.setOut(new PrintStream(outputStream));
+      LALRVerifier.verify(grammar, Map.of(), true);
+    } finally {
+      System.setOut(oldOut);
+    }
+    var result = outputStream.toString();
+
+    assertTrue(result.contains("── State 0"));
+  }
+
+  @Test
+  public void verifyBooleanOverloadDoesNotPrintWhenFalseAndNoConflict() {
+    // E -> num
+    var pNum = new Production(E, List.of(NUM));
+    var grammar = new Grammar(E, List.of(pNum));
+
+    var oldErr = System.err;
+    var outputStream = new ByteArrayOutputStream();
+    try {
+      System.setErr(new PrintStream(outputStream));
+      LALRVerifier.verify(grammar, Map.of(), false);
+    } finally {
+      System.setErr(oldErr);
+    }
+
+    assertEquals("", outputStream.toString());
+  }
+
 
   private static String verifyAndDump(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap) {
     var buf = new ByteArrayOutputStream();
