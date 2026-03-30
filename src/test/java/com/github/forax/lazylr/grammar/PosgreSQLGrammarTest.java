@@ -264,7 +264,10 @@ public final class PosgreSQLGrammarTest {
           left:  kw_or
           left:  kw_and
           right: kw_not
+          left:  kw_left, kw_right, kw_full, kw_inner, kw_cross, kw_natural, kw_join
           left:  kw_is, kw_isnull, kw_notnull, kw_between, kw_in, kw_like, kw_ilike, kw_similar
+          left:  kw_escape
+          left:  kw_default
           left:  '<', '>', '=', op_leq, op_geq, op_neq
           left:  op_concat, op_jsonarrow, op_jsonarrow2, op_at_arrow, op_arrow_at
           left:  '+', '-'
@@ -350,7 +353,6 @@ public final class PosgreSQLGrammarTest {
           TargetEl: Expr kw_as ColId
           TargetEl: Expr
           TargetEl: '*'
-          TargetEl: ColId '.' '*'
 
           FromClause: kw_from FromList
           FromClause:
@@ -377,16 +379,17 @@ public final class PosgreSQLGrammarTest {
           OptOrdinality: kw_with kw_ordinality
           OptOrdinality:
 
-          OptAlias: kw_as ColId
+          OptAlias: kw_as ColId OptAliasColList
           OptAlias: ColId
-          OptAlias: kw_as ColId '(' ColIdList ')'
           OptAlias:
+          OptAliasColList: '(' ColIdList ')'
+          OptAliasColList:
 
-          JoinedTable: TableRef kw_cross kw_join TableRef
-          JoinedTable: TableRef kw_join TableRef JoinQual
-          JoinedTable: TableRef JoinType kw_join TableRef JoinQual
-          JoinedTable: TableRef kw_natural kw_join TableRef
-          JoinedTable: TableRef kw_natural JoinType kw_join TableRef
+          JoinedTable: TableRef kw_cross kw_join TableRef                          %prec kw_join
+          JoinedTable: TableRef kw_join TableRef JoinQual                          %prec kw_join
+          JoinedTable: TableRef JoinType kw_join TableRef JoinQual                 %prec kw_join
+          JoinedTable: TableRef kw_natural kw_join TableRef                        %prec kw_join
+          JoinedTable: TableRef kw_natural JoinType kw_join TableRef               %prec kw_join
 
           JoinType: kw_inner
           JoinType: kw_left kw_outer
@@ -444,6 +447,7 @@ public final class PosgreSQLGrammarTest {
 
           OrderClause: kw_order kw_by SortList
           OrderClause:
+          SortClause: kw_order kw_by SortList
           OptOrderClause: kw_order kw_by SortList
           OptOrderClause:
 
@@ -560,7 +564,7 @@ public final class PosgreSQLGrammarTest {
           ColConstraint: kw_null
           ColConstraint: kw_unique
           ColConstraint: kw_primary kw_key
-          ColConstraint: kw_default Expr
+          ColConstraint: kw_default Expr                                      %prec kw_default
           ColConstraint: kw_check '(' Expr ')'
           ColConstraint: kw_references QualifiedName RefColumns RefActions
           ColConstraint: kw_constraint ColId ColConstraint
@@ -576,15 +580,17 @@ public final class PosgreSQLGrammarTest {
 
           RefColumns: '(' ColIdList ')'
           RefColumns:
+          RefActions: RefMatchClause
+          RefActions: RefMatchClause RefDeleteAction
+          RefActions: RefMatchClause RefUpdateAction
           RefActions: RefMatchClause RefDeleteAction RefUpdateAction
+          RefActions: RefMatchClause RefUpdateAction RefDeleteAction
           RefMatchClause: kw_match kw_full
           RefMatchClause: kw_match kw_partial
           RefMatchClause: kw_match kw_simple
           RefMatchClause:
           RefDeleteAction: kw_on kw_delete RefAction
-          RefDeleteAction:
           RefUpdateAction: kw_on kw_update RefAction
-          RefUpdateAction:
           RefAction: kw_no kw_action
           RefAction: kw_restrict
           RefAction: kw_cascade
@@ -688,76 +694,80 @@ public final class PosgreSQLGrammarTest {
           ExprList: ExprList ',' Expr
           ExprList: Expr
 
-          Expr: Expr kw_or Expr
-          Expr: Expr kw_and Expr
-          Expr: kw_not Expr
-          Expr: Expr '<' Expr
-          Expr: Expr '>' Expr
-          Expr: Expr '=' Expr
-          Expr: Expr op_leq Expr
-          Expr: Expr op_geq Expr
-          Expr: Expr op_neq Expr
-          Expr: Expr '+' Expr
-          Expr: Expr '-' Expr
-          Expr: Expr '*' Expr
-          Expr: Expr '/' Expr
-          Expr: Expr '%' Expr
-          Expr: Expr op_exp Expr
-          Expr: Expr op_concat Expr
-          Expr: Expr op_jsonarrow Expr
-          Expr: Expr op_jsonarrow2 Expr
-          Expr: Expr op_at_arrow Expr
-          Expr: Expr op_arrow_at Expr
-          Expr: '-' Expr   %prec UMINUS
-          Expr: Expr op_typecast TypeName
-          Expr: Expr '[' Expr ']'
-          Expr: Expr '[' Expr ':' Expr ']'
+          Expr: OrExpr
+          OrExpr: OrExpr kw_or AndExpr
+          OrExpr: AndExpr
+          AndExpr: AndExpr kw_and PredExpr
+          AndExpr: PredExpr                                                   %prec kw_and
 
-          Expr: Expr kw_is kw_null
-          Expr: Expr kw_is kw_not kw_null
-          Expr: Expr kw_isnull
-          Expr: Expr kw_notnull
-          Expr: Expr kw_is kw_true
-          Expr: Expr kw_is kw_not kw_true
-          Expr: Expr kw_is kw_false
-          Expr: Expr kw_is kw_not kw_false
-          Expr: Expr kw_is kw_unknown
-          Expr: Expr kw_is kw_not kw_unknown
-          Expr: Expr kw_is kw_distinct kw_from Expr
-          Expr: Expr kw_is kw_not kw_distinct kw_from Expr
+          PredExpr: kw_not PredExpr                                            %prec kw_not
+          PredExpr: PredExpr '<' PredExpr
+          PredExpr: PredExpr '>' PredExpr
+          PredExpr: PredExpr '=' PredExpr
+          PredExpr: PredExpr op_leq PredExpr
+          PredExpr: PredExpr op_geq PredExpr
+          PredExpr: PredExpr op_neq PredExpr
+          PredExpr: PredExpr '+' PredExpr
+          PredExpr: PredExpr '-' PredExpr
+          PredExpr: PredExpr '*' PredExpr
+          PredExpr: PredExpr '/' PredExpr
+          PredExpr: PredExpr '%' PredExpr
+          PredExpr: PredExpr op_exp PredExpr
+          PredExpr: PredExpr op_concat PredExpr
+          PredExpr: PredExpr op_jsonarrow PredExpr
+          PredExpr: PredExpr op_jsonarrow2 PredExpr
+          PredExpr: PredExpr op_at_arrow PredExpr
+          PredExpr: PredExpr op_arrow_at PredExpr
+          PredExpr: '-' PredExpr   %prec UMINUS
+          PredExpr: PredExpr op_typecast TypeName
+          PredExpr: PredExpr '[' Expr ']'
+          PredExpr: PredExpr '[' Expr ':' Expr ']'
 
-          Expr: Expr kw_between Expr kw_and Expr
-          Expr: Expr kw_not kw_between Expr kw_and Expr
-          Expr: Expr kw_between kw_symmetric Expr kw_and Expr
-          Expr: Expr kw_not kw_between kw_symmetric Expr kw_and Expr
+          PredExpr: PredExpr kw_is kw_null
+          PredExpr: PredExpr kw_is kw_not kw_null
+          PredExpr: PredExpr kw_isnull
+          PredExpr: PredExpr kw_notnull
+          PredExpr: PredExpr kw_is kw_true
+          PredExpr: PredExpr kw_is kw_not kw_true
+          PredExpr: PredExpr kw_is kw_false
+          PredExpr: PredExpr kw_is kw_not kw_false
+          PredExpr: PredExpr kw_is kw_unknown
+          PredExpr: PredExpr kw_is kw_not kw_unknown
+          PredExpr: PredExpr kw_is kw_distinct kw_from PredExpr                  %prec kw_is
+          PredExpr: PredExpr kw_is kw_not kw_distinct kw_from PredExpr           %prec kw_is
 
-          Expr: Expr kw_like Expr
-          Expr: Expr kw_not kw_like Expr
-          Expr: Expr kw_ilike Expr
-          Expr: Expr kw_not kw_ilike Expr
-          Expr: Expr kw_similar kw_to Expr
-          Expr: Expr kw_not kw_similar kw_to Expr
-          Expr: Expr kw_like Expr kw_escape Expr
-          Expr: Expr kw_not kw_like Expr kw_escape Expr
+          PredExpr: PredExpr kw_between PredExpr kw_and PredExpr                 %prec kw_between
+          PredExpr: PredExpr kw_not kw_between PredExpr kw_and PredExpr          %prec kw_between
+          PredExpr: PredExpr kw_between kw_symmetric PredExpr kw_and PredExpr    %prec kw_between
+          PredExpr: PredExpr kw_not kw_between kw_symmetric PredExpr kw_and PredExpr %prec kw_between
 
-          Expr: Expr kw_in '(' ExprList ')'
-          Expr: Expr kw_not kw_in '(' ExprList ')'
-          Expr: Expr kw_in '(' SelectStmt ')'
-          Expr: Expr kw_not kw_in '(' SelectStmt ')'
+          PredExpr: PredExpr kw_like PredExpr                                    %prec kw_like
+          PredExpr: PredExpr kw_not kw_like PredExpr                             %prec kw_like
+          PredExpr: PredExpr kw_ilike PredExpr                                   %prec kw_ilike
+          PredExpr: PredExpr kw_not kw_ilike PredExpr                            %prec kw_ilike
+          PredExpr: PredExpr kw_similar kw_to PredExpr                           %prec kw_similar
+          PredExpr: PredExpr kw_not kw_similar kw_to PredExpr                    %prec kw_similar
+          PredExpr: PredExpr kw_like PredExpr kw_escape PredExpr                 %prec kw_escape
+          PredExpr: PredExpr kw_not kw_like PredExpr kw_escape PredExpr          %prec kw_escape
 
-          Expr: Expr '=' kw_any '(' SelectStmt ')'
-          Expr: Expr '=' kw_all '(' SelectStmt ')'
-          Expr: Expr '=' kw_some '(' SelectStmt ')'
-          Expr: Expr op_neq kw_any '(' SelectStmt ')'
-          Expr: Expr op_neq kw_all '(' SelectStmt ')'
-          Expr: Expr '<' kw_any '(' SelectStmt ')'
-          Expr: Expr '<' kw_all '(' SelectStmt ')'
-          Expr: Expr '>' kw_any '(' SelectStmt ')'
-          Expr: Expr '>' kw_all '(' SelectStmt ')'
+          PredExpr: PredExpr kw_in '(' ExprList ')'
+          PredExpr: PredExpr kw_not kw_in '(' ExprList ')'
+          PredExpr: PredExpr kw_in '(' SelectStmt ')'
+          PredExpr: PredExpr kw_not kw_in '(' SelectStmt ')'
 
-          Expr: kw_exists '(' SelectStmt ')'
+          PredExpr: PredExpr '=' kw_any '(' SelectStmt ')'
+          PredExpr: PredExpr '=' kw_all '(' SelectStmt ')'
+          PredExpr: PredExpr '=' kw_some '(' SelectStmt ')'
+          PredExpr: PredExpr op_neq kw_any '(' SelectStmt ')'
+          PredExpr: PredExpr op_neq kw_all '(' SelectStmt ')'
+          PredExpr: PredExpr '<' kw_any '(' SelectStmt ')'
+          PredExpr: PredExpr '<' kw_all '(' SelectStmt ')'
+          PredExpr: PredExpr '>' kw_any '(' SelectStmt ')'
+          PredExpr: PredExpr '>' kw_all '(' SelectStmt ')'
 
-          Expr: CaseExpr
+          PredExpr: kw_exists '(' SelectStmt ')'
+
+          PredExpr: CaseExpr
 
           CaseExpr: kw_case WhenClauses ElseClause kw_end
           CaseExpr: kw_case Expr WhenClauses ElseClause kw_end
@@ -767,25 +777,25 @@ public final class PosgreSQLGrammarTest {
           ElseClause: kw_else Expr
           ElseClause:
 
-          Expr: kw_cast '(' Expr kw_as TypeName ')'
+          PredExpr: kw_cast '(' Expr kw_as TypeName ')'
 
-          Expr: kw_row '(' ExprList ')'
-          Expr: '(' ExprList ',' Expr ')'
+          PredExpr: kw_row '(' ExprList ')'
+          PredExpr: '(' ExprList ',' Expr ')'
 
-          Expr: '(' SelectStmt ')'
+          PredExpr: '(' SelectStmt ')'
 
-          Expr: FunctionCall
+          PredExpr: FunctionCall
 
           FunctionCall: QualifiedName '(' ')'                          FunctionSuffix
           FunctionCall: QualifiedName '(' kw_all ExprList ')'          FunctionSuffix
           FunctionCall: QualifiedName '(' kw_distinct ExprList ')'     FunctionSuffix
           FunctionCall: QualifiedName '(' ExprList ')'                 FunctionSuffix
+          FunctionCall: QualifiedName '(' ExprList SortClause ')'      FunctionSuffix
           FunctionCall: QualifiedName '(' '*' ')'                      FunctionSuffix
-          FunctionCall: QualifiedName '(' ExprList OrderClause ')'     FunctionSuffix
-          FunctionCall: QualifiedName '(' kw_all ExprList OrderClause ')' FunctionSuffix
-          FunctionCall: QualifiedName '(' kw_distinct ExprList OrderClause ')' FunctionSuffix
+          FunctionCall: QualifiedName '(' kw_all ExprList SortClause ')'   FunctionSuffix
+          FunctionCall: QualifiedName '(' kw_distinct ExprList SortClause ')' FunctionSuffix
 
-          FunctionCall: QualifiedName '(' ExprList ')' kw_within kw_group '(' OrderClause ')'
+          FunctionCall: QualifiedName '(' ExprList ')' kw_within kw_group '(' SortClause ')'
 
           FunctionSuffix: FilterClause OverClause
           FilterClause: kw_filter '(' kw_where Expr ')'
@@ -794,15 +804,15 @@ public final class PosgreSQLGrammarTest {
           OverClause: kw_over '(' WindowSpec ')'
           OverClause:
 
-          Expr: ColRef
-          Expr: Literal
-          Expr: kw_null
-          Expr: kw_true
-          Expr: kw_false
-          Expr: kw_current_date
-          Expr: kw_current_time
-          Expr: kw_current_timestamp
-          Expr: '(' Expr ')'
+          PredExpr: ColRef
+          PredExpr: Literal
+          PredExpr: kw_null
+          PredExpr: kw_true
+          PredExpr: kw_false
+          PredExpr: kw_current_date
+          PredExpr: kw_current_time
+          PredExpr: kw_current_timestamp
+          PredExpr: '(' Expr ')'
 
           ColRef: ColId
           ColRef: ColId '.' ColId
@@ -847,7 +857,6 @@ public final class PosgreSQLGrammarTest {
           SimpleType: kw_real
           SimpleType: kw_smallint
           SimpleType: kw_text
-          SimpleType: kw_timestamp
           SimpleType: kw_timestamptz
           SimpleType: kw_timetz
           SimpleType: kw_uuid
@@ -872,9 +881,14 @@ public final class PosgreSQLGrammarTest {
           IntervalFields: kw_minute kw_to kw_second
           IntervalFields:
 
-          OptArrayBounds: OptArrayBounds '[' ']'
-          OptArrayBounds: OptArrayBounds '[' int_literal ']'
+          OptArrayBounds: ArrayBounds
           OptArrayBounds:
+          ArrayBounds: ArrayBound ArrayBoundsTail
+          ArrayBoundsTail: ArrayBound ArrayBoundsTail
+          ArrayBoundsTail:
+          ArrayBound: '[' OptArrayLen ']'
+          OptArrayLen: int_literal
+          OptArrayLen:
         }
         """);
   }
