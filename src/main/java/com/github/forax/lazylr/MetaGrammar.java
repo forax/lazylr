@@ -156,6 +156,7 @@ public final class MetaGrammar {
   /// Use [#verify(Consumer)] instead if you want to handle conflict
   /// messages programmatically rather than printing them to stderr.
   ///
+  /// @param alwaysPrint if `true`, the LALR(1) automaton is printed unconditionally.
   /// @throws IllegalStateException if no grammar section is defined.
   public void verify(boolean alwaysPrint) {
     if (grammar == null) {
