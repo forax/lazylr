@@ -148,6 +148,23 @@ public final class MetaGrammar {
   }
 
   /// Verifies that the grammar is LALR(1), using the precedence map to resolve
+  /// shift/reduce conflicts where possible.
+  /// If unresolved conflicts remain, they are described on stderr.
+  /// If `alwaysPrint` is `true`, the LALR(1) automaton is printed unconditionally
+  /// on stdout; otherwise it is printed on stderr if there are conflicts.
+  ///
+  /// Use [#verify(Consumer)] instead if you want to handle conflict
+  /// messages programmatically rather than printing them to stderr.
+  ///
+  /// @throws IllegalStateException if no grammar section is defined.
+  public void verify(boolean alwaysPrint) {
+    if (grammar == null) {
+      throw new IllegalStateException("no grammar section is defined");
+    }
+    LALRVerifier.verify(grammar, precedenceMap, alwaysPrint);
+  }
+
+  /// Verifies that the grammar is LALR(1), using the precedence map to resolve
   /// shift/reduce conflicts where possible. If unresolved conflicts remain,
   /// the error reporter is called once per conflict with a human-readable
   /// description.

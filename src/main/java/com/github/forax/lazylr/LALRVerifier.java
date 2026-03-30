@@ -75,6 +75,22 @@ public final class LALRVerifier {
 
   /// Verifies that the grammar is LALR(1) (possibly with precedence-based
   /// conflict resolution).
+  /// If `alwaysPrint` is `true`, the LALR state automaton is printed unconditionally on `System.out`.
+  /// Otherwise, it is printed only when conflicts are detected on `System.err`.
+  ///
+  /// @param grammar       the grammar to verify.
+  /// @param precedenceMap maps terminals and productions to their precedence;
+  ///                      used to resolve shift/reduce conflicts.
+  /// @param alwaysPrint   if `true` the automaton is printed unconditionally.
+  /// @throws NullPointerException if `grammar` or `precedenceMap` is null.
+  public static void verify(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap,
+                            boolean alwaysPrint) {
+    var out = alwaysPrint ? System.out : System.err;
+    verify(grammar, precedenceMap, out, alwaysPrint, System.err::println);
+  }
+
+  /// Verifies that the grammar is LALR(1) (possibly with precedence-based
+  /// conflict resolution).
   /// In case of conflicts, the 'errorReporter' is called once per unresolved conflict.
   ///
   /// @param grammar       the grammar to verify.
