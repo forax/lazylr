@@ -918,6 +918,14 @@ public final class MetaGrammarTest {
   }
 
   @Test
+  public void verifyBooleanNoGrammarThrowsIllegalStateException() {
+    var mg = MetaGrammar.load("");
+
+    assertThrows(IllegalStateException.class,
+        () -> mg.verify(true));
+  }
+
+  @Test
   public void verifyNoArgNoGrammarThrowsIllegalStateException() {
     var mg = MetaGrammar.load("");
 
