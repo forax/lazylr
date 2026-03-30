@@ -807,8 +807,8 @@ public final class ParserTest {
 
     var message = exception.getMessage();
     assertTrue(message.contains("Parsing error"));
-    assertTrue(message.contains("'id'"));
-    assertTrue(message.contains("expected"));
+    assertTrue(message.contains("unexpected terminal 'id'"));
+    assertTrue(message.contains("expected '+', <end of file>"));
   }
 
   @Test
@@ -847,6 +847,7 @@ public final class ParserTest {
 
     var message = exception.getMessage();
     assertTrue(message.contains("Lexing error"));
+    assertTrue(message.contains("unexpected character '2'"));
     assertTrue(message.contains("line 1"));
     assertTrue(message.contains("column 6"));
     assertTrue(message.contains("id + 2"));
@@ -889,11 +890,12 @@ public final class ParserTest {
 
     var message = exception.getMessage();
     assertTrue(message.contains("Parsing error"));
+    assertTrue(message.contains("unexpected terminal '+'"));
+    assertTrue(message.contains("expected id"));
     assertTrue(message.contains("line 1"));
     assertTrue(message.contains("column 6"));
     assertTrue(message.contains("id + +"));
     assertTrue(message.contains("^"));
-    assertTrue(message.contains("expected"));
   }
 
   @Test
@@ -935,11 +937,133 @@ public final class ParserTest {
 
     var message = exception.getMessage();
     assertTrue(message.contains("Parsing error"));
+    assertTrue(message.contains("unexpected terminal '+'"));
+    assertTrue(message.contains("expected id"));
     assertTrue(message.contains("line 2"));
     assertTrue(message.contains("column 6"));
     assertTrue(message.contains("id + +"));
     assertTrue(message.contains("^"));
-    assertTrue(message.contains("expected"));
+  }
+
+  @Test
+  public void contextSensitiveLexingFallbackKeepsParsingError() {
+    var S = new NonTerminal("S");
+    var eqeq = new Terminal("==");
+    var grammar = new Grammar(S, List.of(
+        new Production(S, List.of(eqeq))
+    ));
+    var parser = Parser.createParser(grammar, Map.of());
+    var lexer = Lexer.createLexer(List.of(
+        new Token("==", "=="),
+        new Token("=", "=")
+    ));
+
+    var exception = assertThrows(ParsingException.class, () ->
+        parser.parse(lexer.tokenize("="), new ParserListener() {
+          @Override
+          public void onShift(Terminal token) {}
+          @Override
+          public void onReduce(Production production) {}
+        }));
+
+    var message = exception.getMessage();
+    assertTrue(message.contains("Parsing error at line 1"));
+    assertTrue(message.contains("unexpected terminal '='"));
+    assertTrue(message.contains("expected '=='"));
+  }
+
+  @Test
+  public void parseListenerLongReduceChain() {
+    var S = new NonTerminal("S");
+    var id = new Terminal("id");
+
+    var productions = new ArrayList<Production>();
+    productions.add(new Production(S, List.of(new NonTerminal("S0"))));
+    for(int i = 0; i < 64; i++) {
+      var production = new Production(
+          new NonTerminal("S" + i),
+          List.of(new NonTerminal("S" + (i + 1))));
+      productions.add(production);
+    }
+    productions.add(new Production(new NonTerminal("S64"), List.of(id)));
+
+    var grammar = new Grammar(S, productions);
+    var parser = Parser.createParser(grammar, Map.of());
+    var input = List.of(id);
+
+    var listener = new ParserListener() {
+      private int shiftCount;
+      private int reduceCount;
+
+      @Override
+      public void onShift(Terminal token) {
+        shiftCount++;
+      }
+
+      @Override
+      public void onReduce(Production production) {
+        reduceCount++;
+      }
+    };
+    parser.parse(input.iterator(), listener);
+
+    assertEquals(1, listener.shiftCount);
+    assertEquals(67, listener.reduceCount);
+  }
+
+  @Test
+  public void parseListenerResizesInternalStateStack() {
+    var S = new NonTerminal("S");
+    var id = new Terminal("id");
+    var grammar = new Grammar(S,
+        List.of(new Production(S, Collections.nCopies(64, id)))
+    );
+    var parser = Parser.createParser(grammar, Map.of());
+    var input = Collections.nCopies(64, id);
+
+    var listener = new ParserListener() {
+      private int shiftCount;
+      private int reduceCount;
+
+      @Override
+      public void onShift(Terminal token) {
+        shiftCount++;
+      }
+
+      @Override
+      public void onReduce(Production production) {
+        reduceCount++;
+      }
+    };
+    parser.parse(input.iterator(), listener);
+
+    assertEquals(64, listener.shiftCount);
+    assertEquals(2, listener.reduceCount);
+  }
+
+  @Test
+  public void parseEvaluatorResizesInternalValueStack() {
+    var S = new NonTerminal("S");
+    var id = new Terminal("id");
+    var grammar = new Grammar(S,
+        List.of(new Production(S, Collections.nCopies(64, id)))
+    );
+    var parser = Parser.createParser(grammar, Map.of());
+    var input = Collections.nCopies(64, id);
+
+    var result = parser.parse(input.iterator(), new Evaluator<Integer>() {
+      @Override
+      public Integer evaluate(Terminal terminal) {
+        return 1;
+      }
+
+      @Override
+      public Integer evaluate(Production production, List<Integer> args) {
+        return args.stream().mapToInt(v -> v).sum();
+      }
+    });
+
+    assertEquals(64, result);
   }
 
   @Test

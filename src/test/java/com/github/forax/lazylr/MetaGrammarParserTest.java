@@ -907,6 +907,7 @@ public final class MetaGrammarParserTest {
 
     var message = exception.getMessage();
     assertTrue(message.contains("Lexing error"));
+    assertTrue(message.contains("unexpected character '2'"));
     assertTrue(message.contains("line 1"));
     assertTrue(message.contains("column 6"));
     assertTrue(message.contains("id + 2"));
@@ -950,11 +951,12 @@ public final class MetaGrammarParserTest {
 
     var message = exception.getMessage();
     assertTrue(message.contains("Parsing error"));
+    assertTrue(message.contains("unexpected terminal '+'"));
+    assertTrue(message.contains("expected id"));
     assertTrue(message.contains("line 1"));
     assertTrue(message.contains("column 6"));
     assertTrue(message.contains("id + +"));
     assertTrue(message.contains("^"));
-    assertTrue(message.contains("expected"));
   }
 
   @Test
@@ -997,11 +999,199 @@ public final class MetaGrammarParserTest {
 
     var message = exception.getMessage();
     assertTrue(message.contains("Parsing error"));
+    assertTrue(message.contains("unexpected terminal '+'"));
+    assertTrue(message.contains("expected id"));
     assertTrue(message.contains("line 2"));
     assertTrue(message.contains("column 6"));
     assertTrue(message.contains("id + +"));
     assertTrue(message.contains("^"));
-    assertTrue(message.contains("expected"));
+  }
+
+  @Test
+  public void contextSensitiveLexingFallbackKeepsParsingError() {
+    var metaGrammar = MetaGrammar.load("""
+      grammar {
+        S : '=='
+      }
+      """);
+
+    var grammar = metaGrammar.grammar();
+    var parser = Parser.createParser(grammar, Map.of());
+    var lexer = Lexer.createLexer(List.of(
+        new Token("==", "=="),
+        new Token("=", "=")
+    ));
+
+    var exception = assertThrows(ParsingException.class, () ->
+        parser.parse(lexer.tokenize("="), new ParserListener() {
+          @Override
+          public void onShift(Terminal token) {}
+          @Override
+          public void onReduce(Production production) {}
+        }));
+
+    var message = exception.getMessage();
+    System.out.println(message);
+    assertTrue(message.contains("Parsing error at line 1"));
+    assertTrue(message.contains("unexpected terminal '='"));
+    assertTrue(message.contains("expected '=='"));
+  }
+
+  @Test
+  public void parseListenerLongReduceChain() {
+    var metaGrammar = MetaGrammar.load("""
+      grammar {
+        S : S0
+        S0 : S1
+        S1 : S2
+        S2 : S3
+        S3 : S4
+        S4 : S5
+        S5 : S6
+        S6 : S7
+        S7 : S8
+        S8 : S9
+        S9 : S10
+        S10 : S11
+        S11 : S12
+        S12 : S13
+        S13 : S14
+        S14 : S15
+        S15 : S16
+        S16 : S17
+        S17 : S18
+        S18 : S19
+        S19 : S20
+        S20 : S21
+        S21 : S22
+        S22 : S23
+        S23 : S24
+        S24 : S25
+        S25 : S26
+        S26 : S27
+        S27 : S28
+        S28 : S29
+        S29 : S30
+        S30 : S31
+        S31 : S32
+        S32 : S33
+        S33 : S34
+        S34 : S35
+        S35 : S36
+        S36 : S37
+        S37 : S38
+        S38 : S39
+        S39 : S40
+        S40 : S41
+        S41 : S42
+        S42 : S43
+        S43 : S44
+        S44 : S45
+        S45 : S46
+        S46 : S47
+        S47 : S48
+        S48 : S49
+        S49 : S50
+        S50 : S51
+        S51 : S52
+        S52 : S53
+        S53 : S54
+        S54 : S55
+        S55 : S56
+        S56 : S57
+        S57 : S58
+        S58 : S59
+        S59 : S60
+        S60 : S61
+        S61 : S62
+        S62 : S63
+        S63 : S64
+        S64 : id
+      }
+      """);
+
+    var parser = Parser.createParser(metaGrammar.grammar(), Map.of());
+    var input = List.of(new Terminal("id"));
+
+    var listener = new ParserListener() {
+      private int shiftCount;
+      private int reduceCount;
+
+      @Override
+      public void onShift(Terminal token) {
+        shiftCount++;
+      }
+
+      @Override
+      public void onReduce(Production production) {
+        reduceCount++;
+      }
+    };
+    parser.parse(input.iterator(), listener);
+
+    assertEquals(1, listener.shiftCount);
+    assertEquals(67, listener.reduceCount);
+  }
+
+  @Test
+  public void parseListenerResizesInternalStateStack() {
+    var metaGrammar = MetaGrammar.load("""
+      grammar {
+        S: id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id
+      }
+      """);
+
+    var grammar = metaGrammar.grammar();
+    var parser = Parser.createParser(grammar, Map.of());
+    var input = Collections.nCopies(64, new Terminal("id"));
+
+    var listener = new ParserListener() {
+      private int shiftCount;
+      private int reduceCount;
+
+      @Override
+      public void onShift(Terminal token) {
+        shiftCount++;
+      }
+
+      @Override
+      public void onReduce(Production production) {
+        reduceCount++;
+      }
+    };
+    parser.parse(input.iterator(), listener);
+
+    assertEquals(64, listener.shiftCount);
+    assertEquals(2, listener.reduceCount);
+  }
+
+  @Test
+  public void parseEvaluatorResizesInternalValueStack() {
+    var metaGrammar = MetaGrammar.load("""
+      grammar {
+        S: id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id id
+      }
+      """);
+
+    LALRVerifier.verify(metaGrammar.grammar(), Map.of(), System.out, true, System.out::println);
+
+    var grammar = metaGrammar.grammar();
+    var parser = Parser.createParser(grammar, Map.of());
+    var input = Collections.nCopies(64, new Terminal("id"));
+
+    var result = parser.parse(input.iterator(), new Evaluator<Integer>() {
+      @Override
+      public Integer evaluate(Terminal terminal) {
+        return 1;
+      }
+
+      @Override
+      public Integer evaluate(Production production, List<Integer> args) {
+        return args.stream().mapToInt(v -> v).sum();
+      }
+    });
+
+    assertEquals(64, result);
   }
 
   @Test
