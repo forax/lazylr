@@ -611,7 +611,7 @@ public class MainTest {
     public void printWithInputFileShouldExit1(@TempDir Path tempDir) throws Exception {
       // --print is incompatible with a second (input) path argument
       var grammar = tempDir.resolve("grammar.txt");
-      var input   = tempDir.resolve("input.txt");
+      var input = tempDir.resolve("input.txt");
       Files.writeString(grammar, """
           tokens {
             num: /[0-9]+/
@@ -783,8 +783,8 @@ public class MainTest {
           }
           """);
 
-      var defaultResult = runProcess(tempDir,           grammar);
-      var inlineResult  = runProcess(tempDir, "--print", grammar);
+      var defaultResult = runProcess(tempDir, grammar);
+      var inlineResult = runProcess(tempDir, "--print", grammar);
 
       assertEquals(0, defaultResult.exitCode());
       assertEquals(0, inlineResult.exitCode());
@@ -806,6 +806,25 @@ public class MainTest {
       var result = runProcess(tempDir,
           "--print", "--generate", grammar);
       assertEquals(1, result.exitCode());
+      assertTrue(result.stderr.contains("Usage: lazylr"));
+    }
+
+    @Test
+    public void generateAndPrintTogetherShouldExit1(@TempDir Path tempDir) throws Exception {
+      var grammar = tempDir.resolve("grammar.txt");
+      Files.writeString(grammar, """
+          tokens {
+            num: /[0-9]+/
+          }
+          grammar {
+            E: num
+          }
+          """);
+
+      var result = runProcess(tempDir,
+          "--generate", "--print", grammar);
+      assertEquals(1, result.exitCode());
+      assertTrue(result.stderr.contains("Usage: lazylr"));
     }
   }
 }
