@@ -2,13 +2,14 @@ package com.github.forax.lazylr;
 
 import org.junit.jupiter.api.Test;
 
+import java.io.ByteArrayOutputStream;
+import java.io.PrintStream;
 import java.util.ArrayList;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.regex.Pattern;
 
@@ -859,6 +860,94 @@ public final class MetaGrammarTest {
             """);
 
     assertDoesNotThrow(() -> mg.verify());
+  }
+
+  @Test
+  public void verifyBooleanTrueAlwaysPrintTheAutomaton() {
+    var mg = MetaGrammar.load("""
+            tokens {
+              num: /[0-9]+/
+            }
+            precedence {
+              left: '+'
+            }
+            grammar {
+              E: E '+' E
+              E: num
+            }
+            """);
+
+    var out = System.out;
+    try {
+      var outputStream = new ByteArrayOutputStream();
+      System.setOut(new PrintStream(outputStream));
+      mg.verify(true);
+      assertEquals("""
+          ── State 0 ─────────────────────────────────
+             E' :  • E
+             E :   • E + E
+             E :   • num
+            ······································
+             goto( num                  ) → 2
+             goto( E                    ) → 1
+          
+          ── State 1 ─────────────────────────────────
+             E' :  E •
+             E :   E • + E
+            ······································
+             goto( +                    ) → 3
+             accept()                     on [$]
+          
+          ── State 2 ─────────────────────────────────
+             E :  num •
+            ······································
+             reduce( E : num            ) on [$, +]
+          
+          ── State 3 ─────────────────────────────────
+             E :  E + • E
+             E :  • E + E
+             E :  • num
+            ······································
+             goto( num                  ) → 2
+             goto( E                    ) → 4
+          
+          ── State 4 ─────────────────────────────────
+             E :  E + E •
+             E :  E • + E
+            ······································
+             goto( +                    ) → 3 ❌
+             reduce( E : E + E          ) on [$, +]
+          
+          """, outputStream.toString());
+    } finally {
+      System.setOut(out);
+    }
+  }
+
+  @Test
+  public void verifyBooleanFalseDoesNotPrintTheAutomaton() {
+    var mg = MetaGrammar.load("""
+            tokens {
+              num: /[0-9]+/
+            }
+            precedence {
+              left: '+'
+            }
+            grammar {
+              E: E '+' E
+              E: num
+            }
+            """);
+
+    var err = System.err;
+    try {
+      var outputStream = new ByteArrayOutputStream();
+      System.setErr(new PrintStream(outputStream));
+      mg.verify(false);
+      assertEquals("", outputStream.toString());
+    } finally {
+      System.setErr(err);
+    }
   }
 
   @Test
