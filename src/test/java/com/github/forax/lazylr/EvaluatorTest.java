@@ -8,6 +8,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNull;
 
 public class EvaluatorTest {
 
@@ -120,6 +121,30 @@ public class EvaluatorTest {
 
     var expr = parser.parse(lexer.tokenize("2 + 3 * 5"), new ExprEvaluator());
     assertEquals(17, eval(expr));
+  }
+
+  @Test
+  public void parseEvaluatorAllowsNullValues() {
+    var S = new NonTerminal("S");
+    var id = new Terminal("id");
+    var grammar = new Grammar(S, List.of(
+        new Production(S, List.of(id))
+    ));
+    var parser = Parser.createParser(grammar, Map.of());
+
+    var result = parser.parse(List.of(id).iterator(), new Evaluator<String>() {
+      @Override
+      public String evaluate(Terminal terminal) {
+        return null;
+      }
+
+      @Override
+      public String evaluate(Production production, List<String> args) {
+        return args.getFirst();
+      }
+    });
+
+    assertNull(result);
   }
 
   @Test
