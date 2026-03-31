@@ -19,7 +19,7 @@ optimized for fast development and iterative grammar evolution.
 1. [Introduction](#introduction)
 2. [Quick Start](#quick-start)
 3. [Conceptual Overview](#conceptual-overview)
-4. [Grammar Reference (`MetaGrammar`)](#grammar-dsl-reference-metagrammar)
+4. [Grammar DSL Reference (`MetaGrammar`)](#grammar-dsl-reference-metagrammar)
 5. [Lexing Reference (`Token`, `Lexer`, `Terminal`)](#lexing-reference-token-lexer-terminal)
 6. [Parsing Reference (`Grammar`, `Parser`, `ParserFactory`)](#parsing-reference-grammar-parser-parserfactory)
 7. [Semantic Actions (`Evaluator` and `Visitor`)](#semantic-actions-evaluator-and-visitor)
@@ -31,34 +31,37 @@ optimized for fast development and iterative grammar evolution.
 13. [Threading, Reentrancy, and Performance](#threading-reentrancy-and-performance)
 14. [End-to-End Recipes (with JUnit)](#end-to-end-recipes-with-junit)
 15. [Troubleshooting Checklist](#troubleshooting-checklist)
-16[ANTLR-to-LazyLR Mapping Guide](#antlr-to-lazylr-mapping-guide)
+16. [ANTLR-to-LazyLR Mapping Guide](#antlr-to-lazylr-mapping-guide)
 
 ---
 
 ## Introduction
 
-LazyLR is for developers who want LR parser power without a code-generation build step 
-to iterate quickly on a grammar.
+LazyLR is for developers who want LR parser power without a code-generation build step,
+so they can iterate quickly on a grammar.
 
 - **Lexing** is defined by ordered regex rules (`Token`, `Lexer`).
-- **Parsing** is bottom-up LR with lazy state construction (`Parser`).
+- **Parsing** is bottom-up LR(1) with lazy state construction (`Parser`).
 - **Grammar declaration** is usually done with the built-in DSL (`MetaGrammar.load(...)`).
 - **Semantic actions** are implemented with `Evaluator` or typed `Visitor` methods.
 
 ### What it gives you
 
-- Runtime grammar loading of the grammar with lexing + parsing in one library.
-- Parser states are built lazily as input is consumed.
-- Optional offline LALR conflict validation and automaton diagnostics.
-- Precedence/associativity rules to make the grammar more readable.
+- Runtime grammar loading with lexing + parsing in one library.
+- Parser states are built lazily as input is consumed, so startup cost is low even for large grammars.
+- Optional offline LALR(1) conflict validation and automaton diagnostics.
+- Precedence/associativity rules to resolve shift/reduce conflicts without rewriting the grammar.
 - Typed semantic actions through a reflection-backed visitor layer.
 - A CLI for validation, grammar debugging via automaton printing, and Java source generation.
+- Context-sensitive lexing: the lexer uses the parser's current state to decide which token regexes are valid candidates, reducing spurious matches.
+- Coverage tracking: `parser.coverage()` returns the set of productions that have been reduced at least once, useful for verifying test coverage of a grammar.
 
 ### What it does *not* try to be
 
-- A complete language workbench.
+- A complete language workbench or IDE plugin.
 - A parser-combinator framework.
-- A built-in AST object model.
+- A built-in AST object model (you define your own with records and sealed interfaces).
+- A yacc/bison replacement with embedded actions inside grammar text.
 
 ---
 
@@ -76,7 +79,7 @@ record Num(int value) implements Expr {}
 record Add(Expr left, Expr right) implements Expr {}
 record Mul(Expr left, Expr right) implements Expr {}
 
-// Visitor that construct the AST
+// Visitor that constructs the AST
 final class ExprVisitor implements Visitor<Expr> {
   public Expr num(Terminal t) {
     return new Num(Integer.parseInt(t.value()));
@@ -106,33 +109,77 @@ var mg = MetaGrammar.load("""
   }
   """);
 
-// Verifies that the grammar is LALR(1) or prints the automaton
+// Verifies that the grammar is LALR(1), or prints automaton to stderr
 mg.verify();
 
-// run the grammar on a text, and produce the AST
+// Run the grammar on a text and produce the AST
 var text = "2 + 3 * 4";
 Expr ast = mg.parse(text, new ExprVisitor());
 
 System.out.println(ast);
+// Add[left=Num[value=2], right=Mul[left=Num[value=3], right=Num[value=4]]]
 ```
 
 ### API highlights
 
-- `MetaGrammar.load(String text)` parses the `MetaGrammar` text file.
-- `mg.tokens()` returns token list in priority order (or an empty list).
-- `mg.grammar()` returns `Grammar` (or throw an exception).
-  You can check if the grammar exists with `mg.hasGrammar()`.
-- `mg.precedenceMap()` returns effective precedence table (or an empty map).
-- `mg.verify(...)` checks unresolved LALR(1) conflicts.
-- `mg.parse(input, evaluatorOrVisitor)` performs lexing and parsing.
+- `MetaGrammar.load(String text)` parses the MetaGrammar DSL text.
+- `mg.tokens()` returns the token list in lexer priority order (or an empty list if no `tokens` section).
+- `mg.hasGrammar()` returns `true` if a non-empty `grammar` section was present.
+- `mg.grammar()` returns the `Grammar` object, or throws `IllegalStateException` if absent.
+- `mg.precedenceMap()` returns the effective precedence table (or an empty map).
+- `mg.verify(...)` checks for unresolved LALR(1) conflicts.
+- `mg.parse(input, evaluatorOrVisitor)` performs lexing then parsing in one call.
 
 ---
 
-## MetaGrammar Reference
+## Conceptual Overview
 
-The `MetaGrammar` text format has three sections: `tokens`, `precedence`, `grammar`.
-Inside a section, newlines separate rules.
-Each section is optional.
+LazyLR is a *bottom-up* (LR) parser. Understanding its internal flow helps interpret both
+successful parses and error messages.
+
+### Bottom-up parsing
+
+When the parser encounters terminals, it does not try to match a rule from the top down.
+Instead it uses a *shift/reduce* loop:
+
+- **Shift**: consume the next input token and push it on an internal stack.
+- **Reduce**: when the top of the stack matches the body of a production, pop those
+  symbols and replace them with the production's head non-terminal.
+
+Events fire in this order: all shifts and inner reductions for the children of a node
+happen *before* the reduction for the node itself. This is why `Evaluator.evaluate(Terminal)`
+fires before `Evaluator.evaluate(Production, List)` for any given subtree.
+
+### Lazy state construction
+
+A traditional LR table-driven parser pre-computes every possible parser state from the
+grammar before any input is seen. LazyLR instead computes states on demand: the first
+time the parser visits a (state, symbol) pair it builds the next state, caches it, and
+never recomputes it. States built in one `parse()` call are reused in subsequent calls
+on the same `Parser` instance.
+
+### LR(1) vs LALR(1)
+
+LazyLR's `Parser` uses *LR(1)*: each item in a state carries a one-token lookahead,
+so two states whose LR(0) cores are identical but whose lookaheads differ remain
+separate. This makes the parser strictly more powerful than LALR(1) — it handles
+the classic DeRemer grammar that causes reduce/reduce conflicts in LALR(1) without
+any conflicts at all.
+
+`LALRVerifier`, by contrast, checks the grammar under *LALR(1)* rules and reports
+conflicts that the lazy LR(1) parser would actually resolve correctly. Conflicts
+reported by `verify()` are therefore conservative: some may not appear during actual
+parsing. Production use should still resolve all reported conflicts for safety.
+
+---
+
+## Grammar DSL Reference (`MetaGrammar`)
+
+The `MetaGrammar` text format has three named sections: `tokens`, `precedence`, `grammar`.
+Each section is optional and may appear more than once; multiple occurrences of the same section
+are merged in declaration order.
+Newlines separate lines within a section.
+Line comments starting with `//` are allowed anywhere.
 
 ```text
 tokens {
@@ -156,206 +203,465 @@ grammar {
 ### `tokens` section
 
 #### Syntax
-- `name: /regex/` defines a named token.
-- `/regex/` defines an anonymous token, those are not sent to the parser (comments, whitespaces, etc.).
+
+```text
+tokens {
+  name: /regex/     // named token — emits a Terminal
+  /regex/           // anonymous token — consumed and discarded
+}
+```
+
+Regex syntax follows Java's `java.util.regex.Pattern`. Each regex must match at least one
+character; patterns that can match the empty string are rejected at construction time.
+
+Named tokens in the `tokens` section appear after any quoted literals extracted from the
+`grammar` section in the final token list. This ensures that explicitly quoted operators
+like `'+'` are matched before user-defined identifiers that might otherwise consume them.
+Within the named group, tokens appear in declaration order, which determines tie-breaking.
+
+#### Matching rules
+
+1. The lexer attempts to match at the current position with every eligible pattern.
+2. The match with the **greatest length** wins.
+3. If two matches have the same length, the rule that appears **earlier** in the final
+   token list wins.
+4. Anonymous tokens are consumed silently; no `Terminal` is produced.
+5. If no pattern matches and the input is not exhausted, a `Terminal.ERROR` is returned
+   and iteration stops.
+
+#### Context-sensitive lexing
+
+When the iterator is driven by `Parser.parse(...)`, the lexer uses the parser's current
+state to restrict which token patterns are eligible at each position. Only patterns whose
+token name is expected by the current parser state are considered. If no eligible pattern
+matches, the lexer retries with all patterns (the fallback), so that the parser can
+produce a more informative "unexpected terminal" error rather than an opaque lexing error.
 
 #### Example
+
 ```text
 tokens {
   keyword_if: /if/
   id: /[A-Za-z_][A-Za-z_0-9]*/
+  num: /[0-9]+/
   /[ \t\n]+/
 }
 ```
 
-Input `if foo` will tokenize to `keyword_if("if")`, `id("foo")`.
-If `id` has the value `if`, both rules `keyword_if` and `id` match,
-`keyword_if` is chosen because it is declared first.
+Input `if foo 42` tokenizes to `keyword_if("if")`, `id("foo")`, `num("42")`.
+
+For input `iffy`, `keyword_if` and `id` both match at position 0. `id` wins because
+it matches four characters (`iffy`) versus two (`if`), so the result is `id("iffy")`.
+
+For input `if `, `keyword_if` matches two characters and `id` also matches two characters;
+`keyword_if` wins because it is declared earlier.
 
 ### `precedence` section
 
 #### Syntax
-- Syntax: `left: ...` or `right: ...`.
-- Later lines = higher precedence.
-- Symbols may be quoted literals (`'+'`), token names (`plus`) defined in the section `tokens`, or an arbitrary string.
-- Arbitrary strings are as target of `%prec SOME_SYMBOL` in the grammar to override a production's default precedence.
 
-#### Example
 ```text
 precedence {
-  left: '+', '-'    // quoted literals
-  left: if          // named token
-  left: 'UMINUS'    // arbitrary string
-}
-grammar {
-  E : '-' E      %prec UMINUS      // reference `UMINUS` to use that precedence instead pf the one of '-'
+  left:  symbol, symbol, ...    // level N (lowest first)
+  right: symbol, symbol, ...    // level N+1
+  ...
 }
 ```
+
+Each line declares one precedence level. **Later lines have strictly higher precedence.**
+Multiple terminals can share the same level by separating them with commas.
+Symbols can be:
+
+- Quoted literals (e.g., `'+'`), must also appear in the `grammar` section.
+- Token names defined in the `tokens` section (e.g., `plus`).
+- Arbitrary identifiers used only as targets for `%prec` in the `grammar` section
+  (virtual tokens — they are never emitted by the lexer).
+
+#### How precedence is applied
+
+When a shift/reduce conflict is encountered, the parser compares:
+
+- The precedence of the **lookahead terminal** (the token about to be shifted).
+- The precedence of the **production being considered for reduction**.
+
+A production's precedence is, by default, the precedence of its **rightmost terminal**.
+This default can be overridden per-production with `%prec`.
+
+Resolution:
+- If the production has higher precedence -> reduce.
+- If the lookahead has higher precedence -> shift.
+- If equal precedence and `LEFT` associativity -> reduce.
+- If equal precedence and `RIGHT` associativity -> shift.
+- If either side has no declared precedence -> unresolved conflict (parse error at runtime).
+
+#### Example
+
+```text
+precedence {
+  left:  '+', '-'    // level 1
+  left:  '*', '/'    // level 2
+  right: '^'         // level 3
+  right: UMINUS      // level 4, virtual token for unary minus
+}
+grammar {
+  E : E '+' E
+  E : E '-' E
+  E : E '*' E
+  E : E '/' E
+  E : E '^' E
+  E : '-' E    %prec UMINUS
+  E : num
+}
+```
+
+- `2 + 3 * 4` → `2 + (3 * 4)` because `*` (level 2) outranks `+` (level 1).
+- `2 + 3 + 4` → `(2 + 3) + 4` because `+` is `LEFT`.
+- `2 ^ 3 ^ 4` → `2 ^ (3 ^ 4)` because `^` is `RIGHT`.
+- `-3 * 4` → `(-3) * 4` because `UMINUS` (level 4) outranks `*` (level 2).
 
 ### `grammar` section
 
-Core concepts:
-- **Terminal**: concrete lexeme/category from input (`num`, `'+'`, etc.).
-- **NonTerminal**: grammar variable (`Expr`, `Stmt`, ...).
-- **Production**: rules explaining how variables are created `E : E + E` or `E : num`, ...
-- **Grammar**: all productions + one start non-terminal.
-- **Evaluator/Visitor**: semantic actions for terminals and reductions.
-
 #### Syntax
-
-- Rule syntax: nonTerminal ':' symbol1 symbol2 symbol3 ...   (a symbol is a terminal or a non-terminal) 
-  For example: `E : E '+' E`.
-- Empty right and side (`Head :`) is epsilon.
-- The head of the first rule is the start symbol.
-- Quoted literals in grammar are automatically registered as terminals.
-
-#### Example
 
 ```text
 grammar {
-  E : num
-  E : E '+' E
-  E : '-' E %prec UMINUS
+  Head : sym1 sym2 ...    // production with body
+  Head :                  // epsilon production (empty body)
+  Head : sym1 sym2 %prec TOKEN  // production with explicit precedence override
 }
 ```
 
-`-3+4` parses with unary minus precedence from `UMINUS`, not from binary `-`.
+The head of the **first** rule is the **start symbol**. A non-terminal is any identifier
+that appears as the head of at least one rule. Everything else in a rule body that is not
+a known non-terminal is treated as a terminal. Quoted single-character or multi-character
+literals (e.g., `'+'`, `'+='`) are automatically registered as terminals and added to the
+token list.
+
+#### Epsilon productions
+
+An empty right-hand side makes the production nullable:
+
+```text
+grammar {
+  OptElse : 'else' Stmt
+  OptElse :              // ε, OptElse can match nothing
+}
+```
+
+#### Start symbol
+
+The start symbol is always taken from the head of the very first rule across all sections.
 
 ### Comments and readability
 
-`//` comments are allowed.
-
-Example:
+Line comments (`//`) are allowed anywhere in the DSL, including on the same line as a rule.
 
 ```text
 grammar {
   // Primary expression
   E : num
-  // Binary addition
-  E : E '+' E
+
+  // Binary operators
+  E : E '+' E   // addition
+  E : E '*' E   // multiplication
+}
+```
+
+#### `%prec` override
+
+When a production's rightmost terminal is not the right precedence anchor; the classic case is
+a unary operator sharing a terminal with a binary operator; use `%prec`:
+
+```text
+E : '-' E    %prec UMINUS
+```
+
+`UMINUS` must appear somewhere in the `precedence` section. It does not need to correspond
+to any lexer token.
+
+#### Duplicate and self-referential rules
+
+- Left recursion is handled correctly: `E : E '+' E` will not cause infinite loops.
+- Duplicate productions (same head and same body) are rejected at `Grammar` construction time.
+- A non-terminal that appears in a rule body but has no production of its own is rejected.
+
+#### Multiple grammar sections
+
+Declaring `grammar { }` multiple times is allowed but not recommanded; the sections are concatenated.
+
+```text
+grammar {
+  Stmt : ExprStmt
+  Stmt : IfStmt
+}
+grammar {
+  ExprStmt : Expr ';'
+  IfStmt   : 'if' '(' Expr ')' Stmt
 }
 ```
 
 ---
 
-## Lexing Reference
+## Lexing Reference (`Token`, `Lexer`, `Terminal`)
 
 ### `Token`
 
-Represents a lexer rule:
+`Token` encapsulates one lexer rule: a name and a regex pattern, or just a regex pattern
+for anonymous (skip) tokens.
 
-- named token, emitted as `Terminal` of the same name:
-  `new Token(name, regex)` 
-- anonymous token, matched and discarded by the `Lexer`:
-  `new Token(regex)`
+```java
+// Named token — emits a Terminal when matched
+var numToken = new Token("num", "[0-9]+");
 
-Validation rejects malformed patterns and empty-string-matching patterns.
+// Anonymous token — consumed silently
+var wsToken = new Token("[ \t\n]+");
+```
+
+Constructor validation:
+- `null` name or regex -> `NullPointerException`.
+- Malformed regex -> `IllegalArgumentException`.
+- Regex that matches the empty string → `IllegalArgumentException`. This prevents
+  the lexer from looping infinitely at the same position.
+
+Key methods:
+- `name()` — returns the symbolic name, or `null` for anonymous tokens.
+- `regex()` — returns the raw pattern string.
+- `isIgnorable()` — returns `true` for anonymous tokens.
+
+`Token` is a record like type: two tokens are equal when they have the same name and regex.
 
 ### `Lexer`
 
-Create each terminal lazily from an input text using, the `tokens` description.
+`Lexer` converts a `CharSequence` into a lazy stream of `Terminal` objects.
 
 ```java
-var lexer = Lexer.createLexer(tokens);
-var inputText = "a+b";
-
-Iterator<Terminal> iterator = lexer.tokenize(inputText);
+var lexer = Lexer.createLexer(tokens);  // thread-safe, share freely
+var iterator = lexer.tokenize("12 + 34");
 ```
 
-Matching rules:
+The returned `Iterator<Terminal>` is lazy: input is scanned only when `hasNext()` or
+`next()` is called. The `Lexer` itself is immutable and thread-safe; you can call
+`tokenize(...)` from multiple threads simultaneously.
 
-1. longest match wins,
-2. tie resolved by declaration order,
-3. ignorable token rules consume but do not emit,
-4. no match triggers `Terminal.ERROR` path.
+#### Matching rules (detailed)
+
+At each position the lexer:
+
+1. Attempts every pattern (or the eligible subset when driven by a parser state).
+2. Selects the pattern with the **longest match**. If two patterns tie, the one
+   declared **earlier** in the list wins.
+3. If the winning pattern is anonymous, its matched text is skipped and matching
+   resumes immediately after it.
+4. If the winning pattern is named, a `Terminal(name, matchedText)` is returned.
+5. If no pattern matches and the input position is not at the end, a `Terminal.ERROR`
+   terminal is returned and iteration halts.
+
+#### Position tracking
+
+`Lexer.position(iterator)` returns the start character index (zero-based) of the most
+recently returned terminal. It returns `0` before any terminal is consumed, and `-1` if
+the iterator is not a `Tokenizer` (e.g., a plain `List.iterator()`).
+
+```java
+var iterator = lexer.tokenize("42 + 113");
+iterator.next();                          // "42"
+System.out.println(Lexer.position(iterator));  // 0
+iterator.next();                          // "+"
+System.out.println(Lexer.position(iterator));  // 3
+```
+
+This is primarily used inside `Evaluator.evaluate(Terminal)` to attach source positions
+to AST nodes. Use `mg.parse(input, visitorFactory)` so the visitor receives the same
+iterator instance that the parser is consuming.
 
 ### `Terminal`
 
-Runtime token object with:
+`Terminal` is immutable and represents either:
+- A **grammar-level placeholder** (no value): `new Terminal("num")`, used in `Production` bodies.
+- A **lexer-produced token** (with value): `new Terminal("num", "42")`, produced by `Lexer`.
 
-- `name()` (same as the token name)
-- `value()` (the content of the input text that matches the regex)
+Two terminals are **equal if their names match**, regardless of value. This is what allows
+a lexer-produced `Terminal("num", "42")` to match the grammar placeholder `Terminal("num")`
+in the parser's action table.
 
-Special sentinels exist internally (`EPSILON`, `EOF`, `ERROR`) and
-are mainly relevant for parser internals and diagnostics.
+```java
+assertEquals(new Terminal("num", "42"), new Terminal("num"));  // true
+assertEquals(new Terminal("num", "1"),  new Terminal("num", "2")); // also true
+```
+
+Special sentinel terminals (used internally):
+- `Terminal.EOF` (`"$"`), appended by the parser after the last user token.
+- `Terminal.EPSILON` (`"ε"`), used in FIRST-set computation.
+- `Terminal.ERROR` (`"error"`), returned by the lexer on no-match.
 
 ---
 
-## Parsing Reference
+## Parsing Reference (`Grammar`, `Parser`, `ParserFactory`)
 
-### `Grammar`, `Production`, `Symbol`
+### `Grammar`
 
-- `Symbol` is sealed (`Terminal` / `NonTerminal`).
-- `Production` is `head -> body` and also a `PrecedenceEntity`.
-- `Grammar` stores start symbol + productions.
+`Grammar` is an immutable, validated collection of productions plus a start symbol.
+
+```java
+var E    = new NonTerminal("E");
+var plus = new Terminal("+");
+var num  = new Terminal("num");
+
+var grammar = new Grammar(E, List.of(
+    new Production(E, List.of(E, plus, E)),
+    new Production(E, List.of(num))
+));
+```
+
+Construction validates:
+- The start symbol must be the head of at least one production.
+- No duplicate productions (same head and same body).
+- Every non-terminal that appears in a rule body must itself have at least one production.
+
+`Grammar` is thread-safe and can be reused across many parsers and threads.
+
+### `Production`
+
+`Production` is immutable and represents one grammar rule.
+
+```java
+var prod = new Production(E, List.of(E, plus, E));
+System.out.println(prod.name());  // "E : E + E"
+System.out.println(prod.head());  // NonTerminal(E)
+System.out.println(prod.body());  // [Terminal(+), NonTerminal(E), ...]
+```
+
+`production.name()` is the canonical string identifier used in `Evaluator` switch
+statements and `@ProductionName` annotations. Its format is always
+`"Head : sym1 sym2 ..."`, or `"Head : ε"` for epsilon productions.
+
+`Production` also implements `PrecedenceEntity` so it can appear as a key in the
+precedence map (used by `%prec` overrides).
 
 ### `Parser`
 
+`Parser` is the main parsing engine. It maintains mutable internal state during a
+`parse()` call, and that state (the action and transition caches) accumulates across
+multiple calls to avoid recomputing LR(1) states.
+
 ```java
 var parser = Parser.createParser(grammar, precedenceMap);
-var result = parser.parse(terminals, evaluator);
+
+// First call — may build new LR(1) states
+var result1 = parser.parse(input1, evaluator);
+
+// Second call — reuses cached states built during the first call
+var result2 = parser.parse(input2, evaluator);
 ```
 
-The parser adds augmented start rule `S' -> S` internally.
+`Parser` supports two parse entry points:
 
-`Parser` is stateful while parsing and should not be shared concurrently.
+```java
+// Fires events, produces no value
+void parse(Iterator<Terminal> input, ParserListener listener)
 
+// Builds and returns a semantic value
+<V> V parse(Iterator<Terminal> input, Evaluator<V> evaluator)
+```
+
+#### Augmented grammar
+
+Internally, the parser adds an augmented production `S' → S` (where `S` is the declared
+start symbol). This production fires exactly once, as the final reduce event at the end
+of a successful parse. `ParserListener` users will see this reduce. `Evaluator` users do
+not need to handle it; the `parse()` method extracts the result of the start symbol
+automatically.
+
+#### Coverage
+
+```java
+Set<Production> covered = parser.coverage();
+```
+
+Returns the set of productions reduced at least once across all `parse()` calls on this
+instance. The set grows monotonically and is unmodifiable. Useful in tests to verify that
+all grammar rules are exercised.
 
 ### `ParserFactory`
 
-Use factory for concurrent workloads:
+`ParserFactory` separates the one-time cost of computing FIRST sets and the completed
+precedence map from the per-thread cost of creating a parser.
 
 ```java
+// Shared, created once — thread-safe
 var factory = ParserFactory.createFactory(grammar, precedenceMap);
-var parser = factory.createParser(); // call in the thread that will parse
+
+// Per-thread — call createParser() on the thread that will do the parsing
+var parser = factory.createParser();
 ```
+
+`factory.createParser()` is cheap (it creates the initial LR(1) state from the augmented
+grammar and wires up the transition engine). All computationally intensive static analysis
+is done by `createFactory(...)` and shared.
+
+#### Thread ownership
+
+Each `Parser` is permanently **bound to the thread that created it** via `createParser()`.
+Calling `parse()` from any other thread throws `WrongThreadException`. This applies to
+both platform threads and virtual threads.
 
 ---
 
-## Semantic Actions (`ParserListener`, `Evaluator` and `Visitor`)
+## Semantic Actions (`Evaluator` and `Visitor`)
 
-### ParserListener
+### `ParserListener`
 
-If you only need parsing events (e.g., building your own stack, debugging, or streaming processing),
-you can use a listener-style approach instead of producing semantic values.
-
-A `ParserListener` receives callbacks during parsing:
-
-* on shift (token consumed)
-* on reduce (production applied)
-
-#### Example
+The lowest-level hook. It observes shifts and reduces without producing a value:
 
 ```java
-ParserListener listener = new ParserListener() {
+parser.parse(input, new ParserListener() {
   @Override
-  public void onShift(Terminal t) {
-    System.out.println("Shift: " + t);
+  public void onShift(Terminal token) {
+    System.out.println("Shift " + token.name() + "=" + token.value());
   }
-
   @Override
-  public void onReduce(Production p, List<Object> values) {
-    System.out.println("Reduce: " + p.name());
+  public void onReduce(Production production) {
+    System.out.println("Reduce " + production.name());
   }
-};
+});
 ```
+
+Events fire bottom-up: for a production `E : E '+' E`, both inner `onShift` and inner
+`onReduce` events for both `E` children fire before `onReduce(E : E + E)`.
+
+The start position of the current terminal during `onShift` is available via
+`Lexer.position(iterator)` if the iterator is a `Tokenizer`.
 
 ### `Evaluator<V>`
 
-#### Example 1: arithmetic evaluation
+`Evaluator` is a functional interface that builds a result of type `V` while parsing.
+It has two methods:
+
+```java
+V evaluate(Terminal terminal);                         // called on each shift
+V evaluate(Production production, List<V> arguments);  // called on each reduce
+```
+
+`arguments` contains one entry per symbol in `production.body()`, in left-to-right order.
+Terminals for which `evaluate(Terminal)` returned `null` still occupy their position in
+`arguments` as `null`.
+
+`V` may be `null`-typed (e.g., `Evaluator<@Nullable Object>`). Returning `null` from
+`evaluate(Terminal)` is common for punctuation tokens that carry no semantic value.
+
+#### Example 1: direct integer evaluation
 
 ```java
 Evaluator<Integer> eval = new Evaluator<>() {
+  @Override
   public Integer evaluate(Terminal t) {
-    return switch (t.name()) {
-      case "num" -> Integer.parseInt(t.value());
-      default -> null;
-    };
+    return "num".equals(t.name()) ? Integer.parseInt(t.value()) : null;
   }
+  @Override
   public Integer evaluate(Production p, List<Integer> a) {
     return switch (p.name()) {
-      case "E : num" -> a.get(0);
-      case "E : E + E" -> a.get(0) + a.get(2);
+      case "E : num"   -> a.get(0);
+      case "E : E + E" -> a.get(0) + a.get(2);  // a.get(1) is null (the '+')
       case "E : E * E" -> a.get(0) * a.get(2);
       default -> throw new IllegalStateException(p.name());
     };
@@ -363,264 +669,606 @@ Evaluator<Integer> eval = new Evaluator<>() {
 };
 ```
 
-#### Example 2: build a parenthesized string form
+#### Example 2: build a parenthesized string
 
 ```java
 Evaluator<String> eval = new Evaluator<>() {
+  @Override
   public String evaluate(Terminal t) {
-    return t.name().equals("num") ? t.value() : null;
+    return "num".equals(t.name()) ? t.value() : null;
   }
-
+  @Override
   public String evaluate(Production p, List<String> a) {
     return switch (p.name()) {
-      case "E : num" -> a.get(0);
+      case "E : num"   -> a.get(0);
       case "E : E + E" -> "(" + a.get(0) + " + " + a.get(2) + ")";
+      case "E : E * E" -> "(" + a.get(0) + " * " + a.get(2) + ")";
       default -> throw new IllegalStateException(p.name());
     };
   }
 };
 ```
 
+#### Exception propagation
+
+Any `RuntimeException` thrown by either `evaluate` method propagates out of `parse()`.
+Checked exceptions are wrapped in `UndeclaredThrowableException`. After an evaluator
+exception, the parser is in an undefined internal state and must not be reused; create a
+fresh `Parser` for the next input.
+
 ### `Visitor<V>` (reflection-backed convenience)
 
-#### Example 1: AST construction
+`Visitor<V>` lets you write one typed method per terminal or production instead of a
+central `switch`. `Visitor.reflect(lookup, visitor)` inspects public methods and builds
+an `Evaluator` from them.
+
+#### Terminal methods
+
+A public, non-void, non-static method whose **name equals a token name** is called when
+that token is shifted. The method must take exactly one `Terminal` parameter.
 
 ```java
-sealed interface Node {}
-record NumNode(int value) implements Node {}
-record AddNode(Node left, Node right) implements Node {}
+public Node num(Terminal t) {
+  return new NumLit(Integer.parseInt(t.value()));
+}
+```
 
-final class AstVisitor implements Visitor<Node> {
+If no method matches a terminal name, `null` is returned for that terminal.
+
+#### Production methods
+
+A public, non-void, non-static method annotated with `@ProductionName` is called when
+the named production is reduced. The value of the annotation must match `production.name()`
+exactly.
+
+```java
+@ProductionName("E : E + E")
+public Node add(Node left, Node right) {
+  return new BinaryOp("+", left, right);
+}
+```
+
+Parameters correspond to the non-null evaluated values of the body symbols, in
+left-to-right order. Terminals for which no terminal method was defined (i.e., they
+returned `null`) are **filtered out** and do not appear as parameters.
+
+> **Important:** if a terminal method exists and returns non-null, its value *does* appear
+> as a parameter. This lets you use terminal values directly in production methods:
+>
+> ```java
+> public boolean kw_else(Terminal t) { return true; } // contributes a boolean param
+>
+> @ProductionName("Stmt : if ( Expr ) Stmt else Stmt")
+> public Stmt ifElse(Expr cond, Stmt then, boolean unused, Stmt else_) { ... }
+> ```
+
+#### Single-body pass-through
+
+If a production has exactly one symbol in its body and **no `@ProductionName` method** is
+defined for it, the single argument is forwarded automatically. This covers chain
+productions like `E : num` without requiring any code:
+
+```java
+// No method needed for "E : num" — the Num node is passed straight through.
+```
+
+#### Repeatable `@ProductionName`
+
+One method can handle multiple productions by stacking the annotation:
+
+```java
+@ProductionName("E : E + E")
+@ProductionName("E : E - E")
+public int addOrSub(int a, int b) { return a + b; }  // caller decides by context
+```
+
+All listed production names are routed to the same method.
+
+#### Validation at reflection time
+
+`Visitor.reflect(...)` validates all public methods on the visitor class immediately:
+
+- Return type `void` -> `IllegalStateException`.
+- Non-annotated method with parameter count != 1 or parameter type != `Terminal` -> `IllegalStateException`.
+- Two methods annotated with the same production name -> `IllegalStateException`.
+- Static methods or private methods on the visitor class are silently ignored.
+
+Primitive return types and parameter types are accepted and handled transparently via
+boxing/unboxing.
+
+#### Missing production message
+
+When `parse()` encounters a reduction for a production that has no handler, the thrown
+`IllegalStateException` includes a skeleton of the missing method with inferred types:
+
+```
+production "E : E + E" has no evaluator method,  proposed code:
+@ProductionName("E : E + E")
+public int method(int param0, int param1) {
+  throw new UnsupportedOperationException("TODO");
+}
+```
+
+The inferred types are derived from the return types of other visitor methods for the
+same non-terminals.
+
+#### Accessing source positions inside a visitor
+
+```java
+class PositionVisitor implements Visitor<Node> {
+  private final Iterator<Terminal> input;
+
+  PositionVisitor(Iterator<Terminal> input) {
+    this.input = input;
+  }
+
   public Node num(Terminal t) {
-    return new NumNode(Integer.parseInt(t.value()));
+    int pos = Lexer.position(input);   // start offset in the input string
+    return new NumLit(Integer.parseInt(t.value()), pos);
   }
-
-  @ProductionName("E : E + E")
-  public Node add(Node left, Node right) {
-    return new AddNode(left, right);
-  }
+  // ...
 }
+
+// Use the factory overload so the visitor gets the same iterator
+Node ast = mg.parse("1 + 2", PositionVisitor::new);
 ```
-
-#### Example 2: multiple productions with repeated annotation
-
-```java
-final class Printer implements Visitor<String> {
-  public String num(Terminal t) { return t.value(); }
-
-  @ProductionName("E : E + E")
-  @ProductionName("E : E * E")
-  public String bin(String left, String right) {
-    return "(" + left + " ? " + right + ")";
-  }
-}
-```
-
-### Behavioral notes
-
-- Terminal methods are looked up by method name = token name.
-- Production methods are mapped by exact `@ProductionName` text.
-- If a one-symbol production has no method, value is passed through.
-
-### API
-- `Visitor.reflect(...)` turns a visitor into an evaluator.
-- `MetaGrammar.parse(input, visitor)` performs this operation automatically.
 
 ---
 
 ## Precedence, Associativity, and Conflict Resolution
 
-### Example 1: precedence between `+` and `*`
+### Why conflicts arise
+
+The grammar `E : E '+' E` is ambiguous: given `1 + 2 + 3`, the parser cannot tell
+(without extra information) whether to reduce `1 + 2` first or `2 + 3` first. This
+creates a shift/reduce conflict: after shifting `1`, `+`, `2`, the parser has `E + E`
+on its stack and sees another `+` as the lookahead. Should it reduce `E + E` to `E`
+(left-grouping), or shift the next `+` (right-grouping)?
+
+Similarly, `E : E '+' E` and `E : E '*' E` conflict: after `1 + 2`, seeing `*` as
+lookahead, should the parser reduce `1 + 2` first or shift `*` and bind `2` more tightly?
+
+### Declaring precedence
 
 ```text
 precedence {
-  left: '+'
-  left: '*'
-}
-grammar {
-  E : E '+' E
-  E : E '*' E
-  E : num
+  left: '+', '-'   // level 1
+  left: '*', '/'   // level 2
+  right: '^'       // level 3
 }
 ```
 
-Explanation: because `*` appears in a later precedence row, it has higher precedence. So `2 + 3 * 4` parses as `2 + (3 * 4)`.
+Rules:
+- **Later lines = higher precedence level.**
+- `left` means equal-level conflicts resolve by reducing (left-associativity).
+- `right` means equal-level conflicts resolve by shifting (right-associativity).
+- Multiple terminals on one line share the same level.
 
-### Example 2: left associativity
+### The `%prec` directive
 
-```text
-precedence {
-  left: '+'
-}
-grammar {
-  E : E '+' E
-  E : num
-}
-```
+By default, a production's precedence is that of its **rightmost terminal**. For a
+production like `E : '-' E`, the rightmost terminal is `-`, which is declared at the
+same level as binary subtraction. This causes unary minus to bind at the wrong level.
 
-Explanation: `1 + 2 + 3` parses as `(1 + 2) + 3` because equal-precedence conflicts reduce on left-associative operators.
-
-### Example 3: right associativity
-
-```text
-precedence {
-  right: '^'
-}
-grammar {
-  E : E '^' E
-  E : num
-}
-```
-
-Explanation: `2 ^ 3 ^ 2` parses as `2 ^ (3 ^ 2)` because equal-precedence conflicts shift for right-associative operators.
-
-### Example 4: `%prec` override for unary minus
+The `%prec TOKEN` directive assigns a different precedence to the whole production:
 
 ```text
 precedence {
   left: '+', '-'
   left: '*'
+  right: UMINUS     // virtual token — never emitted
+}
+grammar {
+  E : '-' E    %prec UMINUS
+}
+```
+
+Now the unary production has precedence level 3 (UMINUS), so when the parser has
+`'-' E` on its stack and sees `*` (level 2), it reduces (binds unary minus tighter
+than multiplication).
+
+`%prec` can also be applied to productions that use named tokens:
+```text
+E : 'if' Expr 'then' Stmt    %prec kw_if
+E : 'if' Expr 'then' Stmt 'else' Stmt
+```
+
+Here `%prec kw_if` gives the `if-then` production an explicit precedence so that the
+dangling-else ambiguity is resolved in favor of binding `else` to the nearest `if`.
+
+### Example 1: arithmetic with full precedence table
+
+```text
+precedence {
+  left: '+', '-'
+  left: '*', '/'
+  right: '^'
   right: UMINUS
 }
 grammar {
   E : E '+' E
+  E : E '-' E
   E : E '*' E
-  E : '-' E %prec UMINUS
+  E : E '/' E
+  E : E '^' E
+  E : '-' E    %prec UMINUS
   E : num
 }
 ```
 
-Explanation: unary minus gets the `UMINUS` precedence level, so `-3 * 4` groups as `(-3) * 4` instead of `-(3 * 4)`.
+- `2 + 3 * 4`   → `2 + (3 * 4)` = 14
+- `2 + 3 + 4`   → `(2 + 3) + 4` = 9
+- `2 ^ 3 ^ 2`   → `2 ^ (3 ^ 2)` = 512
+- `-3 * 4`       → `(-3) * 4` = -12
 
-### Conflict rules summary
+### Example 2: assignment (right-associative)
 
-When shift/reduce conflict occurs:
+```text
+precedence {
+  left:  '+', '-', '*', '/'
+  right: '='
+}
+grammar {
+  E : E '=' E   // assignment
+  E : E '+' E
+  E : id
+  E : num
+}
+```
 
-1. compare lookahead-token precedence with reducing-production precedence,
-2. higher precedence wins,
-3. equal precedence uses associativity (`LEFT` reduce, `RIGHT` shift),
-4. unresolved conflicts remain errors to diagnose with verifier output.
+`a = b = 0` parses as `a = (b = 0)`.
+
+### Example 3: dangling else
+
+```text
+precedence {
+  right: kw_if       // level 1
+  right: kw_else     // level 2 — higher, so else binds to nearest if
+}
+grammar {
+  Stmt : kw_if '(' Expr ')' Stmt             %prec kw_if
+  Stmt : kw_if '(' Expr ')' Stmt kw_else Stmt
+  Stmt : Expr ';'
+}
+```
 
 ---
 
 ## Error Reporting and Recovery Strategy
 
-LazyLR emphasizes high-quality diagnostics but does not expose yacc-style grammar `error` tokens for user-defined panic recovery,
-at least not yet.
+### Exception types
 
-- The exception `ParsingException` is used for both lexing and syntax failures.
-- Lexing failure occurs when no token rule matches at the current character.
-- Parsing failure occurs when there is no action for the terminal in the current state of the automaton.
+All lexing and parsing failures surface as `ParsingException`. This is a
+`RuntimeException`, so callers are not forced to declare it.
 
-Typical production strategy in applications:
+### Error message format
 
-1. catch `ParsingException`,
-2. report precise line/column context,
-3. continue by parsing the next top-level unit.
+LazyLR generates detailed error messages when a `Tokenizer` is used (i.e., when the
+parser is consuming from a `Lexer`). The message includes:
+
+```
+Parsing error at line 2, column 6: unexpected terminal '+', expected id
+id + +
+     ^
+```
+
+Components:
+- Error type (lexing or parsing) and character classification.
+- Line number (1-based) and column number (1-based).
+- The offending terminal name and the set of expected terminals at that point.
+- The full content of the offending line.
+- A caret `^` pointing to the exact column.
+
+When the iterator is not provided by the `Lexer`, the message
+contains terminal names but no line/column/caret information.
+
+### Lexing errors
+
+A lexing error occurs when no token pattern matches the current input position:
+
+```
+Lexing error at line 1, column 1: unexpected character '@'
+@foo
+^
+```
+
+The error message includes the character using a human-readable representation:
+- Printable characters: `'@'`
+- Whitespace: `'\n'`, `'\r'`, `'\t'`, `' '`
+- Control characters: `'\u001B'`
+
+### Parsing errors
+
+A parsing error occurs when the parser receives a terminal that has no valid action in
+the current state. The expected terminals in the error message are computed from the
+current LR(1) state items:
+
+- If the next symbol after the dot in a non-complete item is a terminal, it is expected.
+- If an item is complete (reduce), its lookahead terminal is expected.
+
+End-of-file (`$`) is displayed as `<end of file>` for readability.
+
+### Recovery strategy
+
+LazyLR does not implement panic-mode recovery or grammar-level `error` tokens.
+The recommended strategy is:
+
+1. Wrap `parse()` in a try-catch for `ParsingException`.
+2. Report the error with line/column context from the message.
+3. For incremental parsing (e.g., a REPL), create a fresh `Parser` for each independent
+   top-level unit and catch `ParsingException` between units.
+
+After a `ParsingException`, the `Parser` instance can be re-used;
+it is guaranteed to be in a clean state after a parse error.
 
 ---
 
 ## Automaton Inspection and Verification (`LALRVerifier`)
 
-Run verification before shipping a grammar:
+### When to run verification
+
+Call `mg.verify()` during development any time the grammar changes. In CI pipelines,
+add a test that calls `mg.verify(errorReporter)` and asserts no errors are reported.
+
+### Verification overloads
+
 ```java
+// Print conflicts to System.err; print automaton to System.err only on conflict
 mg.verify();
-```
 
-Variants exist to:
-- force automaton printing `mg.verify(alwaysPrint)``,
-- route errors to a callback `mg.verifies(errorReporter),
-- customize destination streams (via lower-level API).
-
-For debugging, you can ask to print always:
-```java
+// Always print the full automaton to System.out; conflicts go to System.err
 mg.verify(true);
+
+// Route conflicts to a callback; never print automatically
+var errors = new ArrayList<String>();
+mg.verify(errors::add);
+
+// Full control: destination stream, always-print flag, error callback
+var errors = new ArrayList<String>();
+var out = System.out;
+var alwaysPrint = true;
+LALRVerifier.verify(grammar, precedenceMap, out, alwaysPrint, errors::add);
 ```
 
-Use verification while grammar evolves; it catches unresolved shift/reduce or reduce/reduce conflicts early.
+### Understanding automaton output
 
+Each state is printed as a block. Here is an annotated example:
 
-### Example automaton output (illustrative)
-
-```text
-state 11
-  E -> E + E .
-  E -> E . + E
-  E -> E . * E
-
-  +  reduce by rule (E -> E + E)
-  *  shift and go to state 7
-
-  ❌ conflict: shift/reduce on '+'
-  🔥 chosen by precedence: reduce (LEFT '+')
+```
+── State 4 ─────────────────────────────────
+   E :  E + E •         <- reduce item (dot at end)
+   E :  E • + E         <- shift item (dot before '+')
+  ······································
+   goto( +  ) → 3 🔥    <- shift on '+', but there is also a reduce on '+'
+   reduce( E : E + E ) on [$, + 🔥]
 ```
 
-Interpretation:
+Symbols:
+- `•` marks the current dot position in an item.
+- `goto(X) → N` is the transition on symbol `X` to state `N`.
+- `reduce(P) on [a, b, ...]` means production `P` is reduced when the lookahead is any of `a`, `b`, ...
+- `accept()` fires when the input is fully consumed and the start symbol has been reduced.
+- `🔥` marks an **unresolved conflict** (neither side wins; runtime will throw `ParsingException`).
+- `❌` marks a **resolved conflict** where that action was **not** selected (the winning
+  action is shown without annotation). For example, a shift `❌` means the reduce won via precedence.
 
-- `❌` marks a conflict location.
-- `🔥` shows the conflict resolution selected by precedence/associativity.
+### LALR(1) vs LR(1) caveats
 
-If no precedence rule resolves it, the conflict remains an error report.
+`LALRVerifier` runs an LALR(1) analysis (DeRemer & Pennello algorithm). The runtime
+`Parser` is LR(1). Some grammars that are LR(1) but not LALR(1) will show
+reduce/reduce conflicts in the verifier output, yet parse correctly at runtime. These
+grammars pass through `Parser` without errors.
+
+The reason to do a LALR(1) analysis and not a full LR(1) analysis is that on large
+grammar, doing a full LR(1) takes too much time.
+The `Parser` does not have this problem because it computes the LR states lazily.
 
 ---
 
-## Errors and Exceptions
+## Command-Line Tool (`Main`)
 
-Main failure type: `ParsingException`.
+### Usage
 
-Typical sources:
-
-1. **Lexing failure**: no token regex matches current input position.
-2. **Parsing failure**: token not accepted in current parser state.
-3. **Grammar/visitor mismatch**: missing or incompatible semantic method wiring.
-
-!!!TODO!!!
-
-Error messages are designed with line/column context and caret positioning for quick debugging.
-
----
-
-## Command-Line Tool
-
-Usage:
-
-```text
-lazylr [--generate | --print] <grammar> [input]
+```
+lazylr [--generate | --print] <grammar-file> [input-file]
 ```
 
-`lazylr grammar.txt`: the tool reads and validates the grammar and only prints on stderr the automaton when there are conflicts.
-With the option:
-- `lazylr --print grammar.txt`: the tool validates the grammar and prints the automaton on stdout even when the grammar is conflict-free.
-- `lazylr --generate grammar.txt`:the tool validates the grammar and emits Java code with a `createGrammar()` method that reconstructs the grammar programmatically.
+All output goes to stdout for normal results and to stderr for errors and conflict
+diagnostics.
 
-`lazylr grammar.txt input.txt`: the tool validates the grammar, parses the input file, and prints a derivation tree.
+### Modes
 
-Exit code `1` indicates CLI misuse or file/grammar loading errors, and exit code `2` indicates unresolved grammar conflicts.
+Mode **Validation (default):**
 
-### Code Generation
+```bash
+lazylr grammar.txt
+```
 
-`JavaCodeGenerator.generate(mg)` emits Java source that reconstructs the loaded grammar.
+Parses and validates the grammar. On conflict, prints the LALR(1) automaton to stderr
+and exits with code 2. On success, exits silently with code 0.
 
-Practical uses:
-- freezing grammar definitions in source control,
-- producing reviewable grammar snapshots in code form.
-- reducing time overhead to load the DSL in fixed deployments,
+Mode **Unconditional automaton printing:**
+
+```bash
+lazylr --print grammar.txt
+```
+
+Validates the grammar and always prints the full LALR(1) automaton to stdout. Conflicts
+are additionally reported to stderr. Exit code 0 if conflict-free, 2 if conflicts remain.
+
+Mode **Java source generation:**
+
+```bash
+lazylr --generate grammar.txt
+```
+
+Validates the grammar, then emits a Java source snippet with a static `createGrammar()`
+method to stdout. The generated code reconstructs the exact same `MetaGrammar`
+programmatically. Exit code 0 on success, 2 on conflicts.
+
+Mode **Parse and print derivation tree:**
+
+```bash
+lazylr grammar.txt input.txt
+```
+
+Validates the grammar, lexes and parses the input file, then prints the parse tree:
+
+```
+└── <E>
+    ├── <E>
+    │   └── [num=1]
+    ├── [+]
+    └── <E>
+        └── [num=2]
+```
+
+Terminal nodes are shown as `[name=value]` when name ≠ value, or `[name]` when name == value
+(e.g., operator literals). Non-terminal nodes are shown as `<Name>`. Exit code 0 on success,
+1 on parse failure.
+
+### Exit codes
+
+| Code | Meaning                                                       |
+|------|---------------------------------------------------------------|
+| 0    | Success                                                       |
+| 1    | CLI error, missing/unreadable file, or parse failure on input |
+| 2    | Grammar has unresolved LALR(1) conflicts                      |
+
+### Constraints
+
+- `--print` and `--generate` are mutually exclusive.
+- `--print` and `--generate` cannot be combined with an input file.
 
 ---
 
-## Concurrency and Performance
+## Code Generation
 
-- `Parser` is mutable during parse; use one per thread.
-- All other classes, `MetaGrammar`, `Grammar`, tokens, precedence maps, etc. are immutable and shareable.
-- Lexer and parser are lazy; cost scales with consumed input and explored states.
+The generated output is a standalone static method named `createGrammar()` that returns
+a fully constructed `MetaGrammar`. It faithfully reproduces:
 
-Performance notes:
+- All non-terminal variable declarations.
+- All terminal variable declarations (with collision-safe names for symbols like `+`, `*`).
+- All production declarations, referencing the non-terminal and terminal variables above.
+- The `Grammar` object with its start symbol and production list.
+- All `Token` objects from the `tokens` section, using `Pattern.quote(...)` for
+  quoted literals and raw regex strings for named tokens.
+- The `precedence` map, using a `LinkedHashMap` to preserve declaration order.
 
-- parser states are built lazily,
-- factory setup (`ParserFactory) amortizes FIRST-set and precedence completion work,
-- visitor reflection happens up front and parse dispatch uses method handles afterward.
+```java
+// Example output structure:
+import com.github.forax.lazylr.*;
 
-- For high throughput, reuse `ParserFactory` and create parser-per-task.
+public static MetaGrammar createGrammar() {
+  // Non-terminals
+  var nt_E = new NonTerminal("E");
+
+  // Terminals
+  var t_num = new Terminal("num");
+  var t__   = new Terminal("+");   // sanitized name for '+'
+
+  // Productions
+  var p_0 = new Production(nt_E, List.of(t_num));
+  var p_1 = new Production(nt_E, List.of(nt_E, t__, nt_E));
+
+  // Grammar
+  var startSymbol = nt_E;
+  var grammar = new Grammar(startSymbol, List.of(p_0, p_1));
+
+  // Tokens
+  var tokens = List.of(
+    new Token("+", Pattern.quote("+")),
+    new Token("num", "[0-9]+")
+  );
+
+  // Precedence map
+  var precedenceMap = new LinkedHashMap<PrecedenceEntity, Precedence>();
+  precedenceMap.put(t__, new Precedence(1, Precedence.Associativity.LEFT));
+
+  return new MetaGrammar(tokens, precedenceMap, grammar);
+}
+
+static void main() {
+  var mg = createGrammar();
+  mg.verify();
+}
+```
+
+Terminal variable names are derived from the terminal's name with non-alphanumeric
+characters replaced by `_`. Collisions (e.g., multiple operators mapping to `t__`) are
+resolved by appending a numeric suffix (`t__1`, `t__2`, ...).
+
+---
+
+## Threading, Reentrancy, and Performance
+
+### Thread safety summary
+
+| Class                                   | Thread safety                                                            |
+|-----------------------------------------|--------------------------------------------------------------------------|
+| `MetaGrammar`                           | Immutable; fully thread-safe                                             |
+| `Grammar`                               | Immutable; fully thread-safe                                             |
+| `Token`                                 | Immutable; fully thread-safe                                             |
+| `Lexer`                                 | Immutable; fully thread-safe; `tokenize()` may be called from any thread |
+| `Terminal`, `NonTerminal`, `Production` | Immutable; fully thread-safe                                             |
+| `Precedence`                            | Immutable; fully thread-safe                                             |
+| `ParserFactory`                         | Immutable; fully thread-safe                                             |
+| `Parser`                                | Bound to its creating thread; **not** thread-safe                        |
+| `Iterator<Terminal>` (from `Lexer`)     | Single-threaded; one per parse call                                      |
+
+### Thread ownership of `Parser`
+
+Each `Parser` is permanently bound to the thread that created it. Calling `parse()`
+from a different thread — even if no other thread is currently using the parser — throws
+`WrongThreadException`. This applies to both platform threads and virtual threads (a
+parser created on virtual thread A cannot be used on virtual thread B, even if B runs
+on the same carrier thread).
+
+### Correct multi-threaded patterns
+
+**Pattern 1: one parser per request (stateless service)**
+
+```java
+// Shared
+static final MetaGrammar MG = MetaGrammar.load(grammarText);
+static final ParserFactory FACTORY = ParserFactory.createFactory(MG.grammar(), MG.precedenceMap());
+static final Lexer LEXER = Lexer.createLexer(MG.tokens());
+
+// Per request (e.g., in a servlet or virtual thread handler)
+void handleRequest(String input) {
+    var parser = FACTORY.createParser();   // cheap
+    var result = parser.parse(LEXER.tokenize(input), evaluator);
+    // ...
+}
+```
+
+**Pattern 2: `ParserFactory` with many concurrent virtual threads**
+
+```java
+try (var scope = StructuredTaskScope.open()) {
+    for (var input : inputs) {
+        scope.fork(() -> {
+            var parser = FACTORY.createParser();  // bound to this virtual thread
+            return parser.parse(LEXER.tokenize(input), evaluator);
+        });
+    }
+    scope.join();
+}
+```
+
+### Performance notes
+
+- `ParserFactory.createFactory(...)` runs FIRST-set computation and precedence
+  completion. This is the most expensive step; do it once at startup.
+- `ParserFactory.createParser()` only computes the initial LR(1) state (closure of the
+  augmented start item). It is cheap.
+- `Parser` caches LR(1) states lazily; the first parse of a grammar explores more states
+  than later parses. For large grammars with many distinct token streams, warm-up
+  parses improve throughput.
+- The lexer is lazy; it only scans as much input as the parser demands. Context-sensitive
+  lexing further reduces work by skipping ineligible patterns.
+- The `Lexer` iterator caches the set of eligible token indices per parser state, so the
+  per-token pattern selection cost is amortized over repeated states.
 
 ---
 
@@ -635,6 +1283,7 @@ import org.junit.jupiter.api.Test;
 class GrammarValidationTest {
   @Test
   void grammar_is_lalr1() {
+    // not need to have a section tokens when it's a pure grammar
     var mg = MetaGrammar.load("""
       precedence {
         left: '+'
@@ -644,8 +1293,21 @@ class GrammarValidationTest {
         E : num
       }
       """);
-
     assertDoesNotThrow(mg::verify);
+  }
+
+  @Test
+  void ambiguous_grammar_is_detected() {
+    var mg = MetaGrammar.load("""
+      grammar {
+        E : E '+' E
+        E : num
+      }
+      """);
+    var errors = new java.util.ArrayList<String>();
+    mg.verify(errors::add);
+    assertFalse(errors.isEmpty());
+    assertTrue(errors.getFirst().contains("shift/reduce"));
   }
 }
 ```
@@ -660,30 +1322,41 @@ class ParseResultTest {
   sealed interface Node {}
   record Num(int value) implements Node {}
   record Add(Node l, Node r) implements Node {}
+  record Mul(Node l, Node r) implements Node {}
 
   static final class NodeVisitor implements Visitor<Node> {
     public Node num(Terminal t) { return new Num(Integer.parseInt(t.value())); }
     @ProductionName("E : E + E")
-    public Node add(Node left, Node rrigh) { return new Add(left, right); }
+    public Node add(Node l, Node r) { return new Add(l, r); }
+    @ProductionName("E : E * E")
+    public Node mul(Node l, Node r) { return new Mul(l, r); }
+  }
+
+  static final MetaGrammar MG = MetaGrammar.load("""
+    tokens {
+      num: /[0-9]+/ /[ ]+/
+    }
+    precedence {
+      left: '+'
+      left: '*'
+    }
+    grammar {
+      E : num
+      E : E '+' E
+      E : E '*' E
+    }
+    """);
+
+  @Test
+  void addition_is_left_associative() {
+    var ast = MG.parse("1 + 2 + 3", new NodeVisitor());
+    assertEquals(new Add(new Add(new Num(1), new Num(2)), new Num(3)), ast);
   }
 
   @Test
-  void parses_simple_addition() {
-    var mg = MetaGrammar.load("""
-      tokens {
-        num: /[0-9]+/ /[ ]+/
-      }
-      precedence {
-        left: '+'
-      }
-      grammar {
-        E : num
-        E : E '+' E
-      }
-      """);
-
-    var ast = mg.parse("1 + 2", new NodeVisitor());
-    assertInstanceOf(Add.class, ast);
+  void multiplication_binds_tighter_than_addition() {
+    var ast = MG.parse("2 + 3 * 4", new NodeVisitor());
+    assertEquals(new Add(new Num(2), new Mul(new Num(3), new Num(4))), ast);
   }
 }
 ```
@@ -695,6 +1368,19 @@ import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
 
 class ParseFailureTest {
+  static final MetaGrammar MG = MetaGrammar.load("""
+    tokens {
+      num: /[0-9]+/ /[ ]+/
+    }
+    precedence {
+      left: '+'
+    }
+    grammar {
+      E : num
+      E : E '+' E
+    }
+    """);
+
   static final class NoOpEvaluator implements Evaluator<Object> {
     public Object evaluate(Terminal t) { return null; }
 
@@ -702,121 +1388,165 @@ class ParseFailureTest {
   }
   
   @Test
-  void reportsErrorOnInvalidInput() {
-    var mg = MetaGrammar.load("""
-        tokens {
-          num: /[0-9]+/ /[ ]+/
-        }
-        grammar {
-          E : num 
-        }
-      """);
+  void reportsLexErrorForUnknownCharacter() {
+    var ex = assertThrows(ParsingException.class,
+        () -> MG.parse("1 + @", new NoOpEvaluator()));
+    var message = ex.getMessage();
+    assertTrue(message.contains("Lexing error"));
+    assertTrue(message.contains("'@'"));
+  }
 
-    var ex = assertThrows(ParsingException.class, () ->
-        mg.parse("abc", new NoOpEvaluator()));
-
-    assertTrue(ex.getMessage().contains("line"));
+  @Test
+  void reportsParseErrorWithPosition() {
+    var ex = assertThrows(ParsingException.class,
+        () -> MG.parse("1 + +", new NoOpEvaluator()));
+    var message = ex.getMessage();
+    assertTrue(message.contains("Parsing error"));
+    assertTrue(message.contains("column 5"));
   }
 }
 ```
 
-### Recipe D: conflict diagnostics test
+### Recipe D: coverage assertion
 
 ```java
 import static org.junit.jupiter.api.Assertions.*;
 import org.junit.jupiter.api.Test;
-import java.util.ArrayList;
 
-class ConflictReportTest {
+class CoverageTest {
   @Test
-  void reportsConflictsWhenGrammarIsAmbiguous() {
+  void all_productions_exercised() {
     var mg = MetaGrammar.load("""
+      tokens {
+        num: /[0-9]+/ /[ ]+/
+      }
+      precedence {
+        left: '+'
+        left: '*'
+      }
       grammar {
+        E : num
         E : E '+' E
         E : E '*' E
-        E : num
       }
       """);
-
-    var errors = new ArrayList<String>();
-    mg.verify(errors::add);
-    assertFalse(errors.isEmpty());
+    var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
+    var noop = new ParserListener() {
+      public void onShift(Terminal t) {}
+      public void onReduce(Production p) {}
+    };
+    parser.parse(Lexer.createLexer(mg.tokens()).tokenize("1 + 2 * 3"), noop);
+    var allProductions = mg.grammar().productions();
+    assertTrue(parser.coverage().containsAll(allProductions));
   }
 }
 ```
 
-
-Testing guidance:
-
-- keep grammar text inline in tests for readability,
-- test both successful parse results and expected failures,
-- use `verify(errors::add)` to enforce conflict-free grammars in CI,
-- for regressions, snapshot AST string rendering or evaluator results.
-
 ---
 
-## Troubleshooting Checklists
+## Troubleshooting Checklist
 
-### Lexing failure ("My token never matches")
+### Lexing failure ("My token never matches" or `Terminal.ERROR` returned)
 
-- Check longest-match interactions.
-- For equal-length matches, put preferred token earlier.
-- Ensure whitespace/comment skip tokens are present.
+- Check that your regex cannot match the empty string; such patterns are rejected at
+  construction time, so this would cause a build failure, not a runtime failure.
+- Check longest-match interactions. If `id: /[a-z]+/` is declared before `if: /if/`,
+  `if` will be returned as `id("if")`, not as `keyword_if("if")`, because both patterns
+  match two characters and `id` is declared first.
+- Make sure a whitespace/comment skip token is present. Without it, the first
+  non-matching character causes a `Terminal.ERROR`.
+- Quoted literals in the `grammar` section are added to the token list **before**
+  named tokens from `tokens`. To make a keyword take priority over an identifier
+  pattern, either declare the keyword first in `tokens`, or rely on the automatic
+  literal promotion.
 
 ### Shift/reduce conflicts ("I get shift/reduce conflicts")
 
-- Add or adjust precedence/associativity (lowest first).
-- Use `%prec` for unary/bespoke cases.
-- Run `mg.verify(true)` (or CLI `--print`) to inspect automaton states.
+- Add a `precedence` section with `left:` or `right:` lines for ambiguous operators.
+  Later lines = higher precedence.
+- Use `%prec TOKEN` on the production if its rightmost terminal has the wrong precedence
+  (classic case: unary operators sharing a terminal with a binary operator).
+- Run `mg.verify(true)` or `lazylr --print grammar.txt` to see the full automaton with
+  conflict markers (`🔥`).
+- A `🔥` on a `goto(...)` line means the shift side of a conflict; a `🔥` on a
+  `reduce(...) on [...]` line means the reduce side. Both sides of the same conflict
+  carry the `🔥` mark.
 
-### Unexpected semantics ("Visitor method isn't called")
+### Visitor method isn't called
 
-- Terminal handlers name must equal the token name.
-- Production handlers require an annotation `@ProductionName` with the exat production text.
-- Verify method signatures align with production symbol count/order.
+- Terminal handler method name must equal the **token name** exactly (case-sensitive).
+  If the lexer produces `Terminal("kw_if", "if")`, the method must be named `kw_if`.
+- Production handler annotation must use the **exact text** of `production.name()`.
+  Verify by printing `production.name()` or checking the missing-method error message;
+  it always includes the correct string.
+- The return type must not be `void`. Returning `null` is fine; `void` is rejected at
+  reflection time.
+- If a terminal method returns `null`, that terminal's value is **not** passed as a
+  parameter to production methods. Account for this when counting parameters.
+- Static methods are silently ignored. Instance methods are required.
 
-### Threading issues ("I get a `WrongThreadException`")
+### `WrongThreadException` at parse time
 
-- Do not reuse the same `Parser` concurrently, each parser is bound to a thread.
-- Share `MetaGrammar`/`ParserFactory`, create parser per thread.
+- Each `Parser` is permanently bound to the thread that called `createParser()`.
+- Never share a `Parser` between threads. Each thread must call `createParser()` to
+  get its own parser.
+- Share `MetaGrammar`, `Grammar`, `Lexer`, and `ParserFactory` freely across threads.
+- When using virtual threads, the parser is bound to the virtual thread, not to the
+  carrier platform thread. Two virtual threads running on the same carrier still cannot
+  share a parser.
+
+### Grammar accepted at runtime but the verifier fails on it
+
+`LALRVerifier` uses LALR(1); the runtime parser uses LR(1). A small set of grammars
+are LR(1) but not LALR(1). If the verifier reports a conflict but actual parsing
+succeeds, the grammar is in this category.
+It is not recommanded to have a grammar which is not LALR(1) in a production
+environment, but for a toy example, there is no problem.
 
 ---
 
 ## ANTLR-to-LazyLR Mapping Guide
 
-ANTLR and LazyLR can describe similar languages, but they differ in parser strategy and grammar style.
+ANTLR and LazyLR can describe similar languages but differ in parser strategy (LL(*)
+vs LR(1)), grammar style, and action mechanism.
 
 ### 1) Lexer rules migration
 
 ANTLR:
 
 ```antlr
-ID : [a-zA-Z_][a-zA-Z_0-9]* ;
-INT: [0-9]+ ;
-WS : [ \t\r\n]+ -> skip ;
+ID  : [a-zA-Z_][a-zA-Z_0-9]* ;
+INT : [0-9]+ ;
+WS  : [ \t\r\n]+ -> skip ;
 ```
 
 LazyLR:
 
 ```text
 tokens {
-  ID: /[A-Za-z_][A-Za-z_0-9]*/
+  ID:  /[A-Za-z_][A-Za-z_0-9]*/
   INT: /[0-9]+/
   /[ \t\r\n]+/
 }
 ```
 
-Migration note: `-> skip` maps to an anonymous regex token.
+Migration notes:
+- `-> skip` maps to an anonymous regex token (no name, no Terminal emitted).
+- ANTLR uses implicit priority (longer match, then rule order); LazyLR uses the same
+  longest-match-then-declaration-order rule.
+- ANTLR lexer modes have no direct equivalent; simulate with context-sensitive lexing
+  by structuring the grammar so that the parser state determines which tokens are valid.
 
 ### 2) Parser rules migration
 
-ANTLR (typical precedence by rule layering):
+ANTLR (precedence by rule layering):
 
 ```antlr
-expr : expr '*' expr
-     | expr '+' expr
-     | INT
-     ;
+expr
+    : expr '*' expr  # MulExpr
+    | expr '+' expr  # AddExpr
+    | INT            # IntExpr
+    ;
 ```
 
 LazyLR:
@@ -833,47 +1563,70 @@ grammar {
 }
 ```
 
-Migration note: ANTLR often encodes precedence via rule nesting or explicit precedence constructs;
-in LazyLR you usually declare it directly in `precedence`.
+Migration notes:
+- ANTLR encodes precedence via rule-alternative ordering (earlier = higher precedence
+  within a rule) and numeric `<assoc=right>` annotations. LazyLR uses an explicit
+  `precedence` section — convert the implicit ordering into explicit levels.
+- ANTLR supports rule labels (`# MulExpr`); these become `@ProductionName` annotations
+  in LazyLR.
+- ANTLR rule alternatives with no explicit precedence annotation are unambiguous in
+  ANTLR's LL(*) framework; they may need precedence annotations in LazyLR's LR
+  framework. Run `mg.verify()` to discover them.
 
-### 3) Actions/listeners/visitors migration
+### 3) Actions and visitors migration
 
-ANTLR options:
+| ANTLR mechanism                          | LazyLR equivalent                                    |
+|------------------------------------------|------------------------------------------------------|
+| Embedded actions `{ ... }` in grammar    | `Evaluator<V>.evaluate(Production, List<V>)`         |
+| `ParseTreeListener.enterXxx` / `exitXxx` | `ParserListener.onShift` / `onReduce`                |
+| Generated `Visitor.visitXxx(ctx)`        | `@ProductionName("...") method(...)` in `Visitor<V>` |
+| `ctx.expr(0)`, `ctx.INT()`               | `arguments.get(0)`, `arguments.get(2)` in evaluator  |
 
-- embedded actions in grammar,
-- parse tree listeners,
-- generated visitors.
+Example migration:
 
-LazyLR options:
+ANTLR visitor:
+```java
+@Override
+public Integer visitAddExpr(MyParser.AddExprContext ctx) {
+    return visit(ctx.expr(0)) + visit(ctx.expr(1));
+}
+```
 
-- `Evaluator<V>` for direct semantic reduction,
-- `Visitor<V>` with `@ProductionName` methods.
-
-Example migration shape:
-
-- ANTLR visitor method `visitAddExpr(ctx)` -> LazyLR `@ProductionName("Expr : Expr + Expr")`.
+LazyLR visitor:
+```java
+@ProductionName("Expr : Expr + Expr")
+public int addExpr(int left, int right) {
+    return left + right;
+}
+```
 
 ### 4) Left recursion and ambiguity
 
-ANTLR 4 supports direct left recursion in many expression contexts.
-LazyLR also handles left recursion well (LR parser), but ambiguous grammars
-require explicit precedence/associativity so conflict resolution is deterministic.
+ANTLR 4 supports left-recursive rules and resolves operator precedence within a single
+rule using alternative ordering. LazyLR handles left recursion naturally (LR parsers are
+designed for it) but requires an explicit `precedence` section for ambiguous grammars.
+Any grammar that is unambiguous in ANTLR because of alternative ordering should be
+accompanied by a corresponding `precedence` declaration in LazyLR.
 
 ### 5) Error handling migration
 
-ANTLR exposes rich parser/lexer error listeners and recovery hooks.
-LazyLR uses `ParsingException` and verifier diagnostics; migration typically moves error reporting to call-site exception handling plus test assertions.
+| ANTLR mechanism                            | LazyLR equivalent                       |
+|--------------------------------------------|-----------------------------------------|
+| `ANTLRErrorListener`                       | Catch `ParsingException` at call site   |
+| `reportAmbiguity(...)`                     | `mg.verify(errors::add)` in tests       |
+| `reportAttemptingFullContext(...)`         | Not applicable (LR has no backtracking) |
+| Parser error recovery (`error` token rule) | Not built-in; catch and re-parse        |
+| `ctx.exception` on parse tree nodes        | `ParsingException.getMessage()`         |
 
 ### 6) Practical migration checklist
 
-1. Convert lexer fragments to Java regex tokens.
-2. Convert skip channels to anonymous token rules.
-3. Port parser rules to `grammar` section.
-4. Add precedence table for ambiguous operators.
-5. Port semantic logic to `Visitor` or `Evaluator`.
-6. Add JUnit tests for parse success, parse failure, and conflict detection.
-
-## Final Notes
-
-!!!TODO!!!
-
+1. Convert ANTLR lexer fragments and tokens to LazyLR `tokens` section entries.
+2. Convert ANTLR `-> skip` and `-> channel(HIDDEN)` to anonymous token rules.
+3. Port ANTLR parser rules to the `grammar` section.
+4. For each rule with multiple alternatives ordered by precedence in ANTLR,
+   add corresponding entries to the LazyLR `precedence` section.
+5. Run `mg.verify()` and resolve any reported conflicts.
+6. Port semantic logic: embedded actions → `Evaluator`; generated visitors → `Visitor<V>`.
+7. Port error listeners to try-catch blocks on `parse()`.
+8. Add JUnit tests for representative successful parses, expected failures, and
+   conflict-free grammar verification.
