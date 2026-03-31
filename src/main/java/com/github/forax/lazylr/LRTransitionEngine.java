@@ -240,7 +240,7 @@ final class LRTransitionEngine {
     }
 
     // Levels are equal? Use associativity
-    return productionPrec.associativity() == Precedence.Associativity.LEFT; // Left-associativity means Reduce
+    return tokenPrec.associativity() == Precedence.Associativity.LEFT; // Left-associativity means Reduce
   }
 
   /// Implements the GOTO function of LR parsing.
