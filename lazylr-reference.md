@@ -312,15 +312,33 @@ var parser = factory.createParser(); // call in the thread that will parse
 
 ---
 
-## Semantic Actions (`Evaluator` and `Visitor`)
+## Semantic Actions (`ParserListener`, `Evaluator` and `Visitor`)
 
-### Parser Listener
+### ParserListener
 
-If you only need parsing events, use `ParserListener`-based workflows instead of materialized semantic values.
+If you only need parsing events (e.g., building your own stack, debugging, or streaming processing),
+you can use a listener-style approach instead of producing semantic values.
+
+A `ParserListener` receives callbacks during parsing:
+
+* on shift (token consumed)
+* on reduce (production applied)
 
 #### Example
 
-!!!TODO!!!
+```java
+ParserListener listener = new ParserListener() {
+  @Override
+  public void onShift(Terminal t) {
+    System.out.println("Shift: " + t);
+  }
+
+  @Override
+  public void onReduce(Production p, List<Object> values) {
+    System.out.println("Reduce: " + p.name());
+  }
+};
+```
 
 ### `Evaluator<V>`
 
@@ -855,4 +873,7 @@ LazyLR uses `ParsingException` and verifier diagnostics; migration typically mov
 5. Port semantic logic to `Visitor` or `Evaluator`.
 6. Add JUnit tests for parse success, parse failure, and conflict detection.
 
----
+## Final Notes
+
+!!!TODO!!!
+
