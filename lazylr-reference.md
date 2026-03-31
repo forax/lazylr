@@ -1065,8 +1065,8 @@ The recommended strategy is:
 3. For incremental parsing (e.g., a REPL), create a fresh `Parser` for each independent
    top-level unit and virtually add an `eof` token to the input iterator.
 
-After a `ParsingException`, the `Parser` instance can be re-used;
-it is guaranteed to be in a clean state after a parse error.
+After a `ParsingException`, the `Parser` instance is guaranteed to be in a clean state,
+so it can be re-used.
 
 ---
 
