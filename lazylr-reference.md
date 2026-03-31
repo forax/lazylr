@@ -171,7 +171,7 @@ reduce/reduce conflicts in LALR(1) without any conflicts at all.
 `LALRVerifier`, by contrast, checks the grammar under *LALR(1)* rules and reports
 conflicts that the lazy LR(1) parser would actually resolve correctly. Conflicts
 reported by `verify()` are therefore conservative: some may not appear during actual
-parsing. Production use should still resolve all reported conflicts for safety.
+parsing. In production, you should still resolve all reported conflicts for safety.
 
 ---
 
@@ -216,13 +216,13 @@ tokens {
 Regex syntax follows Java's `java.util.regex.Pattern`. Each regex must match at least one
 character; patterns that can match the empty string are rejected at construction time.
 
-Any quoted literals extracted from the `grammar` section appears before the named tokens
-of the `tokens` section and any unnamed tokens of the `tokens` section appears after the named tokens
+Any quoted literals extracted from the `grammar` section appear before the named tokens
+of the `tokens` section and any unnamed tokens of the `tokens` section appear after the named tokens
 in the final token list.
 So the ordering is always quoted literals -> named tokens -> unnamed tokens.
 This ensures that explicitly quoted operators like `'+'` are matched before user-defined identifiers
 and that unnamed tokens are matched after any other tokens.
-Within the named group, or the unnamed group tokens appear in declaration order.
+Within each group (named and unnamed), tokens appear in declaration order.
 
 #### Matching rules
 
@@ -391,7 +391,7 @@ to any lexer token.
 
 #### Multiple grammar sections
 
-Declaring `grammar { }` or any other sections, multiple times is allowed but not recommended;
+Declaring `grammar { }` (or any other section) multiple times is allowed but not recommended;
 the sections are concatenated.
 
 ```text
@@ -785,18 +785,18 @@ public Node add(Node left, Node right) {
 }
 ```
 
-Parameters correspond to the non-null evaluated values of the body symbols, in
-left-to-right order. Terminals for which no terminal method was defined (i.e., they
-returned `null`) are **filtered out** and do not appear as parameters.
+Parameters correspond to the evaluated values of the body symbols, in left-to-right order.
+Terminals for which no terminal method was defined are **filtered out** and
+do not appear as parameters.
 
-> **Important:** if a terminal method exists and returns non-null, its value *does* appear
-> as a parameter. This lets you use terminal values directly in production methods:
+> **Important:** if a terminal method exists, its value *does* appear as a parameter.
+> This lets you use terminal values directly in production methods:
 >
 > ```java
 > public boolean kw_else(Terminal t) { return true; } // contributes a boolean param
 >
 > @ProductionName("Stmt : if ( Expr ) Stmt else Stmt")
-> public Stmt ifElse(Expr cond, Stmt then, boolean unused, Stmt else_) { ... }
+> public Stmt ifElse(Expr cond, Stmt then, boolean elseValue, Stmt else_) { ... }
 > ```
 
 #### Exception propagation
@@ -808,8 +808,8 @@ After an exception, the parser can be reused.
 #### Single-body pass-through
 
 If a production has exactly one symbol in its body and **no `@ProductionName` method** is
-defined for it, the single argument is forwarded automatically. This covers chain
-productions like `E : num` without requiring any code:
+defined for it, the single argument is forwarded automatically.
+This covers chain productions like `E : num` without requiring any code:
 
 ```java
 // No method needed for "E : num" — the Num node is passed straight through.
@@ -1127,9 +1127,9 @@ Symbols:
 reduce/reduce conflicts in the verifier output, yet parse correctly at runtime.
 These grammars pass through `Parser` without errors.
 
-The reason to do a LALR(1) analysis and not a full LR(1) analysis is that on large
-grammar, doing a full LR(1) takes too much time.
-Production use should still resolve all reported conflicts from the LALR(1) analysis for safety.
+The reason to do a LALR(1) analysis and not a full LR(1) analysis is that, on large
+grammars, doing a full LR(1) analysis takes too much time.
+In production, you should still resolve all reported conflicts from the LALR(1) analysis for safety.
 
 ---
 
@@ -1573,8 +1573,8 @@ public final class CoverageTest {
 `LALRVerifier` uses LALR(1); the runtime parser uses LR(1). A small set of grammars
 are LR(1) but not LALR(1). If the verifier reports a conflict but actual parsing
 succeeds, the grammar is in this category.
-It is not recommended to have a grammar which is not LALR(1) in a production
-environment, but for a toy example, there is no problem.
+It is not recommended to have a grammar that is not LALR(1) in a production
+environment, but for toy examples, this is usually acceptable.
 
 ---
 
