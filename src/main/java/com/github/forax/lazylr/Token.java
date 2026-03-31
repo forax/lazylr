@@ -29,6 +29,13 @@ public final class Token {
     }
   }
 
+  private static void checkEmptyInput(Pattern pattern) {
+    var matcher = pattern.matcher("");
+    if (matcher.lookingAt()) {
+      throw new IllegalArgumentException("regex '" + pattern.pattern() + "' matches empty input");
+    }
+  }
+
    private final @Nullable String name;
    final Pattern pattern;
 
@@ -44,11 +51,12 @@ public final class Token {
   ///              treated as ignorable and its matches will be skipped by the lexer.
   /// @param regex The regular expression pattern to match.
   /// @throws NullPointerException if name or regex is null.
-  /// @throws IllegalArgumentException if the pattern is malformed.
+  /// @throws IllegalArgumentException if the pattern is malformed or matches the empty input.
   public Token(String name, String regex) {
     Objects.requireNonNull(name);
     Objects.requireNonNull(regex);
     var pattern = asPattern(regex);
+    checkEmptyInput(pattern);
     this(name, pattern, false);
   }
 
@@ -58,10 +66,11 @@ public final class Token {
   /// produce a [Terminal] in the terminal stream.
   ///
   /// @param regex The regular expression pattern to match and skip.
-  /// @throws IllegalArgumentException if the pattern is malformed.
+  /// @throws IllegalArgumentException if the pattern is malformed or matches the empty input.
   public Token(String regex) {
     Objects.requireNonNull(regex);
     var pattern = asPattern(regex);
+    checkEmptyInput(pattern);
     this(null, pattern, false);
   }
 

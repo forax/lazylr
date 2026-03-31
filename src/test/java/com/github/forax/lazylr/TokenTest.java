@@ -40,6 +40,18 @@ public final class TokenTest {
   }
 
   @Test
+  public void constructorIgnorableEmptyPattern() {
+    assertThrows(IllegalArgumentException.class, () ->
+        new Token("[0-9]*"));
+  }
+
+  @Test
+  public void constructorNamedEmptyPattern() {
+    assertThrows(IllegalArgumentException.class, () ->
+        new Token("id", "|a"));
+  }
+
+  @Test
   public void constructorIgnorablePatternWithGroup() {
     assertDoesNotThrow(() ->
         new Token("(foo)"));
@@ -118,7 +130,7 @@ public final class TokenTest {
 
   @Test
   public void notEqualsDifferentRegex() {
-    assertNotEquals(new Token("num", "[0-9]+"), new Token("num", "[0-9]*"));
+    assertNotEquals(new Token("num", "[0-9]*\\.[0-9]+"), new Token("num", "[0-9]*\\.[0-9]*"));
   }
 
   @Test
