@@ -1075,7 +1075,7 @@ so it can be re-used.
 ### When to run verification
 
 Call `mg.verify()` during development any time the grammar changes. In CI pipelines,
-add a test that calls `mg.verify(errorReporter)` and asserts no errors are reported.
+add tests that call `mg.verify(errorReporter)` and assert no errors are reported.
 
 ### Verification overloads
 
@@ -1089,6 +1089,7 @@ mg.verify(true);
 // Route conflicts to a callback; never print automatically
 var errors = new ArrayList<String>();
 mg.verify(errors::add);
+assertTrue(errors.isEmpty());
 
 // Full control: destination stream, always-print flag, error callback
 var errors = new ArrayList<String>();
