@@ -160,18 +160,17 @@ time the parser visits a (state, symbol) pair, it builds the next state, caches 
 never recomputes it. States built in one `parse()` call are reused in later calls
 on the same `Parser` instance.
 
-### LR(1) vs LALR(1)
+### LR(1) parser vs LALR(1) analysis
 
-LazyLR's `Parser` uses *LR(1)*: each item in a state carries a one-token lookahead,
-so two states whose LR(0) cores are identical but whose lookaheads differ remain
-separate. This makes the parser strictly more powerful than LALR(1), it handles
-the classic [DeRemer grammar](https://en.wikipedia.org/wiki/LALR_parser) that causes
-reduce/reduce conflicts in LALR(1) without any conflicts at all.
+LazyLR's `Parser` uses $LR(1)$ algorithm while `LALRVerifier` uses
+the classic $LALR(1)$ algorithm from [DeRemer and Pennello](https://en.wikipedia.org/wiki/LALR_parser).
+This makes the parser strictly more powerful than the verifier.
+Some grammars that are LR(1) but not LALR(1) will show
+reduce/reduce conflicts in the verifier output, yet parse correctly at runtime.
 
-`LALRVerifier`, by contrast, checks the grammar under *LALR(1)* rules and reports
-conflicts that the lazy LR(1) parser would actually resolve correctly. Conflicts
-reported by `verify()` are therefore conservative: some may not appear during actual
-parsing. In production, you should still resolve all reported conflicts for safety.
+The reason to do a LALR(1) analysis and not a full LR(1) analysis is that, on large
+grammars, doing a full LR(1) analysis takes too much time.
+In production, you should still resolve all reported conflicts from the LALR(1) analysis for safety.
 
 ---
 
@@ -1120,17 +1119,6 @@ Symbols:
 - `❌` marks a **resolved conflict** where that action was **not** selected
   (the winning action is shown without annotation).
   For example, a shift `❌` means the reduce won via precedence.
-
-### LALR(1) vs LR(1) caveats
-
-`LALRVerifier` runs an LALR(1) analysis (DeRemer & Pennello algorithm). The runtime
-`Parser` is LR(1). Some grammars that are LR(1) but not LALR(1) will show
-reduce/reduce conflicts in the verifier output, yet parse correctly at runtime.
-These grammars pass through `Parser` without errors.
-
-The reason to do a LALR(1) analysis and not a full LR(1) analysis is that, on large
-grammars, doing a full LR(1) analysis takes too much time.
-In production, you should still resolve all reported conflicts from the LALR(1) analysis for safety.
 
 ---
 
