@@ -203,7 +203,7 @@ final class JavaCodeGenerator {
         sb.append("new Token(\"").append(escapeJavaString(token.name())).append("\", ")
             .append(quoteRegex(token.regex())).append(")");
       } else {
-        // anonymous token: Token(String regex)
+        // unnamed token: Token(String regex)
         sb.append("new Token(").append(quoteRegex(token.regex())).append(")");
       }
       separator = ",\n";

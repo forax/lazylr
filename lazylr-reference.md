@@ -186,7 +186,7 @@ Line comments starting with `//` are allowed anywhere.
 ```text
 tokens {
   num: /[0-9]+/
-  /[ \t]+/          // skip token (anonymous)
+  /[ \t]+/          // skip token (unnamed)
 }
 precedence {
   left: '+', '-'
@@ -209,7 +209,7 @@ grammar {
 ```text
 tokens {
   name: /regex/     // named token — emits a Terminal
-  /regex/           // anonymous token — consumed and discarded
+  /regex/           // unnamed token — consumed and discarded
 }
 ```
 
@@ -217,11 +217,11 @@ Regex syntax follows Java's `java.util.regex.Pattern`. Each regex must match at 
 character; patterns that can match the empty string are rejected at construction time.
 
 Any quoted literals extracted from the `grammar` section appears before the named tokens
-of the `tokens` section and any unnamed tokens of the `tokens` section appears before the named tokens
+of the `tokens` section and any unnamed tokens of the `tokens` section appears after the named tokens
 in the final token list.
-So the ordering is always quoted literals -> named tokens -> anonymous tokens.
+So the ordering is always quoted literals -> named tokens -> unnamed tokens.
 This ensures that explicitly quoted operators like `'+'` are matched before user-defined identifiers
-and that anonymous tokens are matched after any other tokens.
+and that unnamed tokens are matched after any other tokens.
 Within the named group, or the unnamed group tokens appear in declaration order.
 
 #### Matching rules
@@ -230,7 +230,7 @@ Within the named group, or the unnamed group tokens appear in declaration order.
 2. The match with the **greatest length** wins.
 3. If two matches have the same length, the rule that appears **earlier** in the final
    token list wins.
-4. Anonymous tokens are consumed silently; no `Terminal` is produced.
+4. Unnamed tokens are consumed silently; no `Terminal` is produced.
 5. If no pattern matches and the input is not exhausted, a `Terminal.ERROR` is returned
    and iteration stops.
 
@@ -415,13 +415,13 @@ the precedence map, and the grammar from scratch.
 ### `Token`
 
 The class `Token` encapsulates one lexer rule: a name and a regex pattern,
-or just a regex pattern for anonymous (skip) tokens.
+or just a regex pattern for unnamed (skip) tokens.
 
 ```java
 // Named token — emits a Terminal when matched
 var numToken = new Token("num", "[0-9]+");
 
-// Anonymous token — consumed silently
+// Unnamed token — consumed silently
 var wsToken = new Token("[ \t\n]+");
 ```
 
@@ -432,9 +432,9 @@ Construction validates:
   the lexer from looping infinitely at the same position.
 
 Key methods:
-- `name()` — returns the symbolic name, or `null` for anonymous tokens.
+- `name()` — returns the symbolic name, or `null` for unnamed tokens.
 - `regex()` — returns the raw pattern string.
-- `isIgnorable()` — returns `true` for anonymous tokens.
+- `isIgnorable()` — returns `true` for unnamed tokens.
 
 `Token` is a record-like type: two tokens are equal when they have the same name and regex.
 
@@ -458,7 +458,7 @@ At each position the lexer:
 1. Attempts every pattern (or the eligible subset when driven by a parser state).
 2. Selects the pattern with the **longest match**. If two patterns tie, the one
    declared **earlier** in the list wins.
-3. If the winning pattern is anonymous, its matched text is skipped and matching
+3. If the winning pattern is unnamed, its matched text is skipped and matching
    resumes immediately after it.
 4. If the winning pattern is named, a `Terminal(name, matchedText)` is returned.
 5. If no pattern matches and the input position is not at the end, a `Terminal.ERROR`
@@ -718,7 +718,7 @@ class IntEvaluator implements Evaluator<Integer> {
   }
 }
 ...
-mg.parse(inputText, new IntParserListener());
+mg.parse(inputText, new IntEvaluator());
 ```
 
 #### Example 2: build a parenthesized string
@@ -740,13 +740,13 @@ class TextEvaluator implements Evaluator<String> {
   }
 }
 ...
-mg.parse(inputText, new TextParserListener());
+mg.parse(inputText, new TextEvaluator());
 ```
 
 #### Exception propagation
 
 Any `RuntimeException` thrown by either `evaluate` method propagates out of `parse()`.
-After an evaluator exception, the parser states are flushed, so the parser can be reused.
+After an evaluator exception, the parser remains reusable.
 
 ### `Visitor<V>` (reflection-backed convenience)
 
@@ -803,7 +803,7 @@ returned `null`) are **filtered out** and do not appear as parameters.
 
 Any `RuntimeException` thrown by either a terminal method or a production method
 propagates out of `parse()`. Checked exceptions are wrapped in `UndeclaredThrowableException`.
-After an exception, the parser states are flushed, so the parser can be reused.
+After an exception, the parser can be reused.
 
 #### Single-body pass-through
 
@@ -1526,7 +1526,7 @@ public final class CoverageTest {
 - Check longest-match interactions. If `id: /[a-z]+/` is declared before `if: /if/`,
   `if` will be returned as `id("if")`, not as `keyword_if("if")`, because both patterns
   match two characters and `id` is declared first.
-- Make sure a whitespace/comment anonymous token is present.
+- Make sure a whitespace/comment unnamed token is present.
   Without it, the first non-matching character causes a `Terminal.ERROR`.
 - Quoted literals in the `grammar` section are added to the token list **before**
   named tokens from `tokens`. To make a keyword take priority over an identifier
@@ -1602,7 +1602,7 @@ tokens {
 ```
 
 Migration notes:
-- `-> skip` maps to an anonymous regex token (no name, no Terminal emitted).
+- `-> skip` maps to an unnamed regex token (no name, no Terminal emitted).
 - ANTLR uses implicit priority (longer match, then rule order); LazyLR uses the same
   longest-match-then-declaration-order rule.
 - ANTLR lexer modes have no direct equivalent; simulate with context-sensitive lexing
@@ -1690,7 +1690,7 @@ accompanied by a corresponding `precedence` declaration in LazyLR.
 ### 6) Practical migration checklist
 
 1. Convert ANTLR lexer fragments and tokens to LazyLR `tokens` section entries.
-2. Convert ANTLR `-> skip` and `-> channel(HIDDEN)` to anonymous token rules.
+2. Convert ANTLR `-> skip` and `-> channel(HIDDEN)` to unnamed token rules.
 3. Port ANTLR parser rules to the `grammar` section.
 4. For each rule with multiple alternatives ordered by precedence in ANTLR,
    add corresponding entries to the LazyLR `precedence` section.

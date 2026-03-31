@@ -88,7 +88,7 @@ The `Lexer` is configured with a list of `Token` objects. Each `Token` pairs a n
 with a Java regular expression.
 The lexer applies a **longest-match** rule at each position; ties are broken
 by declaration order (earlier wins).
-A `Token` created with only a regex and no name is *anonymous*, it is matched and
+A `Token` created with only a regex and no name is *unnamed*, it is matched and
 silently discarded, which is useful for whitespace and comments.
 
 `Lexer.createLexer(tokens)` builds the lexer. `lexer.tokenize(input)` returns

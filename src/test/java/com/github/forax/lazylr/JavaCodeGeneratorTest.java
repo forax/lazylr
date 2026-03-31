@@ -180,7 +180,7 @@ public final class JavaCodeGeneratorTest {
   }
 
   @Test
-  public void anonymousToken() throws IOException {
+  public void unnamedToken() throws IOException {
     var mg = MetaGrammar.load("""
         tokens {
           num: /[0-9]+/
@@ -192,7 +192,7 @@ public final class JavaCodeGeneratorTest {
         """);
 
     var code = JavaCodeGenerator.generate(mg);
-    assertCompilesSuccessfully("AnonymousToken", code);
+    assertCompilesSuccessfully("UnnamedToken", code);
 
     assertEquals("""
         import com.github.forax.lazylr.*;

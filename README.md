@@ -86,7 +86,7 @@ The DSL has three sections:
 
 - **`tokens`**: named terminals (`name: /regex/`) matched by the lexer using longest-match,
   with declaration order breaking ties.
-  Anonymous patterns (`/regex/`) are matched and silently discarded (e.g. whitespace or comments).
+  Unnamed patterns (`/regex/`) are matched and silently discarded (e.g. whitespace or comments).
 - **`precedence`**: operator associativity and priority; later lines have **higher** precedence than earlier ones.
   Multiple terminals can share the same precedence level by separating them with commas.
 - **`grammar`**: BNF-style production rules; quoted literals like `'+'` are automatically registered

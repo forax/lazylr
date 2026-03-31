@@ -42,9 +42,9 @@ import java.util.stream.Stream;
 /// }                                         // empty right-hand side is epsilon
 /// ```
 ///
-/// - **tokens** — defines named and anonymous terminal symbols as Java regular expressions.
+/// - **tokens** — defines named and unnamed terminal symbols as Java regular expressions.
 ///   The declaration order controls lexer token priority.
-///   Named terminals (e.g. `ident: /[a-z]+/`) become lexer tokens; anonymous ones
+///   Named terminals (e.g. `ident: /[a-z]+/`) become lexer tokens; unnamed ones
 ///   (e.g. `/[ \t]+/`) are matched and silently discarded.
 ///
 /// - **precedence** — declares operator associativity and relative precedence.
@@ -93,7 +93,7 @@ public final class MetaGrammar {
   /// The lexer rules derived from the `tokens` section, in priority order.
   ///
   /// @return a list of [Token] objects, ordered so that quoted (implicit)
-  ///         terminals appear first, followed by named terminals, then anonymous ones.
+  ///         terminals appear first, followed by named terminals, then unnamed ones.
   public List<Token> tokens() {
     return tokens;
   }

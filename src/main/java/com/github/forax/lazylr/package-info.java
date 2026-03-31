@@ -37,7 +37,7 @@
 /// ```
 ///
 /// The DSL has three optional sections:
-/// - **`tokens`**: named terminals (`name: /regex/`) and anonymous
+/// - **`tokens`**: named terminals (`name: /regex/`) and unnamed
 ///   skip patterns (`/regex/`).
 /// - **`precedence`**: `left:` or `right:` lines, lowest first,
 ///   multiple terminals per line share the same level.
