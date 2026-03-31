@@ -26,8 +26,8 @@ optimized for fast development and iterative grammar evolution.
 8. [Precedence, Associativity, and Conflict Resolution](#precedence-associativity-and-conflict-resolution)
 9. [Error Reporting and Recovery Strategy](#error-reporting-and-recovery-strategy)
 10. [Automaton Inspection and Verification (`LALRVerifier`)](#automaton-inspection-and-verification-lalrverifier)
-11. [Command-Line Tool (`Main`)](#command-line-tool-main)
-12. [Code Generation (`JavaCodeGenerator`)](#code-generation-javacodegenerator)
+11. [Command-Line Tool](#command-line-tool)
+12. [Code Generation](#code-generation)
 13. [Threading, Reentrancy, and Performance](#threading-reentrancy-and-performance)
 14. [End-to-End Recipes (with JUnit)](#end-to-end-recipes-with-junit)
 15. [Troubleshooting Checklist](#troubleshooting-checklist)
@@ -128,7 +128,7 @@ System.out.println(ast);
 - `mg.grammar()` returns the `Grammar` object, or throws `IllegalStateException` if absent.
 - `mg.precedenceMap()` returns the effective precedence table (or an empty map).
 - `mg.verify(...)` checks for unresolved LALR(1) conflicts.
-- `mg.parse(input, evaluatorOrVisitor)` performs lexing then parsing in one call.
+- `mg.parse(input, evaluatorOrVisitorOrVisitorFactory)` performs lexing then parsing in one call.
 
 ---
 
@@ -140,7 +140,7 @@ successful parses and error messages.
 ### Bottom-up parsing
 
 When the parser encounters terminals, it does not try to match a rule from the top down.
-Instead it uses a *shift/reduce* loop:
+Instead, it uses a *shift/reduce* loop:
 
 - **Shift**: consume the next input token and push it on an internal stack.
 - **Reduce**: when the top of the stack matches the body of a production, pop those
@@ -154,8 +154,8 @@ fires before `Evaluator.evaluate(Production, List)` for any given subtree.
 
 A traditional LR table-driven parser pre-computes every possible parser state from the
 grammar before any input is seen. LazyLR instead computes states on demand: the first
-time the parser visits a (state, symbol) pair it builds the next state, caches it, and
-never recomputes it. States built in one `parse()` call are reused in subsequent calls
+time the parser visits a (state, symbol) pair, it builds the next state, caches it, and
+never recomputes it. States built in one `parse()` call are reused in later calls
 on the same `Parser` instance.
 
 ### LR(1) vs LALR(1)
@@ -387,7 +387,7 @@ to any lexer token.
 
 #### Multiple grammar sections
 
-Declaring `grammar { }` multiple times is allowed but not recommanded; the sections are concatenated.
+Declaring `grammar { }` multiple times is allowed but not recommended; the sections are concatenated.
 
 ```text
 grammar {
@@ -519,6 +519,42 @@ Construction validates:
 - Every non-terminal that appears in a rule body must itself have at least one production.
 
 `Grammar` is thread-safe and can be reused across many parsers and threads.
+
+### `NonTerminal`
+
+`NonTerminal` is immutable and represents an abstract grammatical construct,
+the left-hand side of one or more productions.
+
+```java
+var expr = new NonTerminal("expr");
+var stmt = new NonTerminal("stmt");
+```
+
+Constructor validation:
+- `null` name -> `NullPointerException`.
+- Empty name -> `IllegalArgumentException`.
+
+Key method:
+- `name()` — returns the identifier string passed at construction (e.g., `"expr"`, `"stmt"`).
+
+Two non-terminals are **equal if their names match**:
+```java
+assertEquals(new NonTerminal("expr"), new NonTerminal("expr")); // true
+assertNotEquals(new NonTerminal("expr"), new Terminal("expr")); // different types
+```
+
+`NonTerminal` implements `Symbol`, the same sealed interface as `Terminal`.
+When iterating over a `production.body()`, use a pattern switch to distinguish the two:
+
+```java
+for (var symbol : production.body()) {
+  switch (symbol) {
+    case Terminal t -> System.out.println("terminal: " + t.name());
+    case NonTerminal nt -> System.out.println("non-terminal: " + nt.name());
+  }
+}
+```
+
 
 ### `Production`
 
@@ -693,8 +729,7 @@ Evaluator<String> eval = new Evaluator<>() {
 
 Any `RuntimeException` thrown by either `evaluate` method propagates out of `parse()`.
 Checked exceptions are wrapped in `UndeclaredThrowableException`. After an evaluator
-exception, the parser is in an undefined internal state and must not be reused; create a
-fresh `Parser` for the next input.
+exception, the parser state are flushed, so the parser can be reused.
 
 ### `Visitor<V>` (reflection-backed convenience)
 
@@ -1061,11 +1096,11 @@ grammars pass through `Parser` without errors.
 
 The reason to do a LALR(1) analysis and not a full LR(1) analysis is that on large
 grammar, doing a full LR(1) takes too much time.
-The `Parser` does not have this problem because it computes the LR states lazily.
+Production use should still resolve all reported conflicts from the LALR(1) analysis for safety.
 
 ---
 
-## Command-Line Tool (`Main`)
+## Command-Line Tool
 
 ### Usage
 
@@ -1214,6 +1249,7 @@ resolved by appending a numeric suffix (`t__1`, `t__2`, ...).
 | `Precedence`                            | Immutable; fully thread-safe                                             |
 | `ParserFactory`                         | Immutable; fully thread-safe                                             |
 | `Parser`                                | Bound to its creating thread; **not** thread-safe                        |
+| `Lexer.tokenize()`                      | Fully thread-safe; `tokenize()` may be called from any thread            |
 | `Iterator<Terminal>` (from `Lexer`)     | Single-threaded; one per parse call                                      |
 
 ### Thread ownership of `Parser`
@@ -1334,7 +1370,8 @@ class ParseResultTest {
 
   static final MetaGrammar MG = MetaGrammar.load("""
     tokens {
-      num: /[0-9]+/ /[ ]+/
+      num: /[0-9]+/
+      /[ ]+/
     }
     precedence {
       left: '+'
@@ -1370,7 +1407,8 @@ import org.junit.jupiter.api.Test;
 class ParseFailureTest {
   static final MetaGrammar MG = MetaGrammar.load("""
     tokens {
-      num: /[0-9]+/ /[ ]+/
+      num: /[0-9]+/
+      /[ ]+/
     }
     precedence {
       left: '+'
@@ -1500,7 +1538,7 @@ class CoverageTest {
 `LALRVerifier` uses LALR(1); the runtime parser uses LR(1). A small set of grammars
 are LR(1) but not LALR(1). If the verifier reports a conflict but actual parsing
 succeeds, the grammar is in this category.
-It is not recommanded to have a grammar which is not LALR(1) in a production
+It is not recommended to have a grammar which is not LALR(1) in a production
 environment, but for a toy example, there is no problem.
 
 ---
@@ -1626,7 +1664,7 @@ accompanied by a corresponding `precedence` declaration in LazyLR.
 4. For each rule with multiple alternatives ordered by precedence in ANTLR,
    add corresponding entries to the LazyLR `precedence` section.
 5. Run `mg.verify()` and resolve any reported conflicts.
-6. Port semantic logic: embedded actions → `Evaluator`; generated visitors → `Visitor<V>`.
+6. Port semantic logic: embedded actions -> `Evaluator`; generated visitors -> `Visitor<V>`.
 7. Port error listeners to try-catch blocks on `parse()`.
 8. Add JUnit tests for representative successful parses, expected failures, and
    conflict-free grammar verification.
