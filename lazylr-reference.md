@@ -10,7 +10,7 @@ optimized for fast development and iterative grammar evolution.
 1. [src/main/demo/README.md](src/main/demo/README.md) for incremental demos.
 2. This manual for deep reference.
 3. For API details, consult the generated Javadoc (https://jitpack.io/com/github/forax/lazylr/latest/javadoc/).
-4. [src/test/java/...](src/test/java/) for executable examples.
+4. [src/test/java/...](src/test/java) for executable examples.
 
 ---
 
@@ -191,14 +191,14 @@ tokens {
 precedence {
   left: '+', '-'
   left: '*'
-  right: UNARY
+  right: UMINUS
 }
 grammar {
   E : num
   E : E '+' E
   E : E '-' E
   E : E '*' E
-  E : '-' E %prec UNARY
+  E : '-' E %prec UMINUS
 }
 ```
 
@@ -216,10 +216,13 @@ tokens {
 Regex syntax follows Java's `java.util.regex.Pattern`. Each regex must match at least one
 character; patterns that can match the empty string are rejected at construction time.
 
-Named tokens in the `tokens` section appear after any quoted literals extracted from the
-`grammar` section in the final token list. This ensures that explicitly quoted operators
-like `'+'` are matched before user-defined identifiers that might otherwise consume them.
-Within the named group, tokens appear in declaration order.
+Any quoted literals extracted from the `grammar` section appears before the named tokens
+of the `tokens` section and any unnamed tokens of the `tokens` section appears before the named tokens
+in the final token list.
+So the ordering is always quoted literals -> named tokens -> anonymous tokens.
+This ensures that explicitly quoted operators like `'+'` are matched before user-defined identifiers
+and that anonymous tokens are matched after any other tokens.
+Within the named group, or the unnamed group tokens appear in declaration order.
 
 #### Matching rules
 
@@ -422,7 +425,7 @@ var numToken = new Token("num", "[0-9]+");
 var wsToken = new Token("[ \t\n]+");
 ```
 
-Construction validate:
+Construction validates:
 - `null` name or `null` regex -> `NullPointerException`.
 - Malformed regex -> `IllegalArgumentException`.
 - Regex that matches the empty string → `IllegalArgumentException`. This prevents
@@ -433,7 +436,7 @@ Key methods:
 - `regex()` — returns the raw pattern string.
 - `isIgnorable()` — returns `true` for anonymous tokens.
 
-`Token` is a record like type: two tokens are equal when they have the same name and regex.
+`Token` is a record-like type: two tokens are equal when they have the same name and regex.
 
 ### `Lexer`
 
@@ -464,8 +467,8 @@ At each position the lexer:
 #### Position tracking
 
 `Lexer.position(iterator)` returns the start character index (zero-based) of the most
-recently returned terminal. It returns `0` before any terminal is consumed, and `-1` if
-the iterator is not created by `Lexer.tokenize(...)` (e.g., a plain `List.iterator()`).
+recently returned terminal. It returns `-1` if the iterator is not created by `Lexer.tokenize(...)`
+(e.g., a plain `List.iterator()`).
 
 ```java
 var iterator = lexer.tokenize("42 + 113");
@@ -525,8 +528,8 @@ var grammar = new Grammar(E, List.of(
 
 Construction validates:
 - The start symbol must be the head of at least one production.
-- No duplicate productions (same head and same body).
 - Every non-terminal that appears in a rule body must itself have at least one production.
+- Duplicate productions (same head and same body) are rejected.
 
 `Grammar` is thread-safe and can be reused across many parsers and threads.
 
@@ -677,7 +680,7 @@ Events fire bottom-up: for a production `E : E '+' E`, both inner `onShift` and 
 `onReduce` events for both `E` children fire before `onReduce(E : E + E)`.
 
 The start position of the current terminal during `onShift` is available via
-`Lexer.position(iterator)` if the iterator is a `Tokenizer`.
+`Lexer.position(iterator)` if the iterator was produced by `Lexer.tokenize(...)`.
 
 ### `Evaluator<V>`
 
@@ -715,7 +718,7 @@ class IntEvaluator implements Evaluator<Integer> {
   }
 }
 ...
-mg.parse(inputText, new PrintParserListener());
+mg.parse(inputText, new IntParserListener());
 ```
 
 #### Example 2: build a parenthesized string
@@ -737,7 +740,7 @@ class TextEvaluator implements Evaluator<String> {
   }
 }
 ...
-mg.parse(inputText, new PrintParserListener());
+mg.parse(inputText, new TextParserListener());
 ```
 
 #### Exception propagation
@@ -747,9 +750,14 @@ After an evaluator exception, the parser states are flushed, so the parser can b
 
 ### `Visitor<V>` (reflection-backed convenience)
 
-`Visitor<V>` lets you write one typed method per terminal or production instead of a
-central `switch`. `Visitor.reflect(lookup, visitor)` inspects public methods and builds
-an `Evaluator` from them.
+`Visitor<V>` lets you write one typed method per terminal or production instead of a central `switch`.
+`Visitor.reflect(lookup, visitor)` inspects all public methods of the visitor and
+builds an `Evaluator` from them.
+The `Lookup` object taken as parameter should be created by `MethodHandles.lookup()`
+at a location in the code where the `Visitor` class is visible.
+Unlike `Visitor.reflect(...)`, the convenient method `mg.parse(input, visitor)` computes
+the `Lookup` object via a stack walk, so the visitor class has to be visible from the
+caller of the method `mg.parse(input, visitor)`.
 
 #### Terminal methods
 
@@ -838,7 +846,7 @@ When `parse()` encounters a reduction for a production that has no handler, the 
 `IllegalStateException` includes a skeleton of the missing method with inferred types:
 
 ```
-production "E : E + E" has no evaluator method,  proposed code:
+production "E : E + E" has no evaluator method, proposed code:
 @ProductionName("E : E + E")
 public int method(int param0, int param1) {
   throw new UnsupportedOperationException("TODO");
@@ -1237,7 +1245,7 @@ public static MetaGrammar createGrammar() {
 
   // Tokens
   var tokens = List.of(
-    new Token("+", Pattern.quote("+")),
+    new Token("+", Pattern.quote("+")),  // name and regex are the same
     new Token("num", "[0-9]+")
   );
 
@@ -1274,7 +1282,6 @@ resolved by appending a numeric suffix (`t__1`, `t__2`, ...).
 | `Precedence`                            | Immutable; fully thread-safe                                             |
 | `ParserFactory`                         | Immutable; fully thread-safe                                             |
 | `Parser`                                | Bound to its creating thread; **not** thread-safe                        |
-| `Lexer.tokenize()`                      | Fully thread-safe; `tokenize()` may be called from any thread            |
 | `Iterator<Terminal>` (from `Lexer`)     | Single-threaded; one per parse call                                      |
 
 ### Thread ownership of `Parser`
@@ -1345,7 +1352,7 @@ import org.junit.jupiter.api.Test;
 public final class GrammarValidationTest {
   @Test
   public void grammarIsLALR1() {
-    // not need to have a section tokens when it's a pure grammar
+    // not tokens section is needed when it's a pure grammar
     var mg = MetaGrammar.load("""
       precedence {
         left: '+'
