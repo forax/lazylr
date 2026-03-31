@@ -284,4 +284,29 @@ public final class LRAlgorithmTest {
 
     assertEquals(Set.of(x, y, z), firstSets.get(E));
   }
+
+  @Test
+  public void terminalInBodyBlocksPropagationBeyondIt() {
+      // Grammar:  S -> a A,  A -> b | c
+      // FIRST(S) = {a}   A's FIRST set must NOT flow through 'a' into S.
+      // FIRST(A) = {b, c}
+      var S = new NonTerminal("S");
+      var A = new NonTerminal("A");
+      var a = new Terminal("a");
+      var b = new Terminal("b");
+      var c = new Terminal("c");
+
+      var grammar = new Grammar(S, List.of(
+          new Production(S, List.of(a, A)),  // terminal 'a' blocks further propagation
+          new Production(A, List.of(b)),
+          new Production(A, List.of(c))
+      ));
+
+      var firstSets = LRAlgorithm.computeFirstSets(grammar);
+
+      // S's FIRST set must be exactly {a}, not {a, b, c}.
+      assertEquals(Set.of(a), firstSets.get(S));
+      // A's FIRST set is independent and correct.
+      assertEquals(Set.of(b, c), firstSets.get(A));
+  }
 }

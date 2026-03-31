@@ -147,11 +147,17 @@ final class LRAlgorithm {
       dependents.put(nonTerminal, new HashSet<>());
     }
     for (var production : grammar.productions()) {
-      for (var symbol : production.body()) {
-        if (symbol instanceof NonTerminal dependency) {
-          // head depends on this non-terminal
-          dependents.computeIfAbsent(dependency, _ -> new HashSet<>())
-              .add(production.head());
+      loop: for (var symbol : production.body()) {
+        switch (symbol) {
+          case Terminal _ -> {
+            // Terminals are never nullable; nothing to their right can reach FIRST(head).
+            break loop;
+          }
+          case NonTerminal dependency -> {
+            // head depends on this non-terminal (it may be nullable, so we keep going).
+            dependents.computeIfAbsent(dependency, _ -> new HashSet<>())
+                .add(production.head());
+          }
         }
       }
     }

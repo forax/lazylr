@@ -228,10 +228,15 @@ public final class LALRVerifier {
       dependents.put(nonTerminal, new HashSet<>());
     }
     for (var production : grammar.productions()) {
-      for (var symbol : production.body()) {
-        if (symbol instanceof NonTerminal bodyNt) {
-          dependents.computeIfAbsent(bodyNt, _ -> new HashSet<>())
-              .add(production.head());
+      loop: for (var symbol : production.body()) {
+        switch (symbol) {
+          case Terminal _ -> {
+            break loop;
+          }
+          case NonTerminal bodyNt -> {
+            dependents.computeIfAbsent(bodyNt, _ -> new HashSet<>())
+                .add(production.head());
+          }
         }
       }
     }
