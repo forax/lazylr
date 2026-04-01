@@ -1678,7 +1678,7 @@ public final class CoverageTest {
   pattern, either declare the keyword first in `tokens`, or rely on the automatic
   literal promotion.
 
-### Shift/reduce conflicts ("I get shift/reduce conflicts")
+### Shift/reduce conflicts ("My grammar is on fire")
 
 - Add a `precedence` section with `left:` or `right:` lines for ambiguous operators.
   Later lines = higher precedence.
