@@ -595,11 +595,8 @@ var numToken = new Token("num", "[0-9]+");
 var wsToken = new Token("[ \t\n]+");
 ```
 
-Construction validates:
-- `null` name or `null` regex -> `NullPointerException`.
-- Malformed regex -> `IllegalArgumentException`.
-- Regex that matches the empty string → `IllegalArgumentException`. This prevents
-  the lexer from looping infinitely at the same position.
+Construction validates that the regex is well-formed and matches at least one character
+This prevents the lexer from looping infinitely at the same position.
 
 Key methods:
 - `name()`, returns the symbolic name, or `null` for unnamed tokens.
@@ -662,10 +659,7 @@ The class `Terminal` is immutable and represents either:
 - A **grammar-level placeholder** (no value): `new Terminal("num")`, used in `Production` bodies.
 - A **lexer-produced token** (with a string value): `new Terminal("num", "42")`, produced by `Lexer`.
 
-Construction validates:
-- `null` name -> `NullPointerException`.
-- Empty name -> `IllegalArgumentException`.
-- `null` value for a lexer token -> `NullPointerException`.
+Construction validates that the name is non-empty and that the value, if specified, is not `null`.
 
 Key methods:
 - `name()`, return the symbolic name.
@@ -731,9 +725,7 @@ var expr = new NonTerminal("expr");
 var stmt = new NonTerminal("stmt");
 ```
 
-Constructor validation:
-- `null` name -> `NullPointerException`.
-- Empty name -> `IllegalArgumentException`.
+Construction validates that the name is non-empty.
 
 Key method:
 - `name()`, returns the identifier string passed at construction (e.g., `"expr"`, `"stmt"`).
