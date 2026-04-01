@@ -220,10 +220,10 @@ An LR parser maintains two data structures:
 
 At each step the parser consults a state (built from the grammar) and makes one of two moves:
 
-**Shift** — consume the lookahead token, push it onto the stack, and advance to the next
+**Shift**, consume the lookahead token, push it onto the stack, and advance to the next
 input token.
 
-**Reduce** — when the top of the stack matches the entire right-hand side of some production,
+**Reduce**, when the top of the stack matches the entire right-hand side of some production,
 pop those symbols off the stack and replace them with the production's head non-terminal.
 This is the step that recognizes that a phrase has been fully parsed.
 
@@ -354,14 +354,18 @@ grammar {
 }
 ```
 
+The `tokens` section defines the lexer rules.
+The `precedence` section defines the priority information of terminals and productions in the grammar.
+The `grammar` section defines the grammar rules.
+
 ### `tokens` section
 
 #### Syntax
 
 ```text
 tokens {
-  name: /regex/     // named token — emits a Terminal
-  /regex/           // unnamed token — consumed and discarded
+  name: /regex/     // named token, emits a Terminal
+  /regex/           // unnamed token, consumed and discarded
 }
 ```
 
@@ -432,7 +436,7 @@ Symbols can be:
 - Quoted literals (e.g., `'+'`), must also appear in the `grammar` section.
 - Token names defined in the `tokens` section (e.g., `plus`).
 - Arbitrary identifiers used only as targets for `%prec` in the `grammar` section
-  (virtual tokens — they are never emitted by the lexer).
+  (virtual tokens, they are never emitted by the lexer).
 
 #### How precedence is applied
 
@@ -526,15 +530,15 @@ grammar {
 
 #### `%prec` override
 
-When a production's rightmost terminal is not the right precedence anchor use `%prec`.
+When a production's rightmost terminal is not the right precedence anchor, use `%prec`.
 For example, the classic case is a unary operator sharing a terminal with a binary operator:
 
 ```text
 E : '-' E    %prec UMINUS
 ```
 
-`UMINUS` must appear somewhere in the `precedence` section. It does not need to correspond
-to any lexer token.
+`UMINUS` must appear somewhere in the `precedence` section.
+It does not need to correspond to any lexer token.
 
 #### Duplicate and self-referential rules
 
@@ -570,10 +574,10 @@ The class `Token` encapsulates one lexer rule: a name and a regex pattern,
 or just a regex pattern for unnamed (skip) tokens.
 
 ```java
-// Named token — emits a Terminal when matched
+// Named token, emits a Terminal when matched
 var numToken = new Token("num", "[0-9]+");
 
-// Unnamed token — consumed silently
+// Unnamed token, consumed silently
 var wsToken = new Token("[ \t\n]+");
 ```
 
@@ -584,9 +588,9 @@ Construction validates:
   the lexer from looping infinitely at the same position.
 
 Key methods:
-- `name()` — returns the symbolic name, or `null` for unnamed tokens.
-- `regex()` — returns the raw pattern string.
-- `isIgnorable()` — returns `true` for unnamed tokens.
+- `name()`, returns the symbolic name, or `null` for unnamed tokens.
+- `regex()`, returns the raw pattern string.
+- `isIgnorable()`, returns `true` for unnamed tokens.
 
 `Token` is a record-like type: two tokens are equal when they have the same name and regex.
 
@@ -700,7 +704,7 @@ Constructor validation:
 - Empty name -> `IllegalArgumentException`.
 
 Key method:
-- `name()` — returns the identifier string passed at construction (e.g., `"expr"`, `"stmt"`).
+- `name()`, returns the identifier string passed at construction (e.g., `"expr"`, `"stmt"`).
 
 Two non-terminals are **equal if their names match**:
 ```java
@@ -748,10 +752,10 @@ multiple calls to avoid recomputing LR(1) states.
 ```java
 var parser = Parser.createParser(grammar, precedenceMap);
 
-// First call — may build new LR(1) states
+// First call, may build new LR(1) states
 var result1 = parser.parse(input1, evaluator);
 
-// Second call — reuses cached states built during the first call
+// Second call, reuses cached states built during the first call
 var result2 = parser.parse(input2, evaluator);
 ```
 
@@ -964,7 +968,7 @@ defined for it, the single argument is forwarded automatically.
 This covers chain productions like `E : num` without requiring any code:
 
 ```java
-// No method needed for "E : num" — the Num node is passed straight through.
+// No method needed for "E : num", the Num node is passed straight through.
 ```
 
 #### Repeatable `@ProductionName`
@@ -1072,7 +1076,7 @@ The `%prec TOKEN` directive assigns a different precedence to the whole producti
 precedence {
   left: '+', '-'
   left: '*'
-  right: UMINUS     // virtual token — never emitted
+  right: UMINUS     // virtual token, never emitted
 }
 grammar {
   E : '-' E    %prec UMINUS
@@ -1429,10 +1433,9 @@ resolved by appending a numeric suffix (`t__1`, `t__2`, ...).
 ### Thread ownership of `Parser`
 
 Each `Parser` is permanently bound to the thread that created it. Calling `parse()`
-from a different thread — even if no other thread is currently using the parser — throws
-`WrongThreadException`. This applies to both platform threads and virtual threads (a
-parser created on virtual thread A cannot be used on virtual thread B, even if B runs
-on the same carrier thread).
+from a different thread; even if no other thread is currently using the parser;
+throws`WrongThreadException`.
+This applies to both platform threads and virtual threads.
 
 ### Correct multithreaded patterns
 
@@ -1775,9 +1778,9 @@ grammar {
 ```
 
 Migration notes:
-- ANTLR encodes precedence via rule-alternative ordering (earlier = higher precedence
-  within a rule) and numeric `<assoc=right>` annotations. LazyLR uses an explicit
-  `precedence` section — convert the implicit ordering into explicit levels.
+- ANTLR encodes precedence via rule-alternative ordering (earlier = higher precedence within a rule)
+  and numeric `<assoc=right>` annotations.
+  LazyLR uses an explicit `precedence` section, convert the implicit ordering into explicit levels.
 - ANTLR supports rule labels (`# MulExpr`); these become `@ProductionName` annotations
   in LazyLR.
 - ANTLR rule alternatives with no explicit precedence annotation are unambiguous in
