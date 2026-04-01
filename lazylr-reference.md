@@ -385,7 +385,7 @@ character; patterns that can match the empty string are rejected at construction
 
 Quoted literals are collected from all `grammar` section rules across the
 entire input (in first-encounter order), then named tokens from `tokens`
-sections (in declaration order), then unnamed tokens from `tokens`sections
+sections (in declaration order), then unnamed tokens from `tokens` sections
 (in declaration order).
 The ordering is always quoted literals -> named tokens -> unnamed tokens.
 This ensures that explicitly quoted operators like `'+'` are matched before user-defined
