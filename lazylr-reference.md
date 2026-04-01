@@ -1439,7 +1439,7 @@ resolved by appending a numeric suffix (`t__1`, `t__2`, ...).
 
 Each `Parser` is permanently bound to the thread that created it. Calling `parse()`
 from a different thread; even if no other thread is currently using the parser;
-throws`WrongThreadException`.
+throws `WrongThreadException`.
 This applies to both platform threads and virtual threads.
 
 ### Correct multithreaded patterns
