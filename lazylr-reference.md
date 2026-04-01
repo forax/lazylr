@@ -358,6 +358,17 @@ The `tokens` section defines the lexer rules.
 The `precedence` section defines the priority information of terminals and productions in the grammar.
 The `grammar` section defines the grammar rules.
 
+> **Note:** DSL keywords (`tokens`, `grammar`, `precedence`, `left`, `right`) are also
+> valid non-terminal and terminal names inside a `grammar` section.
+> For example,
+> ```text
+>   grammar {
+>     left : right
+>   }
+> ```
+> is a legal production whose head is the non-terminal `left` and whose body
+> is the terminal `right`.
+
 ### `tokens` section
 
 #### Syntax
@@ -372,13 +383,13 @@ tokens {
 Regex syntax follows Java's `java.util.regex.Pattern`. Each regex must match at least one
 character; patterns that can match the empty string are rejected at construction time.
 
-Any quoted literals extracted from the `grammar` section appear before the named tokens
-of the `tokens` section and any unnamed tokens of the `tokens` section appear after the named tokens
-in the final token list.
-So the ordering is always quoted literals -> named tokens -> unnamed tokens.
-This ensures that explicitly quoted operators like `'+'` are matched before user-defined identifiers
-and that unnamed tokens are matched after any other tokens.
-Within each group (named and unnamed), tokens appear in declaration order.
+Quoted literals are collected from all `grammar` section rules across the
+entire input (in first-encounter order), then named tokens from `tokens`
+sections (in declaration order), then unnamed tokens from `tokens`sections
+(in declaration order).
+The ordering is always quoted literals -> named tokens -> unnamed tokens.
+This ensures that explicitly quoted operators like `'+'` are matched before user-defined
+identifiers, and that unnamed tokens are matched last.
 
 #### Matching rules
 
@@ -641,6 +652,10 @@ This is primarily used inside `Evaluator.evaluate(Terminal)` or `Visitor.xxx(Ter
 to attach source positions to AST nodes.
 Use `mg.parse(input, visitorFactory)` so the visitor receives the same iterator instance that the parser is consuming.
 
+**Tip:** the same iterator must be passed to both `Lexer.position(iterator)` and to `Parser.parse(iterator, ...)`.
+> Using `mg.parse(input, visitorFactory)` guarantees this automatically.
+> If you wire the lexer and parser manually, take care to pass the same `Iterator<Terminal>` instance to both.
+
 ### `Terminal`
 
 The class `Terminal` is immutable and represents either:
@@ -651,6 +666,18 @@ Construction validates:
 - `null` name -> `NullPointerException`.
 - Empty name -> `IllegalArgumentException`.
 - `null` value for a lexer token -> `NullPointerException`.
+
+Key methods:
+- `name()`, return the symbolic name.
+- `value()`, return the string value, or `null` for grammar-level placeholders.
+- `hasValue()`, return `true` if the terminal carries the matched string value
+   produced by the lexer.
+
+`Terminal.hasValue()` distinguishes the two forms when needed:
+```java
+assertTrue(new Terminal("num", "42").hasValue());    // lexer-produced
+assertFalse(new Terminal("num").hasValue());         // grammar placeholder
+ ```
 
 Two terminals are **equal if their names match**, regardless of value.
 This is what allows a lexer-produced `Terminal("num", "42")` to match
@@ -774,6 +801,10 @@ void parse(Iterator<Terminal> input, ParserListener listener)
 <V> V parse(Iterator<Terminal> input, Evaluator<V> evaluator)
 ```
 
+Both overloads throw `ParsingException` on any lexing or grammar error.
+They also throw `WrongThreadException` (a runtime exception) if called from a
+thread other than the one that created the parser.
+
 #### Augmented grammar
 
 Internally, the parser adds an augmented production `S' → S` (where `S` is the declared
@@ -791,6 +822,10 @@ Set<Production> covered = parser.coverage();
 Returns the set of productions reduced at least once across all `parse()` calls on this
 instance. The set grows monotonically and is unmodifiable. Useful in tests to verify that
 all grammar rules are exercised.
+
+Note that coverage accumulates on the `Parser` instance. 
+To measure overall grammar coverage across many parses, reuse a single `Parser` instance
+on one thread, or merge the coverage sets from multiple parsers after the fact.
 
 ### `ParserFactory`
 
@@ -810,9 +845,10 @@ is done by `createFactory(...)` and shared.
 
 #### Thread ownership
 
-Each `Parser` is permanently **bound to the thread that created it** via `createParser()`.
-Calling `parse()` from any other thread throws `WrongThreadException`. This applies to
-both platform threads and virtual threads.
+Each `Parser` is permanently **bound to the thread that created it** via
+`Parser.createParser(grammar, precedenceMap)` or `ParserFactory.createParser()`.
+Calling `parse(...)` from any other thread throws `WrongThreadException`.
+This applies to both platform threads and virtual threads.
 
 ---
 
@@ -920,6 +956,24 @@ Unlike `Visitor.reflect(...)`, the convenient method `mg.parse(input, visitor)` 
 the `Lookup` object via a stack walk, so the visitor class has to be visible from the
 caller of the method `mg.parse(input, visitor)`.
 
+The overload `mg.parse(input, visitorFactory)` creates the lexer iterator first,
+passes it to the factory to construct the visitor, then drives the parse.
+Use it whenever the visitor needs the iterator reference, most commonly
+for `Lexer.position(iterator)` calls inside terminal methods:
+
+```java
+class MyVisitor implements Visitor<Node> {
+  public MyVisitor(Iterator<Terminal> it) {
+    // store it
+  }
+  // ...
+}
+// ...
+Node result = mg.parse(inputText, MyVisitor::new);
+```
+
+The `visitorFactory` is called exactly once per `mg.parse(...)` invocation.
+
 #### Terminal methods
 
 A public, non-void, non-static method whose **name equals a token name** is called when
@@ -950,7 +1004,11 @@ Parameters correspond to the evaluated values of the body symbols, in left-to-ri
 Terminals for which no terminal method was defined are **filtered out** and
 do not appear as parameters.
 
-> **Important:** if a terminal method exists, its value *does* appear as a parameter.
+> **Important:** if a terminal method exists, its return value *does* appear as a parameter 
+> in production methods.  If the terminal method returns `null`, `null` is passed.
+> If no terminal method is defined for a terminal, it is silently filtered out and does
+> not occupy a parameter slot.
+> 
 > This lets you use terminal values directly in production methods:
 >
 > ```java
@@ -978,7 +1036,8 @@ This covers chain productions like `E : num` without requiring any code:
 
 #### Repeatable `@ProductionName`
 
-One method can handle multiple productions by stacking the annotation:
+`@ProductionName` is a `@Repeatable` annotation, so one method can handle multiple
+productions by stacking several `@ProductionName` annotations:
 
 ```java
 @ProductionName("E : E + E")
@@ -1668,8 +1727,8 @@ public final class CoverageTest {
 
 ### Lexing failure ("My token never matches" or `Terminal.ERROR` returned)
 
-- Check that your regex cannot match the empty string; such patterns are rejected at
-  construction time, so this would cause a build failure, not a runtime failure.
+- Check that your regex cannot match the empty string; such patterns are rejected
+  at `Token` construction time, not at parse time, so they cannot cause a silent runtime failure.
 - Check longest-match interactions. If `id: /[a-z]+/` is declared before `if: /if/`,
   `if` will be returned as `id("if")`, not as `keyword_if("if")`, because both patterns
   match two characters and `id` is declared first.
@@ -1679,6 +1738,10 @@ public final class CoverageTest {
   named tokens from `tokens`. To make a keyword take priority over an identifier
   pattern, either declare the keyword first in `tokens`, or rely on the automatic
   literal promotion.
+- When using context-sensitive lexing (the parser drives the iterator), only patterns
+  whose token name is expected in the current parser state are tried.
+  If a token is never expected at the position where it appears, it will not match
+  even if the regex otherwise succeeds.
 
 ### Shift/reduce conflicts ("My grammar is on fire")
 
@@ -1757,7 +1820,11 @@ Migration notes:
 
 ### 2) Parser rules migration
 
-ANTLR (precedence by rule layering):
+ANTLR encodes operator precedence implicitly via rule-alternative ordering
+(earlier alternative = higher precedence within a rule).
+LazyLR requires an explicit `precedence` section instead.
+
+ANTLR:
 ```antlr
 expr
     : expr '*' expr  # MulExpr
@@ -1780,14 +1847,16 @@ grammar {
 ```
 
 Migration notes:
-- ANTLR encodes precedence via rule-alternative ordering (earlier = higher precedence within a rule)
-  and numeric `<assoc=right>` annotations.
-  LazyLR uses an explicit `precedence` section, convert the implicit ordering into explicit levels.
+- ANTLR encodes precedence via rule-alternative ordering (earlier = higher precedence within a rule).
+  LazyLR uses an explicit `precedence` section; convert the implicit ordering into explicit levels.
+  Use `right:` in the `precedence` section in place of ANTLR's `<assoc=right>` annotation.
+  Run `mg.verify()` to discover them.
 - ANTLR supports rule labels (`# MulExpr`); these become `@ProductionName` annotations
   in LazyLR.
-- ANTLR rule alternatives with no explicit precedence annotation are unambiguous in
-  ANTLR's LL(*) framework; they may need precedence annotations in LazyLR's LR framework.
-  Run `mg.verify()` to discover them.
+- ANTLR lexer modes have no direct LazyLR equivalent.
+  The closest approximation is context-sensitive lexing: because the LazyLR lexer
+  restricts candidate patterns to those expected by the current parser state,
+  you can often achieve mode-like behavior by structuring the grammar appropriately.
 
 ### 3) Actions and visitors migration
 
