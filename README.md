@@ -54,7 +54,7 @@ operator precedence, associativity, and production precedence with `%prec`.
 
 See the [Javadoc Reference](https://jitpack.io/com/github/forax/lazylr/latest/javadoc/).
 
-For the Reference Manual, see the [LazyLR Reference Manual](docs/lazylr-reference.md).
+For the Reference Manual, see the [LazyLR Reference Manual](lazylr-reference.md).
 
 ## Getting Started
 
