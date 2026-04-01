@@ -136,41 +136,196 @@ System.out.println(ast);
 
 ## Conceptual Overview
 
-LazyLR is a *bottom-up* (LR) parser. Understanding its internal flow helps interpret both
-successful parses and error messages.
+LazyLR is a *bottom-up* (LR) parser.
+Understanding its internal flow helps interpret both successful parses and error messages.
 
-### Bottom-up parsing
+### A brief history
 
-When the parser encounters terminals, it does not try to match a rule from the top down.
-Instead, it uses a *shift/reduce* loop:
+LR parsing was invented by Donald Knuth in 1965, in his paper *"On the Translation of Languages
+from Left to Right"*. The "LR" stands for scanning the input **L**eft-to-right while constructing
+a **R**ightmost derivation in reverse. Knuth's insight was that a parser could make correct decisions
+using only a bounded amount of lookahead; one token, in the LR(1) case; by maintaining a
+carefully constructed state machine.
+This theoretical foundation underlies most of the production-grade compiler and parser generator in use today.
 
-- **Shift**: consume the next input token and push it on an internal stack.
-- **Reduce**: when the top of the stack matches the body of a production, pop those
-  symbols and replace them with the production's head non-terminal.
+### The grammar we'll use as a running example
 
-Events fire in this order: all shifts and inner reductions for the children of a node
-happen *before* the reduction for the node itself. This is why `Evaluator.evaluate(Terminal)`
-fires before `Evaluator.evaluate(Production, List)` for any given subtree.
+Let's use the same tiny arithmetic grammar as above as our running example,
+so every concept has a concrete anchor:
+
+```
+tokens {
+  num: /[0-9]+/
+  /[ ]+/
+}
+precedence {
+  left: '+'
+  left: '*'
+}
+grammar {
+  E : num
+  E : E '+' E
+  E : E '*' E
+}
+```
+
+We'll parse the input `1 + 2 * 3`.
+The correct result honoring the precedence declarations (* is more important than +)
+should group as `1 + (2 * 3)`.
+
+### Terminals, non-terminals, and productions
+
+Before anything else, let's be precise about the three building blocks of a grammar.
+
+A **terminal** is a concrete token that actually appears in the input stream: `num`, `+`, `*`.
+They are the *leaves* of any parse tree. The lexer produces them; the parser consumes them.
+
+A **non-terminal** is a named abstraction; a *variable* in the grammar; that stands for
+a phrase structure. `E` (expression) is the only non-terminal in our example.
+Non-terminals never appear in raw input; they are created during parsing by grouping terminals and
+smaller non-terminals together.
+
+A **production** is a rewrite rule that says what a non-terminal can expand into.
+Our grammar has three:
+
+| Production name | Meaning                                      |
+|-----------------|----------------------------------------------|
+| `E : num`       | A single number literal is an expression     |
+| `E : E + E`     | Two expressions joined by `+` form a new one |
+| `E : E * E`     | Two expressions joined by `*` form a new one |
+
+The first production listed in the `grammar` section is special: its head non-terminal
+(`E` here) becomes the **start symbol**, the goal the parser works toward.
+
+### Top-down vs bottom-up parsing: what's the difference?
+
+There are two broad families of parsing strategies.
+
+**Top-down** parsers (like recursive-descent, LL, or ANTLR's LL(*)) start from the start
+symbol and try to predict which production to apply before reading any input, expanding
+the grammar downward toward the terminals. This feels intuitive; it mirrors how you might
+read a grammar rule; but it struggles with left-recursive productions like `E : E '+' E`
+and requires reading several tokens in advance to choose between alternatives early.
+
+**Bottom-up** parsers (like LR) work in the opposite direction. They read the input
+left-to-right and, as they accumulate tokens, they look for an opportunity to *recognize*
+a production's right-hand side in what they've already seen and fold it up into a non-terminal.
+They never need to predict; they only need to *decide* what to do with what is already on the stack.
+Left-recursive grammars are handled naturally because the recursion is resolved as input arrives.
+
+### The shift/reduce loop: the heart of LR parsing
+
+An LR parser maintains two data structures:
+
+- A **stack** of grammar symbols and parser states accumulated so far.
+- A **lookahead token**: the next terminal in the input that hasn't been consumed yet.
+
+At each step the parser consults a state (built from the grammar) and makes one of two moves:
+
+**Shift** — consume the lookahead token, push it onto the stack, and advance to the next
+input token.
+
+**Reduce** — when the top of the stack matches the entire right-hand side of some production,
+pop those symbols off the stack and replace them with the production's head non-terminal.
+This is the step that recognizes that a phrase has been fully parsed.
+
+The parser keeps shifting and reducing until it either accepts (the start symbol is on the
+stack and the input is exhausted) or encounters an error.
+
+### Tracing `1 + 2 * 3` step by step
+
+Let's trace every move the parser makes. The stack grows to the right; `$` represents
+end-of-input.
+
+The lexer produces: `num(1)`, `+`, `num(2)`, `*`, `num(3)`, `$`.
+
+
+| Stack                    | Lookahead | Action                                          |
+|--------------------------|-----------|-------------------------------------------------|
+|                          | num(1)    | Shift num                                       |
+| num(1)                   | +         | Reduce E : num        -> E(1)                   |
+| E(1)                     | +         | Shift +                                         |
+| E(1)  +                  | num(2)    | Shift num                                       |
+| E(1)  +  num(2)          | *         | Reduce E : num        -> E(2)                   |
+| E(1)  +  E(2)            | *         | Shift *    (precedence: * > +, so keep reading) |
+| E(1)  +  E(2)  *         | num(3)    | Shift num                                       |
+| E(1)  +  E(2)  *  num(3) | $         | Reduce E : num        -> E(3)                   |
+| E(1)  +  E(2)  *  E(3)   | $         | Reduce E : E * E      -> E(2*3)                 |
+| E(1)  +  E(2*3)          | $         | Reduce E : E + E      -> E(1+(2*3))             |
+| E(1+(2*3))               | $         | Accept                                          |
+
+
+Notice the crucial moment at step 6: the stack holds `E + E` and the lookahead is `*`.
+The parser could reduce `E + E` right now (giving `(1+2)`) or shift `*` first.
+Because `*` has higher precedence than `+`, the parser shifts, deferring the addition
+until after the multiplication is resolved.
+This is exactly how precedence declarations control the parse.
+
+### How the parser decides: the action table
+
+The parser never actually thinks about precedence directly at runtime.
+Instead, when LazyLR builds a parser state, it pre-computes for each (state, terminal) pair
+what action to take.
+The precedence rules are baked into these decisions during state construction.
+When the same (state, terminal) pair can lead to either a shift or a reduce,
+and both choices are valid from a pure grammar standpoint,
+that is a **shift/reduce conflict**.
+The `precedence` section resolves such conflicts: higher precedence favors shifting;
+`left` associativity at equal precedence favours reducing; `right` associativity
+favours shifting.
+
+If a conflict cannot be resolved; because neither side has a declared precedence;
+the parser throws `ParsingException` at runtime when it hits that situation.
 
 ### Lazy state construction
 
 A traditional LR table-driven parser pre-computes every possible parser state from the
-grammar before any input is seen. LazyLR instead computes states on demand: the first
-time the parser visits a (state, symbol) pair, it builds the next state, caches it, and
-never recomputes it. States built in one `parse()` call are reused in later calls
-on the same `Parser` instance.
+grammar before any input is seen. For large grammars (like SQL), this can mean thousands
+of states computed upfront, even if most of them are never reached for any given input.
+
+LazyLR instead computes states on demand: the first time the parser visits a
+(state, symbol) pair, it builds the next state, caches it, and never recomputes it.
+States built in one `parse()` call are reused in later calls on the same `Parser` instance.
+For a grammar like the PostgreSQL grammar included in the test suite;
+with hundreds of productions and tokens; this means the first parse may trigger state
+construction for the productions it exercises, while productions for rarely used SQL
+clauses never generate states at all unless the parser actually encounters them.
+
+The practical consequence is that `Parser.createParser(grammar,precedenceMap)`
+is not expensive regardless of grammar size.
+The startup cost is proportional to what your inputs actually need, not to the total grammar.
 
 ### LR(1) parser vs LALR(1) analysis
 
-LazyLR's `Parser` uses $LR(1)$ algorithm while `LALRVerifier` uses
-the classic $LALR(1)$ algorithm from [DeRemer and Pennello](https://en.wikipedia.org/wiki/LALR_parser).
+LazyLR's `Parser` uses the LR(1) algorithm while `LALRVerifier` uses the classic LALR(1)
+algorithm from [DeRemer and Pennello](https://en.wikipedia.org/wiki/LALR_parser).
 This makes the parser strictly more powerful than the verifier.
-Some grammars that are LR(1) but not LALR(1) will show
-reduce/reduce conflicts in the verifier output, yet parse correctly at runtime.
 
-The reason to do a LALR(1) analysis and not a full LR(1) analysis is that, on large
-grammars, doing a full LR(1) analysis takes too much time.
+LR(1) keeps lookahead information *per-state*: two parser states with the same "position"
+in the grammar but with different lookahead sets remain separate.
+LALR(1) merges those two states, which can introduce reduce/reduce conflicts
+that the full LR(1) automaton would not have.
+
+Some grammars that are LR(1) but not LALR(1) will show reduce/reduce conflicts
+in the verifier output, yet parse correctly at runtime.
 In production, you should still resolve all reported conflicts from the LALR(1) analysis for safety.
+The reason to use LALR(1) for verification rather than the full LR(1) analysis is that,
+on large grammars, a full LR(1) analysis can produce an exponentially larger state machine and
+takes much longer to compute.
+
+### Bottom-up events: why reductions fire from the inside out
+
+Because the parser works bottom-up, **inner reductions always fire before outer ones**.
+In our example, `E : num` fires three times (once for each literal) before any `E : E * E`
+or `E : E + E` reduction fires.
+This is what you observe in `ParserListener` callbacks, and it is why
+`Evaluator.evaluate(Terminal)` always runs before`Evaluator.evaluate(Production, List)`
+for the production that contains that terminal.
+
+When building an AST, this means your leaf nodes (`NumLit`, `Literal`, etc.) are always
+constructed first, and your inner nodes (`BinaryOp`, etc.) receive already-constructed
+children as arguments.
+The tree builds from the leaves upward, naturally.
 
 ---
 
