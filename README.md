@@ -46,7 +46,7 @@ This is especially useful when:
   Efficient handling of large grammars (like SQL) where only a specific subset
   of productions is needed for a given task.
 
-## Tutorial
+## Tutorial and Reference
 
 The [demo](src/main/demo/README.md) walks you through using LazyLR to build a grammar
 from scratch in steps, starting from a single-number parser and progressing through recursion,
@@ -54,7 +54,7 @@ operator precedence, associativity, and production precedence with `%prec`.
 
 See the [Javadoc Reference](https://jitpack.io/com/github/forax/lazylr/latest/javadoc/).
 
-For the reference manual, see the [LazyLR Reference Manual](docs/lazylr-reference.md).
+For the Reference Manual, see the [LazyLR Reference Manual](docs/lazylr-reference.md).
 
 ## Getting Started
 
