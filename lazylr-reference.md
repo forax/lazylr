@@ -54,7 +54,7 @@ so they can iterate quickly on a grammar.
 - Typed semantic actions through a reflection-backed visitor layer.
 - A CLI for validation, grammar debugging via automaton printing, and Java source generation.
 - Context-sensitive lexing: the lexer uses the parser's current state to decide which token regexes
-  are valid candidates, reducing spurious matches.
+  are valid candidates, reducing spurious matches. 
 - Coverage tracking: `parser.coverage()` returns the set of productions that have been reduced at least once,
   useful for verifying test coverage of a grammar.
 
@@ -393,10 +393,12 @@ Within each group (named and unnamed), tokens appear in declaration order.
 #### Context-sensitive lexing
 
 When the iterator is driven by `Parser.parse(...)`, the lexer uses the parser's current
-state to restrict which token patterns are eligible at each position. Only patterns whose
-token name is expected by the current parser state are considered. If no eligible pattern
-matches, the lexer retries with all patterns as a fallback, so that the parser can
-produce a more informative "unexpected terminal" error rather than an opaque lexing error.
+state to restrict which token patterns are eligible at each position.
+Only patterns whose token name is expected by the current parser state are considered.
+The set of eligible patterns per parser state is lazily cached while parsing.
+If no eligible pattern matches, the lexer retries with all patterns as a fallback,
+so that the parser can produce a more informative "unexpected terminal" error rather
+than an opaque lexing error.
 
 #### Example
 
@@ -423,18 +425,19 @@ For input `if`, `keyword_if` matches two characters and `id` also matches two ch
 
 ```text
 precedence {
-  left:  symbol, symbol, ...    // level N (lowest first)
-  right: symbol, symbol, ...    // level N+1
+  left:  name, name, ...    // level N (lowest first)
+  right: name, name, ...    // level N+1
   ...
 }
 ```
 
 Each line declares one precedence level. **Later lines have strictly higher precedence.**
-Multiple terminals can share the same level by separating them with commas.
-Symbols can be:
+Multiple names can share the same level by separating them with commas.
+During conflict resolution, only the relative order of the names matters.
 
+Names can be:
 - Quoted literals (e.g., `'+'`), must also appear in the `grammar` section.
-- Token names defined in the `tokens` section (e.g., `plus`).
+- Token names defined in the `tokens` section (e.g., `plus, 'id`).
 - Arbitrary identifiers used only as targets for `%prec` in the `grammar` section
   (virtual tokens, they are never emitted by the lexer).
 
@@ -603,9 +606,9 @@ Lexer lexer = Lexer.createLexer(tokens);  // thread-safe, share freely
 Iterator<Terminal> iterator = lexer.tokenize("12 + 34");
 ```
 
-The returned `Iterator<Terminal>` is lazy: input is scanned only when `hasNext()` or
-`next()` is called. The `Lexer` itself is immutable and thread-safe; you can call
-`tokenize(...)` from multiple threads simultaneously.
+The `Lexer` itself is immutable and thread-safe; you can call `tokenize(...)` from multiple threads simultaneously.
+The returned `Iterator<Terminal>` is lazy: input is scanned only when `hasNext()` or`next()` is called.
+This iterator is not thread-safe and must be used only from the thread that have called `tokenize(...)`.
 
 #### Matching rules (detailed)
 
@@ -657,6 +660,8 @@ the grammar placeholder `Terminal("num")`in the parser's internals.
 assertEquals(new Terminal("num", "42"), new Terminal("num"));  // true
 assertEquals(new Terminal("num", "1"),  new Terminal("num", "2")); // also true
 ```
+
+Both `Terminal` and `NonTerminal` implement `Symbol`, to be used as right-hand sides of productions.
 
 Special sentinel terminals (used internally):
 - `Terminal.EOF` (`"$"`), appended by the parser after the last user token.
@@ -1421,14 +1426,14 @@ resolved by appending a numeric suffix (`t__1`, `t__2`, ...).
 | Class                                   | Thread safety                                                            |
 |-----------------------------------------|--------------------------------------------------------------------------|
 | `MetaGrammar`                           | Immutable; fully thread-safe                                             |
-| `Grammar`                               | Immutable; fully thread-safe                                             |
 | `Token`                                 | Immutable; fully thread-safe                                             |
 | `Lexer`                                 | Immutable; fully thread-safe; `tokenize()` may be called from any thread |
+| `Iterator<Terminal>` (from `Lexer`)     | Single-threaded; one per `tokenize()` call; **not** thread-safe          |
 | `Terminal`, `NonTerminal`, `Production` | Immutable; fully thread-safe                                             |
+| `Grammar`                               | Immutable; fully thread-safe                                             |
 | `Precedence`                            | Immutable; fully thread-safe                                             |
 | `ParserFactory`                         | Immutable; fully thread-safe                                             |
 | `Parser`                                | Bound to its creating thread; **not** thread-safe                        |
-| `Iterator<Terminal>` (from `Lexer`)     | Single-threaded; one per parse call                                      |
 
 ### Thread ownership of `Parser`
 
@@ -1490,14 +1495,24 @@ try (var scope = StructuredTaskScope.open()) {
 ### Recipe A: grammar verification test
 
 ```java
-import module java.base;
-import static org.junit.jupiter.api.Assertions.*;
-import org.junit.jupiter.api.Test;
-
 public final class GrammarValidationTest {
   @Test
+  public void ambiguousGrammarIsDetected() {
+    // no tokens section is needed when it's a pure grammar
+    var mg = MetaGrammar.load("""
+        grammar {
+          E : E '+' E
+          E : num
+        }
+        """);
+    var errors = new ArrayList<String>();
+    mg.verify(errors::add);
+    assertFalse(errors.isEmpty());
+    assertTrue(errors.getFirst().contains("shift/reduce"));
+  }
+  
+  @Test
   public void grammarIsLALR1() {
-    // not tokens section is needed when it's a pure grammar
     var mg = MetaGrammar.load("""
       precedence {
         left: '+'
@@ -1507,36 +1522,27 @@ public final class GrammarValidationTest {
         E : num
       }
       """);
-    assertDoesNotThrow(mg::verify);
-  }
-
-  @Test
-  public void ambiguousGrammarIsDetected() {
-    var mg = MetaGrammar.load("""
-      grammar {
-        E : E '+' E
-        E : num
-      }
-      """);
-    var errors = new ArrayList<String>();
-    mg.verify(errors::add);
-    assertFalse(errors.isEmpty());
-    assertTrue(errors.getFirst().contains("shift/reduce"));
+    var err = System.err;
+    var output = new ByteArrayOutputStream();
+    System.setErr(new PrintStream(output));
+    try {
+      mg.verify();
+    } finally {
+      System.setErr(err);
+    }
+    assertTrue(output.toString().isEmpty());
   }
 }
 ```
 
-### Recipe B: parser result test with visitor
+### Recipe B: parser result test with a visitor
 
 ```java
-import static org.junit.jupiter.api.Assertions.*;
-import org.junit.jupiter.api.Test;
-
 public final class ParseResultTest {
   sealed interface Node {}
   record Num(int value) implements Node {}
-  record Add(Node l, Node r) implements Node {}
-  record Mul(Node l, Node r) implements Node {}
+  record Add(Node left, Node right) implements Node {}
+  record Mul(Node left, Node right) implements Node {}
 
   static final class NodeVisitor implements Visitor<Node> {
     public Node num(Terminal t) { return new Num(Integer.parseInt(t.value())); }
@@ -1579,10 +1585,6 @@ public final class ParseResultTest {
 ### Recipe C: expected parse failure test
 
 ```java
-import module java.base;
-import static org.junit.jupiter.api.Assertions.*;
-import org.junit.jupiter.api.Test;
-
 public final class ParseFailureTest {
   static final MetaGrammar MG = MetaGrammar.load("""
     tokens {
@@ -1627,9 +1629,6 @@ public final class ParseFailureTest {
 ### Recipe D: coverage assertion
 
 ```java
-import static org.junit.jupiter.api.Assertions.*;
-import org.junit.jupiter.api.Test;
-
 public final class CoverageTest {
   @Test
   public void allProductionsExercised() {
@@ -1648,12 +1647,15 @@ public final class CoverageTest {
         E : E '*' E
       }
       """);
+    
+    var lexer = Lexer.createLexer(mg.tokens());
     var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
     var noop = new ParserListener() {
       public void onShift(Terminal t) {}
       public void onReduce(Production p) {}
     };
-    parser.parse(Lexer.createLexer(mg.tokens()).tokenize("1 + 2 * 3"), noop);
+    
+    parser.parse(lexer.tokenize("1 + 2 * 3"), noop);
     var allProductions = mg.grammar().productions();
     assertTrue(parser.coverage().containsAll(allProductions));
   }
@@ -1819,8 +1821,8 @@ public int addExpr(int left, int right) {
 ANTLR 4 supports left-recursive rules and resolves operator precedence within a single
 rule using alternative ordering. LazyLR handles left recursion naturally (LR parsers are
 designed for it) but requires an explicit `precedence` section for ambiguous grammars.
-Any grammar that is unambiguous in ANTLR because of alternative ordering should be
-accompanied by a corresponding `precedence` declaration in LazyLR.
+Ambiguous productions using operators resolved by alternative ordering in ANTLR will need
+`precedence` declaration in LazyLR; other structural ambiguities may require grammar restructuring.
 
 ### 5) Error handling migration
 
