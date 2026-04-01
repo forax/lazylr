@@ -19,13 +19,13 @@ optimized for fast development and iterative grammar evolution.
 1. [Introduction](#introduction)
 2. [Quick Start](#quick-start)
 3. [Conceptual Overview](#conceptual-overview)
-4. [Grammar DSL Reference (`MetaGrammar`)](#grammar-dsl-reference-metagrammar)
-5. [Lexing Reference (`Token`, `Lexer`, `Terminal`)](#lexing-reference-token-lexer-terminal)
-6. [Parsing Reference (`Grammar`, `Parser`, `ParserFactory`)](#parsing-reference-grammar-parser-parserfactory)
-7. [Semantic Actions](#semantic-actions) (`ParserListener`, `Evaluator` and `Visitor`)
+4. [Grammar DSL Reference](#grammar-dsl-reference)
+5. [Lexing Reference](#lexing-reference)
+6. [Parsing Reference](#parsing-reference)
+7. [Semantic Actions](#semantic-actions)
 8. [Precedence, Associativity, and Conflict Resolution](#precedence-associativity-and-conflict-resolution)
 9. [Error Reporting and Recovery Strategy](#error-reporting-and-recovery-strategy)
-10. [Automaton Inspection and Verification (`LALRVerifier`)](#automaton-inspection-and-verification-lalrverifier)
+10. [Automaton Inspection and Verification](#automaton-inspection-and-verification)
 11. [Command-Line Tool](#command-line-tool)
 12. [Code Generation](#code-generation)
 13. [Threading, Reentrancy, and Performance](#threading-reentrancy-and-performance)
@@ -331,7 +331,7 @@ The tree builds from the leaves upward, naturally.
 
 ---
 
-## Grammar DSL Reference (`MetaGrammar`)
+## Grammar DSL Reference
 
 The `MetaGrammar` text format has three named sections: `tokens`, `precedence`, `grammar`.
 Each section is optional and may appear more than once; multiple occurrences of the same section
@@ -354,7 +354,7 @@ grammar {
   E : E '+' E
   E : E '-' E
   E : E '*' E
-  E : '-' E %prec UMINUS
+  E : '-' E       %prec UMINUS
 }
 ```
 
@@ -566,7 +566,7 @@ the precedence map, and the grammar from scratch.
 
 ---
 
-## Lexing Reference (`Token`, `Lexer`, `Terminal`)
+## Lexing Reference
 
 ### `Token`
 
@@ -618,7 +618,7 @@ At each position the lexer:
    resumes immediately after it.
 4. If the winning pattern is named, a `Terminal(name, matchedText)` is returned.
 5. If no pattern matches and the input position is not at the end, a `Terminal.ERROR`
-   terminal is returned and iteration halts.
+   terminal is returned with an error message as value and iteration halts.
 
 #### Position tracking
 
@@ -628,30 +628,30 @@ recently returned terminal. It returns `-1` if the iterator is not created by `L
 
 ```java
 var iterator = lexer.tokenize("42 + 113");
-iterator.next();                          // "42"
+iterator.next();                               // "42"
 System.out.println(Lexer.position(iterator));  // 0
-iterator.next();                          // "+"
+iterator.next();                               // "+"
 System.out.println(Lexer.position(iterator));  // 3
 ```
 
-This is primarily used inside `Evaluator.evaluate(Terminal)` to attach source positions
-to AST nodes. Use `mg.parse(input, visitorFactory)` so the visitor receives the same
-iterator instance that the parser is consuming.
+This is primarily used inside `Evaluator.evaluate(Terminal)` or `Visitor.xxx(Terminal)`
+to attach source positions to AST nodes.
+Use `mg.parse(input, visitorFactory)` so the visitor receives the same iterator instance that the parser is consuming.
 
 ### `Terminal`
 
 The class `Terminal` is immutable and represents either:
 - A **grammar-level placeholder** (no value): `new Terminal("num")`, used in `Production` bodies.
-- A **lexer-produced token** (with value): `new Terminal("num", "42")`, produced by `Lexer`.
+- A **lexer-produced token** (with a string value): `new Terminal("num", "42")`, produced by `Lexer`.
 
 Construction validates:
 - `null` name -> `NullPointerException`.
 - Empty name -> `IllegalArgumentException`.
-- `null` value for a named token -> `NullPointerException`.
+- `null` value for a lexer token -> `NullPointerException`.
 
-Two terminals are **equal if their names match**, regardless of value. This is what allows
-a lexer-produced `Terminal("num", "42")` to match the grammar placeholder `Terminal("num")`
-in the parser's action table.
+Two terminals are **equal if their names match**, regardless of value.
+This is what allows a lexer-produced `Terminal("num", "42")` to match
+the grammar placeholder `Terminal("num")`in the parser's internals.
 
 ```java
 assertEquals(new Terminal("num", "42"), new Terminal("num"));  // true
@@ -665,7 +665,7 @@ Special sentinel terminals (used internally):
 
 ---
 
-## Parsing Reference (`Grammar`, `Parser`, `ParserFactory`)
+## Parsing Reference
 
 ### `Grammar`
 
@@ -1226,7 +1226,7 @@ so it can be re-used.
 
 ---
 
-## Automaton Inspection and Verification (`LALRVerifier`)
+## Automaton Inspection and Verification
 
 ### When to run verification
 
