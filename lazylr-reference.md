@@ -437,7 +437,7 @@ During conflict resolution, only the relative order of the names matters.
 
 Names can be:
 - Quoted literals (e.g., `'+'`), must also appear in the `grammar` section.
-- Token names defined in the `tokens` section (e.g., `plus, 'id`).
+- Token names defined in the `tokens` section (e.g., `plus`, `id`).
 - Arbitrary identifiers used only as targets for `%prec` in the `grammar` section
   (virtual tokens, they are never emitted by the lexer).
 
@@ -607,8 +607,8 @@ Iterator<Terminal> iterator = lexer.tokenize("12 + 34");
 ```
 
 The `Lexer` itself is immutable and thread-safe; you can call `tokenize(...)` from multiple threads simultaneously.
-The returned `Iterator<Terminal>` is lazy: input is scanned only when `hasNext()` or`next()` is called.
-This iterator is not thread-safe and must be used only from the thread that have called `tokenize(...)`.
+The returned `Iterator<Terminal>` is lazy: input is scanned only when `hasNext()` or `next()` is called.
+This iterator is not thread-safe and must be used only from the thread that has called `tokenize(...)`.
 
 #### Matching rules (detailed)
 
@@ -654,7 +654,7 @@ Construction validates:
 
 Two terminals are **equal if their names match**, regardless of value.
 This is what allows a lexer-produced `Terminal("num", "42")` to match
-the grammar placeholder `Terminal("num")`in the parser's internals.
+the grammar placeholder `Terminal("num")` in the parser's internals.
 
 ```java
 assertEquals(new Terminal("num", "42"), new Terminal("num"));  // true
@@ -1701,8 +1701,8 @@ public final class CoverageTest {
   it always includes the correct string.
 - The return type must not be `void`. Returning `null` is fine;
   `void` is rejected at the visitor creation time.
-- If a terminal method unconditionally returns `null`, that terminal's value is passed
-  as a parameter to production methods. You want to remove that method.
+- If a terminal method unconditionally returns `null`, that terminal's value is not useful;
+  remove that method so the terminal is filtered out of production method parameters.
 - Static and private methods are silently ignored. Public instance methods are required.
 
 ### `WrongThreadException` at parse time
