@@ -125,10 +125,6 @@ System.out.println(ast);
 ### API highlights
 
 - `MetaGrammar.load(String text)` parses the MetaGrammar DSL text.
-- `mg.tokens()` returns the token list in lexer priority order (or an empty list if no `tokens` section).
-- `mg.hasGrammar()` returns `true` if a non-empty `grammar` section was present.
-- `mg.grammar()` returns the `Grammar` object, or throws `IllegalStateException` if absent.
-- `mg.precedenceMap()` returns the effective precedence table (or an empty map).
 - `mg.verify(...)` checks for unresolved LALR(1) conflicts.
 - `mg.parse(input, evaluatorOrVisitorOrVisitorFactory)` performs lexing then parsing in one call.
 
