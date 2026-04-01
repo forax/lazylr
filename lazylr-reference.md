@@ -142,11 +142,13 @@ Understanding its internal flow helps interpret both successful parses and error
 ### A brief history
 
 LR parsing was invented by Donald Knuth in 1965, in his paper *"On the Translation of Languages
-from Left to Right"*. The "LR" stands for scanning the input **L**eft-to-right while constructing
-a **R**ightmost derivation in reverse. Knuth's insight was that a parser could make correct decisions
-using only a bounded amount of lookahead; one token, in the LR(1) case; by maintaining a
-carefully constructed state machine.
-This theoretical foundation underlies most of the production-grade compiler and parser generator in use today.
+from Left to Right"*. The "LR" stands for scanning the input **L**eft-to-right while
+evaluating the grammar **R**ight-to-left in reverse.
+The parser starts from the tokens and evaluates larger grammar structures, step by step,
+until it reaches the start symbol.
+Knuth's insight was that a parser could make correct decisions using only a bounded amount of lookahead;
+one token, in the LR(1) case; by maintaining a carefully constructed state machine.
+This theoretical foundation underlies most of the production-grade compilers and parser generators in use today.
 
 ### The grammar we'll use as a running example
 
@@ -229,8 +231,8 @@ input token.
 pop those symbols off the stack and replace them with the production's head non-terminal.
 This is the step that recognizes that a phrase has been fully parsed.
 
-The parser keeps shifting and reducing until it either accepts (the start symbol is on the
-stack and the input is exhausted) or encounters an error.
+The parser keeps shifting to read the input and reducing to build the structure until it either accepts
+(the start symbol is on the stack and the input is exhausted) or encounters an error.
 
 ### Tracing `1 + 2 * 3` step by step
 
@@ -297,7 +299,7 @@ The startup cost is proportional to what your inputs actually need, not to the t
 
 ### LR(1) parser vs LALR(1) analysis
 
-LazyLR's `Parser` uses the LR(1) algorithm while `LALRVerifier` uses the classic LALR(1)
+LazyLR's `Parser` uses the LR(1) algorithm, while `LALRVerifier` uses the classic LALR(1)
 algorithm from [DeRemer and Pennello](https://en.wikipedia.org/wiki/LALR_parser).
 This makes the parser strictly more powerful than the verifier.
 
@@ -309,7 +311,7 @@ that the full LR(1) automaton would not have.
 Some grammars that are LR(1) but not LALR(1) will show reduce/reduce conflicts
 in the verifier output, yet parse correctly at runtime.
 In production, you should still resolve all reported conflicts from the LALR(1) analysis for safety.
-The reason to use LALR(1) for verification rather than the full LR(1) analysis is that,
+The reason to use LALR(1) for verification rather than full LR(1) analysis is that,
 on large grammars, a full LR(1) analysis can produce an exponentially larger state machine and
 takes much longer to compute.
 
@@ -319,7 +321,7 @@ Because the parser works bottom-up, **inner reductions always fire before outer 
 In our example, `E : num` fires three times (once for each literal) before any `E : E * E`
 or `E : E + E` reduction fires.
 This is what you observe in `ParserListener` callbacks, and it is why
-`Evaluator.evaluate(Terminal)` always runs before`Evaluator.evaluate(Production, List)`
+`Evaluator.evaluate(Terminal)` always runs before `Evaluator.evaluate(Production, List)`
 for the production that contains that terminal.
 
 When building an AST, this means your leaf nodes (`NumLit`, `Literal`, etc.) are always
