@@ -1768,6 +1768,9 @@ ANTLR and LazyLR can describe similar languages but differ in parser strategy
 
 ### 1) Lexer rules migration
 
+ANTLR tokens must start with an uppercase letter. 
+LazyLR tokens must be declared in the `tokens` section.
+
 ANTLR:
 ```antlr
 ID  : [a-zA-Z_][a-zA-Z_0-9]* ;
@@ -1795,9 +1798,39 @@ Migration notes:
 
 ### 2) Parser rules migration
 
-ANTLR encodes operator precedence implicitly via rule-alternative ordering
-(earlier alternative = higher precedence within a rule).
-LazyLR requires an explicit `precedence` section instead.
+ANTLR non-terminals must start with a lowercase letter.
+LazyLR non-terminals must be declared in the `grammar` section,
+non-terminals are the name on the left side of the colon.
+
+ANTLR supports rule labels (`# Paren`).
+LazyLR productions are matched by the production text in the `Evaluator`
+or using the annotations `@ProductionName` in the `Visitor`.
+
+ANTLR:
+```antlr
+expr
+    : '(' expr ')'       # Paren
+    | NUM                # Number
+    ;
+```
+
+LazyLR:
+```text
+grammar {
+  Expr : '(' Expr ')'
+  Expr : NUM
+}
+```
+
+Migration notes:
+- ANTLR supports direct left recursion only.
+  LazyLR supports left recursion (LR parsers are designed for that) and right recursion.
+
+### 3) Left recursion and ambiguity
+
+ANTLR 4 resolves operator precedence within a single rule using alternative ordering.
+LazyLR, in case of ambiguous grammars, requires converting the implicit ordering
+into explicit levels in the `precedence` section.
 
 ANTLR:
 ```antlr
@@ -1811,8 +1844,8 @@ expr
 LazyLR:
 ```text
 precedence {
-  left: '+'
-  left: '*'
+  left: '+'              // level 1: lower precedence
+  left: '*'              // level 2: higher precedence
 }
 grammar {
   Expr : Expr '+' Expr
@@ -1822,14 +1855,9 @@ grammar {
 ```
 
 Migration notes:
-- ANTLR encodes precedence via rule-alternative ordering (earlier = higher precedence within a rule).
-  LazyLR uses an explicit `precedence` section; convert the implicit ordering into explicit levels.
-  Use `right:` in the `precedence` section in place of ANTLR's `<assoc=right>` annotation.
-  Run `mg.verify()` to discover them.
-- ANTLR supports rule labels (`# MulExpr`); these become `@ProductionName` annotations
-  in LazyLR.
+- Use `right:` in the `precedence` section in place of ANTLR's `<assoc=right>` annotation.
 
-### 3) Actions and visitors migration
+### 4) Actions and visitors migration
 
 | ANTLR mechanism                          | LazyLR equivalent                                    |
 |------------------------------------------|------------------------------------------------------|
@@ -1844,7 +1872,7 @@ ANTLR visitor:
 ```java
 @Override
 public Integer visitAddExpr(MyParser.AddExprContext ctx) {
-    return visit(ctx.expr(0)) + visit(ctx.expr(1));
+  return visit(ctx.expr(0)) + visit(ctx.expr(1));
 }
 ```
 
@@ -1852,17 +1880,9 @@ LazyLR visitor:
 ```java
 @ProductionName("Expr : Expr + Expr")
 public int addExpr(int left, int right) {
-    return left + right;
+  return left + right;
 }
 ```
-
-### 4) Left recursion and ambiguity
-
-ANTLR 4 supports left-recursive rules and resolves operator precedence within a single
-rule using alternative ordering. LazyLR handles left recursion naturally (LR parsers are
-designed for it) but requires an explicit `precedence` section for ambiguous grammars.
-Ambiguous productions using operators resolved by alternative ordering in ANTLR will need
-`precedence` declaration in LazyLR; other structural ambiguities may require grammar restructuring.
 
 ### 5) Error handling migration
 
