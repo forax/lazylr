@@ -1660,6 +1660,11 @@ public final class ParseFailureTest {
 
 ```java
 public final class CoverageTest {
+  static final class NoOpParserListener implements ParserListener {
+    public void onShift(Terminal t) {}
+    public void onReduce(Production p) {}
+  }
+  
   @Test
   public void allProductionsExercised() {
     var mg = MetaGrammar.load("""
@@ -1680,10 +1685,7 @@ public final class CoverageTest {
     
     var lexer = Lexer.createLexer(mg.tokens());
     var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
-    var noop = new ParserListener() {
-      public void onShift(Terminal t) {}
-      public void onReduce(Production p) {}
-    };
+    var noop = new NoOpParserListener();
     
     parser.parse(lexer.tokenize("1 + 2 * 3"), noop);
     var allProductions = mg.grammar().productions();
