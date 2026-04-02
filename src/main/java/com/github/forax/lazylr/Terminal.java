@@ -83,6 +83,9 @@ public final class Terminal implements Symbol, PrecedenceEntity {
   }
 
   /// Returns whether the terminal has a value.
+  /// This method is not intended for general use but for debugging purposes.
+  /// This is unlikely that you want to mix a terminal from a grammar
+  /// and a terminal from the lexer.
   ///
   /// @return `true` if the terminal has a value, `false` otherwise.
   public boolean hasValue() {
