@@ -208,7 +208,8 @@ and requires reading several tokens in advance to choose between alternatives ea
 **Bottom-up** parsers (like LR) work in the opposite direction. They read the input
 left-to-right and, as they accumulate tokens, they look for an opportunity to *recognize*
 a production's right-hand side in what they've already seen and fold it up into a non-terminal.
-They never need to predict; they only need to *decide* what to do with what is already on the stack.
+They never need to predict which production to expand; they only need to *decide* what
+to do with what is already on the stack.
 Left-recursive grammars are handled naturally because the recursion is resolved as input arrives.
 
 ### The shift/reduce loop: the heart of LR parsing
@@ -385,9 +386,7 @@ character; patterns that can match the empty string are rejected at construction
 
 Quoted literals are collected from all `grammar` section rules across the
 entire input (in first-encounter order), then named tokens from `tokens`
-sections (in declaration order), then unnamed tokens from `tokens` sections
-(in declaration order).
-The ordering is always quoted literals -> named tokens -> unnamed tokens.
+sections (in declaration order), then unnamed tokens from `tokens` sections (in declaration order).
 This ensures that explicitly quoted operators like `'+'` are matched before user-defined
 identifiers, and that unnamed tokens are matched last.
 
@@ -666,12 +665,6 @@ Key methods:
 - `value()`, return the string value, or `null` for grammar-level placeholders.
 - `hasValue()`, return `true` if the terminal carries the matched string value
    produced by the lexer.
-
-`Terminal.hasValue()` distinguishes the two forms when needed:
-```java
-assertTrue(new Terminal("num", "42").hasValue());    // lexer-produced
-assertFalse(new Terminal("num").hasValue());         // grammar placeholder
- ```
 
 Two terminals are **equal if their names match**, regardless of value.
 This is what allows a lexer-produced `Terminal("num", "42")` to match
@@ -1274,11 +1267,10 @@ The recommended strategy is:
 
 1. Wrap `parse()` in a try-catch for `ParsingException`.
 2. Report the error with line/column context from the message.
-3. For incremental parsing (e.g., a REPL), create a fresh `Parser` for each independent
-   top-level unit and virtually add an `eof` token to the input iterator.
+3. For incremental parsing (e.g., a REPL), create a fresh `Parser` for each independent top-level unit.
 
 After a `ParsingException`, the `Parser` instance is guaranteed to be in a clean state,
-so it can be re-used.
+so it can be reused.
 
 ---
 
@@ -1564,6 +1556,8 @@ public final class GrammarValidationTest {
   
   @Test
   public void grammarIsLALR1() {
+    // This test redirect stderr, given that stderr is a global state in Java
+    // This code does not work if JUnit runs tests concurrently
     var mg = MetaGrammar.load("""
       precedence {
         left: '+'
