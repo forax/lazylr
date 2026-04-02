@@ -1809,8 +1809,10 @@ Migration notes:
 - `-> skip` maps to an unnamed regex token (no name, no Terminal emitted).
 - ANTLR uses implicit priority (longer match, then rule order); LazyLR uses the same
   longest-match-then-declaration-order rule.
-- ANTLR lexer modes have no direct equivalent; simulate with context-sensitive lexing
-  by structuring the grammar so that the parser state determines which tokens are valid.
+- ANTLR lexer modes have no direct LazyLR equivalent.
+  The closest approximation is context-sensitive lexing: because the LazyLR lexer
+  restricts candidate patterns to those expected by the current parser state,
+  you can sometimes achieve mode-like behavior by structuring the grammar appropriately.
 
 ### 2) Parser rules migration
 
@@ -1847,10 +1849,6 @@ Migration notes:
   Run `mg.verify()` to discover them.
 - ANTLR supports rule labels (`# MulExpr`); these become `@ProductionName` annotations
   in LazyLR.
-- ANTLR lexer modes have no direct LazyLR equivalent.
-  The closest approximation is context-sensitive lexing: because the LazyLR lexer
-  restricts candidate patterns to those expected by the current parser state,
-  you can often achieve mode-like behavior by structuring the grammar appropriately.
 
 ### 3) Actions and visitors migration
 
