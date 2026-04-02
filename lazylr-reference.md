@@ -1561,30 +1561,6 @@ public final class GrammarValidationTest {
     assertFalse(errors.isEmpty());
     assertTrue(errors.getFirst().contains("shift/reduce"));
   }
-  
-  @Test
-  public void grammarIsLALR1() {
-    // This test redirect stderr, given that stderr is a global state in Java
-    // This code does not work if JUnit runs tests concurrently
-    var mg = MetaGrammar.load("""
-      precedence {
-        left: '+'
-      }
-      grammar {
-        E : E '+' E
-        E : num
-      }
-      """);
-    var err = System.err;
-    var output = new ByteArrayOutputStream();
-    System.setErr(new PrintStream(output));
-    try {
-      mg.verify();
-    } finally {
-      System.setErr(err);
-    }
-    assertTrue(output.toString().isEmpty());
-  }
 }
 ```
 
