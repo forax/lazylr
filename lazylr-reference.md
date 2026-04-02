@@ -1275,7 +1275,8 @@ The recommended strategy is:
 
 1. Wrap `parse()` in a try-catch for `ParsingException`.
 2. Report the error with line/column context from the message.
-3. For incremental parsing (e.g., a REPL), create a fresh `Parser` for each independent top-level unit.
+3. For incremental parsing (e.g., a REPL), you can either reuse a `Parser`
+   or create a fresh one for each independent top-level unit.
 
 After a `ParsingException`, the `Parser` instance is guaranteed to be in a clean state,
 so it can be reused.
