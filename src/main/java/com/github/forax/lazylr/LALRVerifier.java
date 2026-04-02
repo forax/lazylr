@@ -681,6 +681,9 @@ public final class LALRVerifier {
   // Step 6: Conflict reporting
   // -----------------------------------------------------------------------
 
+  private static final String CONFLICT_UNRESOLVED = "\uD83D\uDD25";
+  private static final String CONFLICT_OVERRIDDEN = "\uD83D\uDEAB";
+
   private static boolean reportConflicts(List<Map<Terminal, Result>> actionTable,
                                          Consumer<? super String> errorReporter) {
     var conflicts = false;
@@ -768,9 +771,9 @@ public final class LALRVerifier {
               case Terminal terminal -> {
                 var result = stateActions.get(terminal);
                 var suffix = switch (result.winner()) {
-                  case null -> " 🔥";
+                  case null -> " " + CONFLICT_UNRESOLVED;
                   case Shift _ -> "";
-                  case Reduce _ -> " ❌";
+                  case Reduce _ -> " " + CONFLICT_OVERRIDDEN;
                   case Accept _ -> throw new AssertionError();
                 };
                 out.printf("   goto( %-20s ) → %d%s\n", terminal.name(), target, suffix);
@@ -815,9 +818,9 @@ public final class LALRVerifier {
                   .map(lookahead -> {
                     var result = stateActions.get(lookahead);
                     var suffix = switch (result.winner()) {
-                      case null -> " 🔥";      // unresolved conflict
+                      case null -> " " + CONFLICT_UNRESOLVED;
                       case Reduce(Production p) when p.equals(production) -> "";
-                      case Reduce _ -> " ❌";  // reduce lost to shift via precedence
+                      case Reduce _ -> " " + CONFLICT_OVERRIDDEN;  // reduce lost to shift via precedence
                       case Shift _ -> "";
                       case Accept _ -> throw new AssertionError();
                     };

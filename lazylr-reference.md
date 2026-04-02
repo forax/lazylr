@@ -240,13 +240,13 @@ The lexer produces: `num(1)`, `+`, `num(2)`, `*`, `num(3)`, `$`.
 
 | Stack                    | Lookahead | Action                                          |
 |--------------------------|-----------|-------------------------------------------------|
-|                          | num(1)    | Shift num                                       |
+|                          | num       | Shift num(1)                                    |
 | num(1)                   | +         | Reduce E : num        -> E(1)                   |
 | E(1)                     | +         | Shift +                                         |
-| E(1)  +                  | num(2)    | Shift num                                       |
+| E(1)  +                  | num       | Shift num(2)                                    |
 | E(1)  +  num(2)          | *         | Reduce E : num        -> E(2)                   |
 | E(1)  +  E(2)            | *         | Shift *    (precedence: * > +, so keep reading) |
-| E(1)  +  E(2)  *         | num(3)    | Shift num                                       |
+| E(1)  +  E(2)  *         | num       | Shift num(3)                                    |
 | E(1)  +  E(2)  *  num(3) | $         | Reduce E : num        -> E(3)                   |
 | E(1)  +  E(2)  *  E(3)   | $         | Reduce E : E * E      -> E(2*3)                 |
 | E(1)  +  E(2*3)          | $         | Reduce E : E + E      -> E(1+(2*3))             |
@@ -291,7 +291,7 @@ clauses never generate states at all unless the parser actually encounters them.
 
 The practical consequence is that `Parser.createParser(grammar,precedenceMap)`
 is not expensive regardless of grammar size.
-The startup cost is proportional to what your inputs actually need, not to the total grammar.
+The startup cost is proportional to what the inputs actually need, not to the total grammar.
 
 ### LR(1) parser vs LALR(1) analysis
 
@@ -1329,9 +1329,9 @@ Symbols:
 - `reduce(P) on [a, b, ...]` means production `P` is reduced when the lookahead is any of `a`, `b`, ...
 - `accept()` fires when the input is fully consumed and the start symbol has been reduced.
 - `🔥` marks an **unresolved conflict** (neither side wins; runtime will throw `ParsingException`).
-- `❌` marks a **resolved conflict** where that action was **not** selected
+- `🚫` marks a **resolved conflict** where that action was **not** selected
   (the winning action is shown without annotation).
-  For example, a shift `❌` means the reduce won via precedence.
+  For example, a shift `🚫` means the reduce won via precedence.
 
 ---
 

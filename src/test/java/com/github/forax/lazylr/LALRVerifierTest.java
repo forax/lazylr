@@ -468,7 +468,7 @@ public final class LALRVerifierTest {
            E :  E + E •
            E :  E • + E
           ······································
-           goto( +                    ) → 3 ❌
+           goto( +                    ) → 3 🚫
            reduce( E : E + E          ) on [$, +]
         
         """, output);
@@ -626,7 +626,7 @@ public final class LALRVerifierTest {
            E :  E • * E
           ······································
            goto( *                    ) → 4
-           goto( +                    ) → 3 ❌
+           goto( +                    ) → 3 🚫
            reduce( E : E + E          ) on [$, *, +]
         
         ── State 6 ─────────────────────────────────
@@ -634,8 +634,8 @@ public final class LALRVerifierTest {
            E :  E • + E
            E :  E • * E
           ······································
-           goto( *                    ) → 4 ❌
-           goto( +                    ) → 3 ❌
+           goto( *                    ) → 4 🚫
+           goto( +                    ) → 3 🚫
            reduce( E : E * E          ) on [$, *, +]
         
         """, output);
