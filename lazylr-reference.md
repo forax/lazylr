@@ -550,8 +550,9 @@ For example, the classic case is a unary operator sharing a terminal with a bina
 E : '-' E    %prec UMINUS
 ```
 
-`UMINUS` must appear somewhere in the `precedence` section.
-It does not need to correspond to any lexer token.
+`UMINUS` is a virtual token.
+It must appear somewhere in the `precedence` section but not in the `tokens` section.
+It does not correspond to any lexer token.
 
 #### Duplicate and self-referential rules
 
