@@ -597,7 +597,7 @@ var numToken = new Token("num", "[0-9]+");
 var wsToken = new Token("[ \t\n]+");
 ```
 
-Construction validates that the regex is well-formed and matches at least one character
+Construction validates that the regex is well-formed and matches at least one character.
 This prevents the lexer from looping infinitely at the same position.
 
 Key methods:
@@ -651,7 +651,7 @@ This is primarily used inside `Evaluator.evaluate(Terminal)` or `Visitor.xxx(Ter
 to attach source positions to AST nodes.
 Use `mg.parse(input, visitorFactory)` so the visitor receives the same iterator instance that the parser is consuming.
 
-**Tip:** the same iterator must be passed to both `Lexer.position(iterator)` and to `Parser.parse(iterator, ...)`.
+**Tip:** the same iterator must be passed to both `Lexer.position(iterator)` and `Parser.parse(iterator, ...)`.
 > Using `mg.parse(input, visitorFactory)` guarantees this automatically.
 > If you wire the lexer and parser manually, take care to pass the same `Iterator<Terminal>` instance to both.
 
@@ -811,7 +811,7 @@ Returns the set of productions reduced at least once across all `parse()` calls 
 instance. The set grows monotonically and is unmodifiable. Useful in tests to verify that
 all grammar rules are exercised.
 
-Note that coverage accumulates on the `Parser` instance. 
+Note that coverage accumulates on the `Parser` instance.
 To measure overall grammar coverage across many parses, reuse a single `Parser` instance
 on one thread, or merge the coverage sets from multiple parsers after the fact.
 
@@ -940,9 +940,10 @@ After an evaluator exception, the parser remains reusable.
 builds an `Evaluator` from them.
 The `Lookup` object taken as parameter should be created by `MethodHandles.lookup()`
 at a location in the code where the `Visitor` class is visible.
-Unlike `Visitor.reflect(...)`, the convenient method `mg.parse(input, visitor)` computes
-the `Lookup` object via a stack walk, so the visitor class has to be visible from the
-caller of the method `mg.parse(input, visitor)`.
+
+Unlike `Visitor.reflect(...)`, the convenient method `mg.parse(input, visitor)` asks
+the virtual machine to do a stack walk to compute the `Lookup` object.
+So, the visitor class must be visible from the caller of the method `mg.parse(input, visitor)`.
 
 The overload `mg.parse(input, visitorFactory)` creates the lexer iterator first,
 passes it to the factory to construct the visitor, then drives the parse.
@@ -993,7 +994,7 @@ Parameters correspond to the evaluated values of the body symbols, in left-to-ri
 `null` is a valid return value for production methods.
 
 If a terminal method exists, its return value *does* appear as a parameter in production methods.
-Otherwise, Terminals for which no terminal method was defined are **filtered out** and
+Otherwise, terminals for which no terminal method was defined are **filtered out** and
 do not appear as parameters. In the example above, there is no parameter for the '+' token.
 
 > **Important:** If the terminal method returns `null`, `null` is passed as argument
@@ -1096,8 +1097,8 @@ Node ast = mg.parse("1 + 2", PositionVisitor::new);
 
 ### Why conflicts arise
 
-The grammar `E : E '+' E` is ambiguous: given `1 + 2 + 3`, the parser cannot tell
-(without extra information) whether to reduce `1 + 2` first or `2 + 3` first.
+The grammar `E : E '+' E` is ambiguous: given `1 + 2 + 3`, the parser cannot tell,
+without extra information, whether to reduce `1 + 2` first or `2 + 3` first.
 This creates a shift/reduce conflict: after shifting `1`, `+`, `2`, the parser has `E + E`
 on its stack and sees another `+` as the lookahead.
 Should it reduce `E + E` to `E` (left-grouping), or shift the next `+` (right-grouping)?
