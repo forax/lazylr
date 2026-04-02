@@ -1087,6 +1087,9 @@ class PositionVisitor implements Visitor<Node> {
 Node ast = mg.parse("1 + 2", PositionVisitor::new);
 ```
 
+> GraalVM Native Image: When compiling using native image, do not use a `Visitor`
+> which internally uses the reflection API but use the `Evaluator` interface instead.
+
 ---
 
 ## Precedence, Associativity, and Conflict Resolution
