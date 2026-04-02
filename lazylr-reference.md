@@ -971,7 +971,8 @@ public Node num(Terminal t) {
 }
 ```
 
-If no method matches a terminal name, `null` is returned for that terminal.
+`null` is a valid return value for terminal methods. 
+If no method matches a terminal name, the terminal value is ignored.
 
 #### Production methods
 
@@ -987,21 +988,22 @@ public Node add(Node left, Node right) {
 ```
 
 Parameters correspond to the evaluated values of the body symbols, in left-to-right order.
-Terminals for which no terminal method was defined are **filtered out** and
-do not appear as parameters.
+`null` is a valid return value for production methods.
 
-> **Important:** if a terminal method exists, its return value *does* appear as a parameter 
-> in production methods.  If the terminal method returns `null`, `null` is passed.
-> If no terminal method is defined for a terminal, it is silently filtered out and does
-> not occupy a parameter slot.
-> 
-> This lets you use terminal values directly in production methods:
+If a terminal method exists, its return value *does* appear as a parameter in production methods.
+Otherwise, Terminals for which no terminal method was defined are **filtered out** and
+do not appear as parameters. In the example above, there is no parameter for the '+' token.
+
+> **Important:** If the terminal method returns `null`, `null` is passed as argument
+> to the production method.
 >
 > ```java
-> public boolean kw_else(Terminal t) { return true; } // contributes a boolean param
+> public String kw_else(Terminal t) { return null; }
 >
 > @ProductionName("Stmt : if ( Expr ) Stmt else Stmt")
-> public Stmt ifElse(Expr cond, Stmt then, boolean elseValue, Stmt else_) { ... }
+> public Stmt ifElse(Expr cond, Stmt then, String elseValue, Stmt else_) {
+>   // elseValue is null and there is no parameter for '(' and ')'  
+> }
 > ```
 
 #### Exception propagation

@@ -32,7 +32,7 @@ import java.util.stream.IntStream;
 /// A public method whose name matches a terminal name is called
 /// whenever that terminal is shifted.
 /// The method must take exactly one [Terminal] parameter.
-/// If no method matches a given terminal, `null` is returned for it.
+/// If no method matches a given terminal, the terminal value is ignored.
 ///
 /// ```java
 /// public Node num(Terminal terminal) {
@@ -46,7 +46,8 @@ import java.util.stream.IntStream;
 /// is reduced.
 /// Parameters correspond to the evaluated values
 /// of the production body symbols, in left-to-right order.
-/// If a symbol is a terminal and has no terminal method, its value is ignored.
+/// If a symbol is a terminal and there is no corresponding terminal method,
+/// the production method has no corresponding parameter.
 ///
 /// ```java
 /// @ProductionName("E : E + E")
