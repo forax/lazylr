@@ -26,7 +26,8 @@ final class Tokenizer implements Iterator<Terminal> {
   private final List<Token> tokens;
 
   private final Matcher[] matchers;
-  private final HashMap<LRTransitionEngine.State, BitSet> activatedCache;
+  // The Activation Table: State -> Set(token index)
+  private final HashMap<LRTransitionEngine.State, BitSet> activatedMap;
 
   private int matchIndex;
   private int terminalIndex;
@@ -39,7 +40,7 @@ final class Tokenizer implements Iterator<Terminal> {
     this.matchers = tokens.stream()
         .map(token -> token.pattern().matcher(input))
         .toArray(Matcher[]::new);
-    activatedCache = new HashMap<>();
+    activatedMap = new HashMap<>();
     super();
   }
 
@@ -170,7 +171,7 @@ final class Tokenizer implements Iterator<Terminal> {
   ///         or [Terminal#ERROR] if no pattern matches.
   public @Nullable Terminal pollTerminal(LRTransitionEngine.State state) {
     if (!computed) {
-      var activated = activatedCache.computeIfAbsent(state, this::computeActivated);
+      var activated = activatedMap.computeIfAbsent(state, this::computeActivated);
       terminal = nextTerminal(matchIndex, activated);
       computed = true;
     }
