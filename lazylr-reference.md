@@ -284,7 +284,9 @@ of states computed upfront, even if most of them are never reached for any given
 
 LazyLR instead computes states on demand: the first time the parser visits a
 (state, symbol) pair, it builds the next state, caches it, and never recomputes it.
+States are cached per `Parser` instance; a new `Parser` starts with an empty cache.
 States built in one `parse()` call are reused in later calls on the same `Parser` instance.
+
 For a grammar like the PostgreSQL grammar included in the test suite;
 with hundreds of productions and tokens; this means the first parse may trigger state
 construction for the productions it exercises, while productions for rarely used SQL
