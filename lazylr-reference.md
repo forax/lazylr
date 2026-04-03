@@ -960,7 +960,7 @@ class IntVisitor implements Visitor<Integer> {
   }
 
   @ProductionName("E : E * E")
-  public int add(int left, int right) {
+  public int mul(int left, int right) {
     return left * right;
   }
 }
