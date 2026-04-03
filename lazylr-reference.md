@@ -1556,8 +1556,8 @@ try (var scope = StructuredTaskScope.open()) {
 - `Parser` caches LR(1) states lazily; the first parse of a grammar explores more states
   than later parses. For large grammars with many distinct token streams,
   warm-up parses improve throughput.
-- The lexer is lazy; it only scans as much input as the parser demands. Context-sensitive
-  lexing further reduces work by skipping ineligible patterns.
+- The lexer is lazy; it only scans as much input as the parser demands.
+  Context-sensitive lexing further reduces work by skipping ineligible patterns.
 - The `Lexer` iterator caches the set of eligible token indices per parser state,
   so the per-token pattern selection cost is amortized over repeated states.
 
