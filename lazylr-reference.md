@@ -1106,7 +1106,7 @@ public int method(int param0, int param1) {
 The inferred types are derived from the return types of other visitor methods for the
 same non-terminals.
 
-#### GraalVM native-image support
+#### GraalVM Native Image compatibility
 
 When compiling using native image, do not use a `Visitor`which internally uses the reflection API
 but use the `Evaluator` interface instead.
