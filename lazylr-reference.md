@@ -945,28 +945,40 @@ Unlike `Visitor.reflect(...)`, the convenient method `mg.parse(input, visitor)` 
 the virtual machine to do a stack walk to compute the `Lookup` object.
 So, the visitor class must be visible from the caller of the method `mg.parse(input, visitor)`.
 
-The overload `mg.parse(input, visitorFactory)` creates the lexer iterator first,
-passes it to the factory to construct the visitor, then drives the parse.
-Use it whenever the visitor needs the iterator reference, most commonly
-for `Lexer.position(iterator)` calls inside terminal methods:
+#### Example: an integer visitor
 
 ```java
-class MyVisitor implements Visitor<Node> {
-  public MyVisitor(Iterator<Terminal> it) {
-    // store it
+class IntVisitor implements Visitor<Integer> {
+  @Override
+  public int num(Terminal t) {    // terminal method
+    return Integer.parseInt(t.value());
   }
-  // ...
+
+  @ProductionName("E : E + E")   // production method
+  public int add(int left, int right) {
+    return left + right;
+  }
+
+  @ProductionName("E : E * E")
+  public int add(int left, int right) {
+    return left * right;
+  }
 }
-// ...
-Node result = mg.parse(inputText, MyVisitor::new);
+...
+mg.parse(inputText, new IntVisitor());
 ```
 
-The `visitorFactory` is called exactly once per `mg.parse(...)` invocation.
+A visitor contains two kinds of methods:
+- **Terminal methods** are called on each terminal inside a production body.
+  They are called with the `Terminal` as argument.
+- **Production methods** are called on each production that matches the input.
+  They are called with the arguments of the production symbols as arguments.
 
 #### Terminal methods
 
 A public, non-void, non-static method whose **name equals a token name** is called when
 that token is shifted. The method must take exactly one `Terminal` parameter.
+If no method matches a terminal name, the terminal value is ignored.
 
 ```java
 public Node num(Terminal t) {
@@ -974,8 +986,7 @@ public Node num(Terminal t) {
 }
 ```
 
-`null` is a valid return value for terminal methods. 
-If no method matches a terminal name, the terminal value is ignored.
+`null` is a valid return value for terminal methods.
 
 #### Production methods
 
@@ -1009,12 +1020,6 @@ do not appear as parameters. In the example above, there is no parameter for the
 > }
 > ```
 
-#### Exception propagation
-
-Any `RuntimeException` thrown by either a terminal method or a production method
-propagates out of `parse()`. Checked exceptions are wrapped in `UndeclaredThrowableException`.
-After an exception, the parser can be reused.
-
 #### Single-body pass-through
 
 If a production has exactly one symbol in its body and **no `@ProductionName` method** is
@@ -1022,7 +1027,7 @@ defined for it, the single argument is forwarded automatically.
 This covers chain productions like `E : num` without requiring any code:
 
 ```java
-// No method needed for "E : num", the Num node is passed straight through.
+// No method needed for "E : num", the value of the terminal "num" is passed straight through.
 ```
 
 #### Repeatable `@ProductionName`
@@ -1037,6 +1042,40 @@ public int addOrSub(int a, int b) { return ...; }
 ```
 
 All listed production names are routed to the same method.
+
+#### Exception propagation
+
+Any `RuntimeException` thrown by either a terminal method or a production method
+propagates out of `parse()`. Checked exceptions are wrapped in `UndeclaredThrowableException`.
+After an exception, the parser can be reused.
+
+#### Accessing source positions inside a visitor
+
+The overload `mg.parse(input, visitorFactory)` creates the lexer iterator first,
+passes it to the factory to construct the visitor, then drives the parse.
+Use it whenever the visitor needs the iterator reference, most commonly
+for `Lexer.position(iterator)` calls inside terminal methods:
+
+```java
+class PositionVisitor implements Visitor<Node> {
+  private final Iterator<Terminal> input;
+
+  PositionVisitor(Iterator<Terminal> input) {
+    this.input = input;
+  }
+
+  public Node num(Terminal t) {
+    int pos = Lexer.position(input);   // start offset in the input string
+    return new NumLit(Integer.parseInt(t.value()), pos);
+  }
+  // ...
+}
+
+// Use the factory overload so the visitor gets the same iterator
+Node ast = mg.parse("1 + 2", PositionVisitor::new);
+```
+
+The `visitorFactory` is called exactly once per `mg.parse(...)` invocation.
 
 #### Validation at reflection time
 
@@ -1067,29 +1106,10 @@ public int method(int param0, int param1) {
 The inferred types are derived from the return types of other visitor methods for the
 same non-terminals.
 
-#### Accessing source positions inside a visitor
+#### GraalVM native-image support
 
-```java
-class PositionVisitor implements Visitor<Node> {
-  private final Iterator<Terminal> input;
-
-  PositionVisitor(Iterator<Terminal> input) {
-    this.input = input;
-  }
-
-  public Node num(Terminal t) {
-    int pos = Lexer.position(input);   // start offset in the input string
-    return new NumLit(Integer.parseInt(t.value()), pos);
-  }
-  // ...
-}
-
-// Use the factory overload so the visitor gets the same iterator
-Node ast = mg.parse("1 + 2", PositionVisitor::new);
-```
-
-> GraalVM Native Image: When compiling using native image, do not use a `Visitor`
-> which internally uses the reflection API but use the `Evaluator` interface instead.
+When compiling using native image, do not use a `Visitor`which internally uses the reflection API
+but use the `Evaluator` interface instead.
 
 ---
 
