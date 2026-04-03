@@ -239,19 +239,19 @@ end-of-input.
 The lexer produces: `num(1)`, `+`, `num(2)`, `*`, `num(3)`, `$`.
 
 
-| Stack                    | Lookahead | Action                                          |
-|--------------------------|-----------|-------------------------------------------------|
-|                          | num       | Shift num(1)                                    |
-| num(1)                   | +         | Reduce E : num        -> E(1)                   |
-| E(1)                     | +         | Shift +                                         |
-| E(1)  +                  | num       | Shift num(2)                                    |
-| E(1)  +  num(2)          | *         | Reduce E : num        -> E(2)                   |
-| E(1)  +  E(2)            | *         | Shift *    (precedence: * > +, so keep reading) |
-| E(1)  +  E(2)  *         | num       | Shift num(3)                                    |
-| E(1)  +  E(2)  *  num(3) | $         | Reduce E : num        -> E(3)                   |
-| E(1)  +  E(2)  *  E(3)   | $         | Reduce E : E * E      -> E(2*3)                 |
-| E(1)  +  E(2*3)          | $         | Reduce E : E + E      -> E(1+(2*3))             |
-| E(1+(2*3))               | $         | Accept                                          |
+| Step | Stack                    | Lookahead | Action                                          |
+|------|--------------------------|-----------|-------------------------------------------------|
+| 1    |                          | num       | Shift num(1)                                    |
+| 2    | num(1)                   | +         | Reduce E : num        -> E(1)                   |
+| 3    | E(1)                     | +         | Shift +                                         |
+| 4    | E(1)  +                  | num       | Shift num(2)                                    |
+| 5    | E(1)  +  num(2)          | *         | Reduce E : num        -> E(2)                   |
+| 6    | E(1)  +  E(2)            | *         | Shift *    (precedence: * > +, so keep reading) |
+| 7    | E(1)  +  E(2)  *         | num       | Shift num(3)                                    |
+| 8    | E(1)  +  E(2)  *  num(3) | $         | Reduce E : num        -> E(3)                   |
+| 9    | E(1)  +  E(2)  *  E(3)   | $         | Reduce E : E * E      -> E(2*3)                 |
+| 10   | E(1)  +  E(2*3)          | $         | Reduce E : E + E      -> E(1+(2*3))             |
+| 11   | E(1+(2*3))               | $         | Accept                                          |
 
 
 Notice the crucial moment at step 6: the stack holds `E + E` and the lookahead is `*`.
