@@ -54,9 +54,9 @@ so they can iterate quickly on a grammar.
 - Typed semantic actions through a reflection-backed visitor layer.
 - A CLI for validation, grammar debugging via automaton printing, and Java source generation.
 - Context-sensitive lexing: the lexer uses the parser's current state to decide which token regexes
-  are valid candidates, reducing spurious matches. 
+  are valid candidates, reducing spurious matches.
 - Coverage tracking: `parser.coverage()` returns the set of productions that have been reduced at least once,
-  useful for verifying test coverage of a grammar.
+  which is useful for verifying test coverage of a grammar.
 
 ### What it does *not* try to be
 
@@ -139,7 +139,7 @@ Understanding its internal flow helps interpret both successful parses and error
 
 LR parsing was invented by Donald Knuth in 1965, in his paper *"On the Translation of Languages
 from Left to Right"*. The "LR" stands for scanning the input **L**eft-to-right while
-evaluating the grammar **R**ight-to-left in reverse.
+evaluating the grammar rules **R**ight-to-left, in reverse.
 The parser starts from the tokens and evaluates larger grammar structures, step by step,
 until it reaches the start symbol.
 Knuth's insight was that a parser could make correct decisions using only a bounded amount of lookahead;
@@ -335,7 +335,7 @@ The tree builds from the leaves upward, naturally.
 The `MetaGrammar` text format has three named sections: `tokens`, `precedence`, `grammar`.
 Each section is optional and may appear more than once; multiple occurrences of the same section
 are merged in declaration order.
-Newlines separate lines within a section.
+Each rule must appear on its own line.
 Line comments starting with `//` are allowed anywhere.
 
 ```text
@@ -378,7 +378,7 @@ The `grammar` section defines the grammar rules.
 
 ```text
 tokens {
-  name: /regex/     // named token, emits a Terminal
+  name: /regex/     // named token, emits a terminal
   /regex/           // unnamed token, consumed and discarded
 }
 ```
@@ -590,7 +590,7 @@ The class `Token` encapsulates one lexer rule: a name and a regex pattern,
 or just a regex pattern for unnamed (skip) tokens.
 
 ```java
-// Named token, emits a Terminal when matched
+// Named token, emits a terminal when matched
 var numToken = new Token("num", "[0-9]+");
 
 // Unnamed token, consumed silently
@@ -1042,14 +1042,14 @@ All listed production names are routed to the same method.
 
 `Visitor.reflect(...)` validates all public methods on the visitor class immediately:
 
-- Return type `void` -> `IllegalStateException`.
-- Non-annotated method, terminal method, with parameter count != 1 or
-  parameter type != `Terminal` -> `IllegalStateException`.
-- Two methods annotated with the same production name -> `IllegalStateException`.
-- Static methods or private methods in the visitor class are silently ignored.
+- Static methods or private methods in the visitor class are ignored.
+- Terminal methods (methods not annotated by `@ProductionName`) must have exactly
+  one parameter of type `Terminal`.
+- Several different production methods cannot be annotated with the same `@ProductionName` value.
+- All terminal methods or production methods must not return `void`.
 
-Primitive return types and parameter types are accepted and handled transparently via
-boxing/unboxing.
+Primitive return types and parameter types are accepted and handled transparently
+via boxing/unboxing.
 
 #### Missing production message
 
@@ -1738,8 +1738,8 @@ public final class CoverageTest {
   it always includes the correct string.
 - The return type must not be `void`. Returning `null` is fine;
   `void` is rejected at visitor creation time.
-- If a terminal method unconditionally returns `null`, that terminal's value is not useful;
-  remove that method so the terminal is filtered out of production method parameters.
+- If you don't need a terminal's value in production methods, omit the terminal method entirely.
+  Terminals without matching visitor methods are automatically filtered from the parameter list.
 - Static and private methods are silently ignored. Public instance methods are required.
 
 ### `WrongThreadException` at parse time
@@ -1789,7 +1789,7 @@ tokens {
 ```
 
 Migration notes:
-- `-> skip` maps to an unnamed regex token (no name, no Terminal emitted).
+- `-> skip` maps to an unnamed regex token (no name, no terminal emitted).
 - ANTLR uses implicit priority (longer match, then rule order); LazyLR uses the same
   longest-match-then-declaration-order rule.
 - ANTLR lexer modes have no direct LazyLR equivalent.
