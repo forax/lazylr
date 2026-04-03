@@ -168,7 +168,7 @@ grammar {
 ```
 
 We'll parse the input `1 + 2 * 3`.
-The correct result honoring the precedence declarations (* is more important than +)
+The correct result honoring the precedence declarations (`*` is more important than `+`)
 should group as `1 + (2 * 3)`.
 
 ### Terminals, non-terminals, and productions
@@ -226,7 +226,7 @@ input token.
 
 **Reduce**, when the top of the stack matches the entire right-hand side of some production,
 pop those symbols off the stack and replace them with the production's head non-terminal.
-This is the step that recognizes that a phrase has been fully parsed.
+This is the step that recognizes a phrase has been fully parsed.
 
 The parser keeps shifting to read the input and reducing to build the structure until it either accepts
 (the start symbol is on the stack and the input is exhausted) or encounters an error.
@@ -273,7 +273,7 @@ The `precedence` section resolves such conflicts: higher precedence favors shift
 `left` associativity at equal precedence favours reducing; `right` associativity
 favours shifting.
 
-If a conflict cannot be resolved; because neither side has a declared precedence;
+If a conflict cannot be resolved, because neither side has a declared precedence,
 the parser throws `ParsingException` at runtime when it hits that situation.
 
 ### Lazy state construction
@@ -319,9 +319,9 @@ takes much longer to compute.
 Because the parser works bottom-up, **inner reductions always fire before outer ones**.
 In our example, `E : num` fires three times (once for each literal) before any `E : E * E`
 or `E : E + E` reduction fires.
-This is what you observe in `ParserListener` callbacks, and it is why
-`Evaluator.evaluate(Terminal)` always runs before `Evaluator.evaluate(Production, List)`
-for the production that contains that terminal.
+This is what you observe in `ParserListener` callbacks.
+This is also why `Evaluator.evaluate(Terminal)` always runs before `Evaluator.evaluate(Production, List)`
+for the production that contains this terminal.
 
 When building an AST, this means your leaf nodes (`NumLit`, `Literal`, etc.) are always
 constructed first, and your inner nodes (`BinaryOp`, etc.) receive already-constructed
@@ -466,8 +466,8 @@ This default can be overridden per-production with `%prec`.
 Resolution:
 - If the production has higher precedence -> reduce.
 - If the lookahead has higher precedence -> shift.
-- If equal precedence and `LEFT` associativity -> reduce.
-- If equal precedence and `RIGHT` associativity -> shift.
+- If equal precedence and `left` associativity -> reduce.
+- If equal precedence and `right` associativity -> shift.
 - If either side has no declared precedence -> unresolved conflict (parse error at runtime).
 
 #### Example
@@ -664,9 +664,9 @@ The class `Terminal` is immutable and represents either:
 Construction validates that the name is non-empty and that the value, if specified, is not `null`.
 
 Key methods:
-- `name()`, return the symbolic name.
-- `value()`, return the string value, or `null` for grammar-level placeholders.
-- `hasValue()`, return `true` if the terminal carries the matched string value
+- `name()`, returns the symbolic name.
+- `value()`, returns the string value, or `null` for grammar-level placeholders.
+- `hasValue()`, returns `true` if the terminal carries the matched string value
    produced by the lexer.
 
 Two terminals are **equal if their names match**, regardless of value.
@@ -980,7 +980,7 @@ If no method matches a terminal name, the terminal value is ignored.
 #### Production methods
 
 A public, non-void, non-static method annotated with `@ProductionName` is called when
-the named production is reduced. The value of the annotation must match `production.name()`
+the named production is reduced. The value of the annotation must match `Production.name()`
 exactly.
 
 ```java
@@ -1737,7 +1737,7 @@ public final class CoverageTest {
   Verify by printing `production.name()` or checking the missing-method error message;
   it always includes the correct string.
 - The return type must not be `void`. Returning `null` is fine;
-  `void` is rejected at the visitor creation time.
+  `void` is rejected at visitor creation time.
 - If a terminal method unconditionally returns `null`, that terminal's value is not useful;
   remove that method so the terminal is filtered out of production method parameters.
 - Static and private methods are silently ignored. Public instance methods are required.
