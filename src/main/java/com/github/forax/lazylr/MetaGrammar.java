@@ -563,7 +563,7 @@ public final class MetaGrammar {
                "Spec : Sections" ->
               null;
 
-          default -> throw new MatchException("unhandled production: " + p.name(), null);
+          default -> throw new AssertionError("unhandled production: " + p.name(), null);
         };
       }
     });
