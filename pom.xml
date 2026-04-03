@@ -88,6 +88,8 @@
                 <configuration>
                     <excludes>
                         <exclude>_*.class</exclude>
+                        <exclude>TreeEvaluator*.class</exclude>
+                        <exclude>PrintEvaluator*.class</exclude>
                     </excludes>
                     <archive>
                         <manifest>
@@ -95,6 +97,33 @@
                         </manifest>
                     </archive>
                 </configuration>
+            </plugin>
+
+            <plugin>
+                <groupId>org.moditect</groupId>
+                <artifactId>moditect-maven-plugin</artifactId>
+                <version>1.3.0.Final</version>
+                <executions>
+                    <execution>
+                        <id>add-module-info</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>add-module-info</goal>
+                        </goals>
+                        <configuration>
+                            <overwriteExistingFiles>true</overwriteExistingFiles>
+                            <module>
+                                <moduleInfoSource>
+                                  module com.github.forax.lazylr {
+                                    requires static org.jspecify;
+
+                                    exports com.github.forax.lazylr;
+                                  }
+                                </moduleInfoSource>
+                            </module>
+                        </configuration>
+                    </execution>
+                </executions>
             </plugin>
         </plugins>
     </build>
