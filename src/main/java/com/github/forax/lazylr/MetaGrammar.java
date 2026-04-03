@@ -230,7 +230,8 @@ public final class MetaGrammar {
     try {
       return MethodHandles.privateLookupIn(callerClass, MethodHandles.lookup());
     } catch (IllegalAccessException e) {
-      throw new IllegalStateException(e);
+      throw new IllegalStateException(
+          "The caller class module is not open, you may use Visitor.reflect(MethodHandles.lookup(), visitor) instead", e);
     }
   }
 
