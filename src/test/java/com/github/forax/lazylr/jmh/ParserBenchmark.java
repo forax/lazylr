@@ -71,7 +71,7 @@ public class ParserBenchmark {
     NOOP_LISTENER = listener;
   }
 
-  @Param({"10", "100", "1000", "10000", "100000"})
+  @Param(/*{"10", "100", "1000", "10000", "100000"}*/ {"1000"})
   public int terminalLength;
 
   private List<Terminal> terminals;
@@ -101,7 +101,7 @@ public class ParserBenchmark {
     PARSER.parse(terminals.iterator(), NOOP_LISTENER);
   }
 
-  @Benchmark
+  //@Benchmark
   public void lexerAndParser() {
     PARSER.parse(LEXER.tokenize(inputText), NOOP_LISTENER);
   }
