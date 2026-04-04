@@ -31,7 +31,8 @@ optimized for fast development and iterative grammar evolution.
 13. [Threading, Reentrancy, and Performance](#threading-reentrancy-and-performance)
 14. [End-to-End Recipes (with JUnit)](#end-to-end-recipes-with-junit)
 15. [Troubleshooting Checklist](#troubleshooting-checklist)
-16. [ANTLR-to-LazyLR Mapping Guide](#antlr-to-lazylr-mapping-guide)
+16. [ANTLR-to-LazyLR Migration Guide](#antlr-to-lazylr-migration-guide)
+17. [Lark-to-LazyLR Migration Guide](#lark-to-lazylr-migration-guide)
 
 ---
 
@@ -1782,7 +1783,7 @@ environment, but for toy examples, this is usually acceptable.
 
 ---
 
-## ANTLR-to-LazyLR Mapping Guide
+## ANTLR-to-LazyLR Migration Guide
 
 ANTLR and LazyLR can describe similar languages but differ in parser strategy
 (LL(*) vs LR(1)), grammar style, and action mechanism.
@@ -1927,3 +1928,295 @@ public int addExpr(int left, int right) {
 7. Port error listeners to try-catch blocks on `parse()`.
 8. Add JUnit tests for representative successful parses, expected failures, and
    conflict-free grammar verification.
+
+
+## Lark-to-LazyLR Migration Guide
+
+Lark is a Python parsing library that supports both Earley and LALR(1) parsing strategies,
+with a PEG-inspired grammar syntax. LazyLR is a Java runtime LR(1) parser library.
+This guide covers the most common migration patterns.
+
+---
+
+### 1) Grammar syntax mapping
+
+Lark uses a grammar format with EBNF conveniences.
+LazyLR uses a yacc-style format with explicit productions.
+
+Lark:
+```python
+grammarText = r"""
+    start: expr+
+    
+    expr:  expr "+" term   -> add
+         | term
+
+    term:  term "*" atom   -> mul
+         | atom
+
+    atom:  NUMBER
+         | "(" expr ")"
+
+    NUMBER: /[0-9]+/
+    %ignore /\s+/
+  """
+```
+
+LazyLR:
+```java
+var grammarText = """
+  tokens {
+    NUMBER: /[0-9]+/
+    /\s+/
+  }
+  precedence {
+    left: '+'
+    left: '*'
+  }
+  grammar {
+    Start  : Expr
+    Expr   : Expr '+' Term
+    Expr   : Term
+    Term   : Term '*' Atom
+    Term   : Atom
+    Atom   : NUMBER
+    Atom   : '(' Expr ')'
+  }
+  """;
+```
+
+Migration notes:
+- Lark rule names are lowercase by convention; LazyLR has no casing constraint for non-terminals.
+- Lark's `start` rule is implicit. In LazyLR, the **first production** in the `grammar` section
+  defines the start symbol.
+- Lark's `-> alias` labels (e.g., `-> add`) correspond to `@ProductionName` annotations in
+  a LazyLR `Visitor<V>`.
+- Lark's `%ignore` maps to unnamed token rules (no name prefix, no terminal emitted).
+- Lark's `%import common.NUMBER` style imports have no LazyLR equivalent; copy the
+  regex directly into the `tokens` section.
+
+### 2) EBNF operators
+
+Lark supports EBNF shorthands (`?`, `*`, `+`, `~n`) that LazyLR does not have.
+Each must be desugared into explicit nullable or recursive productions.
+
+| Lark EBNF    | Meaning             | LazyLR equivalent                                   |
+|--------------|---------------------|-----------------------------------------------------|
+| `rule?`      | zero or one         | Two productions: one with `rule`, one epsilon       |
+| `rule*`      | zero or more        | `List :` (epsilon) and `List : List rule`           |
+| `rule+`      | one or more         | `List : rule` and `List : List rule`                |
+| `~2..4`      | repetition range    | Expand manually into 2, 3, and 4-element productions|
+
+Example — `arg*` (zero or more arguments):
+
+Lark:
+```python
+  call: NAME "(" arg* ")"
+```
+
+LazyLR:
+```text
+grammar {
+  Call    : NAME '(' ArgList ')'
+  ArgList :               // epsilon; zero args
+  ArgList : ArgList Arg   // one or more args (left-recursive)
+}
+```
+
+Example — `item+` (one or more items):
+
+Lark:
+```python
+"items: item+"
+```
+
+LazyLR:
+```text
+grammar {
+  Items : Item            // base case
+  Items : Items Item      // left-recursive accumulation
+}
+```
+
+### 3) Terminals (tokens) migration
+
+Lark terminals are uppercase identifiers with regex bodies.
+LazyLR uses the `tokens` section with the same `name: /regex/` syntax.
+
+Lark:
+```python
+NAME    : /[a-zA-Z_]\w*/
+INT     : /[0-9]+/
+FLOAT   : /[0-9]+\.[0-9]*/
+NEWLINE : /\n/
+%ignore /[ \t]+/
+```
+
+LazyLR:
+```text
+tokens {
+  NAME:    /[a-zA-Z_]\w*/
+  INT:     /[0-9]+/
+  FLOAT:   /[0-9]+\.[0-9]*/
+  NEWLINE: /\n/
+  /[ \t]+/
+}
+```
+
+Migration notes:
+- Lark terminal priority is controlled by explicit `priority` declarations or by rule order.
+  LazyLR uses only the declaration order.
+
+### 4) Ambiguity and precedence
+
+When using Lark's LALR(1) backend, operator precedence is handled by grammar stratification
+(separate `expr`, `term`, `atom` rules).
+
+LazyLR requires explicit precedence declarations for ambiguous grammars, but also accepts
+stratified grammars without any `precedence` section.
+
+**Option A: Keep stratified grammar (no precedence section needed):**
+
+```text
+grammar {
+  Expr : Expr '+' Term
+  Expr : Term
+  Term : Term '*' Atom
+  Term : Atom
+  Atom : NUMBER
+  Atom : '(' Expr ')'
+}
+```
+
+**Option B: Flatten with explicit precedence (matches Earley/ambiguous Lark grammars):**
+
+```text
+precedence {
+  left: '+'
+  left: '*'
+}
+grammar {
+  Expr : Expr '+' Expr
+  Expr : Expr '*' Expr
+  Expr : NUMBER
+  Expr : '(' Expr ')'
+}
+```
+
+Option B is more compact but should be tested with `mg.verify()` to confirm there are no unresolved conflicts.
+
+### 5) Tree construction and semantic actions
+
+Lark automatically builds a `Tree` with named children that you traverse using a `Transformer`
+or `Visitor`. LazyLR requires you to define your own AST types and wire them up through
+an `Evaluator<V>` or `Visitor<V>`.
+
+**Lark Transformer:**
+```python
+from lark import Transformer
+
+class CalcTransformer(Transformer):
+    def NUMBER(self, token):
+        return int(token)
+
+    def add(self, args):
+        return args[0] + args[1]
+
+    def mul(self, args):
+        return args[0] * args[1]
+```
+
+**LazyLR Visitor:**
+```java
+final class CalcVisitor implements Visitor<Integer> {
+  public int NUMBER(Terminal t) {
+    return Integer.parseInt(t.value());
+  }
+
+  @ProductionName("Expr : Expr + Expr")
+  public int add(int left, int right) {
+    return left + right;
+  }
+
+  @ProductionName("Expr : Expr * Expr")
+  public int mul(int left, int right) {
+    return left * right;
+  }
+}
+```
+
+Migration notes:
+- Lark's `Transformer` methods receive a list of already-transformed children; LazyLR
+  production methods receive each child as a typed parameter directly.
+- Lark's `Tree.data` (rule alias) corresponds to the `@ProductionName` string in LazyLR.
+- Lark's `Token` (a terminal with a type and value) corresponds to LazyLR's `Terminal`
+  (with `name()` and `value()`).
+- Lark's `Discard` return value (to suppress a node) has no direct equivalent; in LazyLR,
+  omit the terminal method and the terminal will be filtered from production parameters.
+- For building an AST, define your node types as Java `sealed interface` and `record`
+  and return them from visitor methods.
+
+### 6) Inline rules and anonymous terminals
+
+Lark supports anonymous string literals directly inside rules (e.g., `"if"`, `"+"`).
+LazyLR does the same: quoted literals in the `grammar` section are automatically registered
+as terminals and added to the token list before named tokens.
+
+Lark:
+```python
+if_stmt: "if" expr "then" stmt
+```
+
+LazyLR:
+```text
+grammar {
+  IfStmt : 'if' Expr 'then' Stmt
+}
+```
+
+In LazyLR, the quoted literals `'if'` and `'then'` are matched before any named token
+(e.g., before `NAME`), so keyword promotion is automatic as long as the grammar uses
+quoted forms.
+
+### 7) Error handling migration
+
+| Lark mechanism                           | LazyLR equivalent                             |
+|------------------------------------------|-----------------------------------------------|
+| `UnexpectedToken` exception              | `ParsingException` (includes line + column)   |
+| `UnexpectedCharacters` exception         | `ParsingException` with "Lexing error" prefix |
+| `UnexpectedEOF` exception                | `ParsingException` with `<end of file>`       |
+| `on_error` callback in `UnexpectedToken` | Not built-in; catch and handle at call site   |
+| `ambiguity='resolve'` (Earley)           | Add a `precedence` section; run `mg.verify()` |
+| `ambiguity='explicit'` (Earley)          | No equivalent; explicit precedence required   |
+
+### 8) Parser backend selection
+
+Lark lets you choose between Earley and LALR(1) backends at instantiation time.
+LazyLR is always LR(1) (strictly more powerful than LALR(1)).
+
+| Lark backend      | Notes when migrating to LazyLR                                                                 |
+|-------------------|------------------------------------------------------------------------------------------------|
+| `parser="lalr"`   | Straightforward migration; run `mg.verify()` to check for conflicts                            |
+| `parser="earley"` | Earley handles ambiguous grammars silently.                                                    |
+|                   | LazyLR requires you to resolve ambiguities via the `precedence` section or grammar refactoring |
+
+If you relied on Earley's ability to parse ambiguous grammars, start by running
+`mg.verify(errors::add)` and work through each reported conflict before going to production.
+
+### 9) Practical migration checklist
+
+1. Copy terminal (token) definitions from Lark's uppercase rules into the LazyLR `tokens` section.
+2. Convert `%ignore` rules to unnamed token entries (regex only, no name).
+3. Port Lark parser rules to the `grammar` section; desugar all EBNF operators (`*`, `+`, `?`)
+   into explicit recursive productions.
+4. If the Lark grammar was stratified for precedence, keep the stratification in LazyLR
+   (no `precedence` section needed). If the grammar was ambiguous (Earley backend), add a
+   `precedence` section with `left:` / `right:` entries.
+5. Run `mg.verify()` and resolve any reported shift/reduce or reduce/reduce conflicts.
+6. Define your AST types (sealed interface and  records) and implement a `Visitor<V>`,
+   porting each `Transformer` method to an annotated production method.
+7. Replace `Transformer.TOKEN_NAME` terminal handlers with same-named public methods in
+   the visitor taking a single `Terminal` parameter.
+8. Replace `UnexpectedToken` / `UnexpectedCharacters` catch blocks with `ParsingException`.
+9. Write JUnit tests covering representative inputs, expected failures, and
+   `mg.verify()` assertions.
