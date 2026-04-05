@@ -9,8 +9,7 @@ optimized for fast development and iterative grammar evolution.
 
 1. [src/main/demo/README.md](src/main/demo/README.md) for incremental demos.
 2. This manual for deep reference.
-3. The migration guide for migrating from Yacc, ANTLR or ..
-4.
+3. The [migration guide](migration-guide.md) for migrating from Yacc, ANTLR, or Lark
 3. For API details, consult the generated Javadoc (https://jitpack.io/com/github/forax/lazylr/latest/javadoc/).
 4. [src/test/java/...](src/test/java) for executable examples.
 
