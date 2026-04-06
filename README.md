@@ -56,7 +56,7 @@ See the [Javadoc Reference](https://jitpack.io/com/github/forax/lazylr/latest/ja
 
 For the Reference Manual, see the [LazyLR Reference Manual](reference-manual.md).
 
-For the Migration Guide, see the [Migration Guide](migration-guide.md).
+For the Migration Guide, from ANTLR, Lex/Yacc, or Lark, see the [Migration Guide](migration-guide.md).
 
 ## Getting Started
 
