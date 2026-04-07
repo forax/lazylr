@@ -10,6 +10,12 @@ import java.util.stream.Collectors;
 /// Generates a Java [Visitor] implementation from a [Grammar].
 class JavaCodeVisitorGenerator {
 
+  sealed interface NtInfo permits NormalNtInfo, PassThroughNtInfo, OptionalNtInfo, ListNtInfo {}
+  enum NormalNtInfo implements NtInfo { INSTANCE }
+  record PassThroughNtInfo(Symbol element) implements NtInfo {}
+  record OptionalNtInfo(Production empty, Production present, Symbol element) implements NtInfo {}
+  record ListNtInfo(Production recursive, Production base, Symbol element) implements NtInfo {}
+
   /// Generates a Java [Visitor] implementation from a [Grammar].
   public static String generateVisitor(Grammar grammar) {
     var nonTerminals = grammar.nonTerminals();
@@ -18,55 +24,52 @@ class JavaCodeVisitorGenerator {
     // 1. Classify non-terminals
     // ---------------------------------------------------------------------------
 
-    enum NtKind { LIST, OPTIONAL, PASS_THROUGH, NORMAL }
-    record NtInfo(NtKind kind) {}
-
     var ntInfoMap = new LinkedHashMap<NonTerminal, NtInfo>();
 
     for (var nonTerminal : nonTerminals) {
       var prods = grammar.productionsFor(nonTerminal);
-      NtKind kind = null;
+      var info = (NtInfo) null;
 
       // Optional: exactly two productions, one ε and one single-symbol
       if (prods.size() == 2) {
-        var p0 = prods.get(0).body();
-        var p1 = prods.get(1).body();
-        if ((p0.isEmpty() && p1.size() == 1) || (p1.isEmpty() && p0.size() == 1)) {
-          kind = NtKind.OPTIONAL;
+        var p0 = prods.get(0);
+        var p1 = prods.get(1);
+        if (p0.body().isEmpty() && p1.body().size() == 1) {
+          info = new OptionalNtInfo(p0, p1, p1.body().getFirst());
+        }
+        if (p1.body().isEmpty() && p0.body().size() == 1) {
+          info = new OptionalNtInfo(p1, p0, p0.body().getFirst());
         }
       }
 
       // List: exactly two productions — one left-recursive append and one single base element
-      if (kind == null && prods.size() == 2) {
-        Production recursive = null;
-        Production base = null;
-        for (var production : prods) {
-          var body = production.body();
-          if (body.size() == 2 && body.getFirst().equals(nonTerminal)) {
-            recursive = production;
-          } else if (body.size() == 1) {
-            base = production;
+      if (info == null && prods.size() == 2) {
+        var p0 = prods.get(0);
+        var p1 = prods.get(1);
+
+        if (p0.body().size() == 2 && p0.body().getFirst().equals(nonTerminal)) {
+          var element = p0.body().get(1);
+          if (p1.body().size() == 1 && p1.body().getFirst().equals(element)) {
+            info = new ListNtInfo(p0, p1, element);
           }
         }
-        if (recursive != null && base != null && recursive.body().get(1).equals(base.body().getFirst())) {
-          kind = NtKind.LIST;
+        if (p1.body().size() == 2 && p1.body().getFirst().equals(nonTerminal)) {
+          var element = p1.body().get(1);
+          if (p0.body().size() == 1 && p0.body().getFirst().equals(element)) {
+            info = new ListNtInfo(p1, p0, element);
+          }
         }
       }
 
-      // Pass-through: all non-epsilon productions are single-symbol and collapse to the same symbol type.
-      if (kind == null) {
-        var singleSymbols = prods.stream()
-            .filter(p -> !p.body().isEmpty())
-            .filter(p -> p.body().size() == 1)
-            .map(p -> p.body().getFirst().name())
-            .collect(Collectors.toCollection(LinkedHashSet::new));
-        var onlySingles = prods.stream()
-            .filter(p -> !p.body().isEmpty())
-            .allMatch(p -> p.body().size() == 1);
-        kind = onlySingles && singleSymbols.size() <= 1 ? NtKind.PASS_THROUGH : NtKind.NORMAL;
+      // Pass-through: one production with one symbol.
+      if (info == null && prods.size() == 1) {
+        var p = prods.getFirst();
+        if (p.body().size() == 1) {
+          info = new PassThroughNtInfo(p.body().getFirst());
+        }
       }
 
-      ntInfoMap.put(nonTerminal, new NtInfo(kind));
+      ntInfoMap.put(nonTerminal, info == null ? NormalNtInfo.INSTANCE : info);
     }
 
     // ---------------------------------------------------------------------------
@@ -93,11 +96,13 @@ class JavaCodeVisitorGenerator {
     };
 
     for (var nt : nonTerminals) {
-      if (ntInfoMap.get(nt).kind() != NtKind.NORMAL) continue;
+      if (!(ntInfoMap.get(nt) instanceof NormalNtInfo)) {
+        continue;
+      }
       for (var prod : grammar.productionsFor(nt)) {
         var body = prod.body();
         if (body.size() == 1 && body.getFirst() instanceof NonTerminal target
-            && ntInfoMap.get(target).kind() == NtKind.NORMAL) {
+            && ntInfoMap.get(target) instanceof NormalNtInfo) {
           // union: keep the one that appears first in grammar order as root
           var rootNt  = unionFind.findRef(nt);
           var rootTgt = unionFind.findRef(target);
@@ -127,22 +132,17 @@ class JavaCodeVisitorGenerator {
     for (var nonTerminal : nonTerminals) {
       var info = ntInfoMap.get(nonTerminal);
       var prods = grammar.productionsFor(nonTerminal);
-      switch (info.kind()) {
-        case NORMAL -> {
+      switch (info) {
+        case NormalNtInfo _ -> {
           var root = unionFind.findRef(nonTerminal);
           ntTypeMap.put(nonTerminal, capitalize(root.name()));
         }
-        case PASS_THROUGH -> ntTypeMap.put(nonTerminal, "Object");
-        case OPTIONAL -> {
-          var elem = prods.stream().filter(p -> p.body().size() == 1).findFirst();
-          ntTypeMap.put(nonTerminal, elem.map(p -> "Optional<" + capitalize(p.body().getFirst().name()) + ">")
-              .orElse("Optional<Object>"));
+        case PassThroughNtInfo(Symbol element) -> ntTypeMap.put(nonTerminal, capitalize(element.name()));
+        case OptionalNtInfo(Production _, Production _, Symbol element) -> {
+          ntTypeMap.put(nonTerminal, "Optional<" + capitalize(element.name()) + ">");
         }
-        case LIST -> {
-          var base = prods.stream()
-              .filter(p -> !p.body().isEmpty() && !p.body().getFirst().equals(nonTerminal))
-              .findFirst().map(p -> p.body().getFirst());
-          ntTypeMap.put(nonTerminal, "List<" + base.map(s -> capitalize(s.name())).orElse("Object") + ">");
+        case ListNtInfo(Production _, Production _, Symbol element) -> {
+          ntTypeMap.put(nonTerminal, "List<" + capitalize(element.name()) + ">");
         }
       }
     }
@@ -153,37 +153,23 @@ class JavaCodeVisitorGenerator {
       changed = false;
       for (var nonTerminal : nonTerminals) {
         var info = ntInfoMap.get(nonTerminal);
-        var prods = grammar.productionsFor(nonTerminal);
-        var newType = switch (info.kind()) {
-          case NORMAL -> ntTypeMap.get(nonTerminal);
-          case PASS_THROUGH -> {
-            var unified = (String) null;
-            for (var p : prods) {
-              if (p.body().isEmpty()) continue;
-              var symbol = p.body().getFirst();
-              var t = symbol instanceof NonTerminal innerNt
-                  ? ntTypeMap.getOrDefault(innerNt, "Object") : capitalize(symbol.name());
-              unified = unified == null ? t : unified.equals(t) ? unified : "Object";
-            }
-            yield unified != null ? unified : "Object";
-          }
-          case OPTIONAL -> {
-            var elem = prods.stream().filter(p -> p.body().size() == 1).findFirst().orElseThrow();
-            var sym = elem.body().getFirst();
-            var inner = sym instanceof NonTerminal innerNt
-                ? ntTypeMap.getOrDefault(innerNt, "Object") : capitalize(sym.name());
-            yield "Optional<" + inner + ">";
-          }
-          case LIST -> {
-            var sym = prods.stream()
-                .filter(p -> !p.body().isEmpty() && !p.body().getFirst().equals(nonTerminal))
-                .findFirst().map(p -> p.body().getFirst()).orElseThrow();
-            var inner = sym instanceof NonTerminal innerNt
-                ? ntTypeMap.getOrDefault(innerNt, "Object") : capitalize(sym.name());
-            yield "List<" + inner + ">";
-          }
+        var newType = switch (info) {
+          case NormalNtInfo _ -> ntTypeMap.get(nonTerminal);
+          case PassThroughNtInfo(NonTerminal innerNt) -> ntTypeMap.get(innerNt);
+          case PassThroughNtInfo(Symbol element) -> capitalize(element.name());
+          case OptionalNtInfo(Production _, Production _, NonTerminal innerNt) ->
+              "Optional<" + ntTypeMap.get(innerNt) + '>';
+          case OptionalNtInfo(Production _, Production _, Symbol element) ->
+              "Optional<" + capitalize(element.name()) + '>';
+          case ListNtInfo(Production _, Production _, NonTerminal innerNt) ->
+              "List<" + ntTypeMap.get(innerNt) + '>';
+          case ListNtInfo(Production _, Production _, Symbol element) ->
+              "List<" + capitalize(element.name()) + '>';
         };
-        if (!newType.equals(ntTypeMap.get(nonTerminal))) { ntTypeMap.put(nonTerminal, newType); changed = true; }
+        if (!newType.equals(ntTypeMap.get(nonTerminal))) {
+          ntTypeMap.put(nonTerminal, newType);
+          changed = true;
+        }
       }
     }
 
@@ -194,7 +180,7 @@ class JavaCodeVisitorGenerator {
 
     var sealedRoots = new LinkedHashSet<NonTerminal>();
     for (var nt : nonTerminals) {
-      if (ntInfoMap.get(nt).kind() == NtKind.NORMAL && unionFind.findRef(nt).equals(nt)) {
+      if (ntInfoMap.get(nt) instanceof NormalNtInfo && unionFind.findRef(nt).equals(nt)) {
         sealedRoots.add(nt);
       }
     }
@@ -204,13 +190,12 @@ class JavaCodeVisitorGenerator {
     for (var root : sealedRoots) {
       var allProds = new ArrayList<Production>();
       for (var nt : nonTerminals) {
-        if (ntInfoMap.get(nt).kind() == NtKind.NORMAL && unionFind.findRef(nt).equals(root)) {
+        if (ntInfoMap.get(nt) instanceof NormalNtInfo && unionFind.findRef(nt).equals(root)) {
           grammar.productionsFor(nt).stream()
               .filter(p -> !p.body().isEmpty())              // skip epsilon
               .filter(p -> !(p.body().size() == 1            // skip ladder passthroughs
                   && p.body().getFirst() instanceof NonTerminal target
-                  && ntInfoMap.get(target) != null
-                  && ntInfoMap.get(target).kind() == NtKind.NORMAL
+                  && ntInfoMap.get(target) instanceof NormalNtInfo
                   && unionFind.findRef(target).equals(root)))
               .forEach(allProds::add);
         }
@@ -289,7 +274,7 @@ class JavaCodeVisitorGenerator {
     // Production methods for OPTIONAL and LIST non-terminals
     for (var nonTerminal : nonTerminals) {
       var info = ntInfoMap.get(nonTerminal);
-      if (info.kind() == NtKind.PASS_THROUGH || info.kind() == NtKind.NORMAL) {
+      if (info instanceof PassThroughNtInfo|| info instanceof NormalNtInfo) {
         continue;
       }
       for (var production : grammar.productionsFor(nonTerminal)) {
@@ -299,7 +284,7 @@ class JavaCodeVisitorGenerator {
         sb.append(buildComponentList(production, ntTypeMap));
         sb.append(") {\n");
 
-        if (info.kind() == NtKind.OPTIONAL) {
+        if (info instanceof OptionalNtInfo) {
           if (production.body().isEmpty()) {
             sb.append("    return Optional.empty();\n");
           } else {
