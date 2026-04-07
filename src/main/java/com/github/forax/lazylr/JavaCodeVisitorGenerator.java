@@ -36,22 +36,34 @@ class JavaCodeVisitorGenerator {
         }
       }
 
-      // List: exactly two productions — one left-recursive, one single non-quoted terminal
+      // List: exactly two productions — one left-recursive append and one single base element
       if (kind == null && prods.size() == 2) {
-        var hasRecursive = prods.stream().anyMatch(p ->
-            !p.body().isEmpty() && p.body().getFirst().equals(nonTerminal));
-        var hasBase = prods.stream().anyMatch(p ->
-            p.body().size() == 1 && p.body().getFirst() instanceof Terminal terminal
-                && !isQuotedPunctuation(terminal.name()));
-        if (hasRecursive && hasBase) kind = NtKind.LIST;
+        Production recursive = null;
+        Production base = null;
+        for (var production : prods) {
+          var body = production.body();
+          if (body.size() == 2 && body.getFirst().equals(nonTerminal)) {
+            recursive = production;
+          } else if (body.size() == 1) {
+            base = production;
+          }
+        }
+        if (recursive != null && base != null && recursive.body().get(1).equals(base.body().getFirst())) {
+          kind = NtKind.LIST;
+        }
       }
 
-      // Pass-through: every non-epsilon production has exactly one symbol
+      // Pass-through: all non-epsilon productions are single-symbol and collapse to the same symbol type.
       if (kind == null) {
-        kind = prods.stream()
+        var singleSymbols = prods.stream()
             .filter(p -> !p.body().isEmpty())
-            .allMatch(p -> p.body().size() == 1)
-            ? NtKind.PASS_THROUGH : NtKind.NORMAL;
+            .filter(p -> p.body().size() == 1)
+            .map(p -> p.body().getFirst().name())
+            .collect(Collectors.toCollection(LinkedHashSet::new));
+        var onlySingles = prods.stream()
+            .filter(p -> !p.body().isEmpty())
+            .allMatch(p -> p.body().size() == 1);
+        kind = onlySingles && singleSymbols.size() <= 1 ? NtKind.PASS_THROUGH : NtKind.NORMAL;
       }
 
       ntInfoMap.put(nonTerminal, new NtInfo(kind));
@@ -253,7 +265,7 @@ class JavaCodeVisitorGenerator {
       }
     }
 
-    // Production methods
+    // Production methods for NORMAL roots
     for (var root : sealedRoots) {
       for (var production : rootProductions.get(root)) {
         var rootType = ntTypeMap.getOrDefault(root, "Object");
@@ -269,6 +281,45 @@ class JavaCodeVisitorGenerator {
           var parameterNames = componentNames(production, ntTypeMap);
           sb.append("    return new ").append(recordName).append("(")
               .append(String.join(", ", parameterNames)).append(");\n");
+        }
+        sb.append("  }\n\n");
+      }
+    }
+
+    // Production methods for OPTIONAL and LIST non-terminals
+    for (var nonTerminal : nonTerminals) {
+      var info = ntInfoMap.get(nonTerminal);
+      if (info.kind() == NtKind.PASS_THROUGH || info.kind() == NtKind.NORMAL) {
+        continue;
+      }
+      for (var production : grammar.productionsFor(nonTerminal)) {
+        var returnType = ntTypeMap.getOrDefault(nonTerminal, "Object");
+        sb.append("  @ProductionName(\"").append(production.name()).append("\")\n");
+        sb.append("  public ").append(returnType).append(" ").append(methodNameFor(production)).append("(");
+        sb.append(buildComponentList(production, ntTypeMap));
+        sb.append(") {\n");
+
+        if (info.kind() == NtKind.OPTIONAL) {
+          if (production.body().isEmpty()) {
+            sb.append("    return Optional.empty();\n");
+          } else {
+            sb.append("    return Optional.of(").append(componentNames(production, ntTypeMap).getFirst()).append(");\n");
+          }
+        } else {
+          // LIST
+          if (production.body().size() == 2 && production.body().getFirst().equals(nonTerminal)) {
+            var names = componentNames(production, ntTypeMap);
+            sb.append("    ").append(names.getFirst()).append(".add(").append(names.get(1)).append(");\n");
+            sb.append("    return ").append(names.getFirst()).append(";\n");
+          } else {
+            var listType = ntTypeMap.getOrDefault(nonTerminal, "List<Object>");
+            var elementType = listType.substring(listType.indexOf('<') + 1, listType.lastIndexOf('>'));
+            var elementName = componentNames(production, ntTypeMap).getFirst();
+            var listName = javaId(elementName) + "List";
+            sb.append("    var ").append(listName).append(" = new ArrayList<").append(elementType).append(">();\n");
+            sb.append("    ").append(listName).append(".add(").append(elementName).append(");\n");
+            sb.append("    return ").append(listName).append(";\n");
+          }
         }
         sb.append("  }\n\n");
       }
@@ -375,6 +426,9 @@ class JavaCodeVisitorGenerator {
   }
 
   private static String methodNameFor(Production p) {
+    if (p.body().isEmpty()) {
+      return "empty" + capitalize(p.head().name());
+    }
     // same logic as recordNameFor but camelCase: plusExp(...)
     var recName = recordNameFor(p);
     return Character.toLowerCase(recName.charAt(0)) + recName.substring(1);

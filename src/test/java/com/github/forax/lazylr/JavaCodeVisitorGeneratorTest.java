@@ -122,7 +122,6 @@ public class JavaCodeVisitorGeneratorTest {
     }
 
     @Test
-    @Disabled
     public void twoAlternatives() {
       var code = generateFromDsl("""
         grammar {
@@ -139,6 +138,14 @@ public class JavaCodeVisitorGeneratorTest {
         record IdentExp(String ident) implements Exp {}
 
         class GeneratedVisitor implements Visitor<Exp> {
+        
+          public String num(Terminal terminal) {
+            return terminal.value();
+          }
+
+          public String ident(Terminal terminal) {
+            return terminal.value();
+          }
 
           @ProductionName("Exp : num")
           public Exp numExp(String num) {
@@ -150,20 +157,11 @@ public class JavaCodeVisitorGeneratorTest {
             return new IdentExp(ident);
           }
 
-          public String num(Terminal terminal) {
-            return terminal.value();
-          }
-
-          public String ident(Terminal terminal) {
-            return terminal.value();
-          }
-
         }
         """, code);
     }
 
     @Test
-    @Disabled
     public void simpleBinaryOperator() {
       var code = generateFromDsl("""
         grammar {
@@ -181,6 +179,10 @@ public class JavaCodeVisitorGeneratorTest {
 
         class GeneratedVisitor implements Visitor<Exp> {
 
+          public String num(Terminal terminal) {
+            return terminal.value();
+          }
+
           @ProductionName("Exp : Exp + Exp")
           public Exp plusExp(Exp exp, Exp exp2) {
             return new PlusExp(exp, exp2);
@@ -189,10 +191,6 @@ public class JavaCodeVisitorGeneratorTest {
           @ProductionName("Exp : num")
           public Exp numExp(String num) {
             return new NumExp(num);
-          }
-
-          public String num(Terminal terminal) {
-            return terminal.value();
           }
 
         }
@@ -318,7 +316,6 @@ public class JavaCodeVisitorGeneratorTest {
     }
 
     @Test
-    @Disabled
     public void optionalWrapper() {
       var code = generateFromDsl("""
         grammar {
@@ -355,12 +352,12 @@ public class JavaCodeVisitorGeneratorTest {
             public Optional<Ident> identLabel(String ident) {
               return Optional.of(ident);
             }
+          
           }
           """, code);
     }
 
     @Test
-    @Disabled
     public void listPattern() {
       var code = generateFromDsl("""
         grammar {
@@ -380,7 +377,7 @@ public class JavaCodeVisitorGeneratorTest {
             }
           
             @ProductionName("Args : Args ident")
-            public List<Ident> identArgsArgs(List<Ident> args, String ident) {
+            public List<Ident> identArgs(List<Ident> args, String ident) {
               args.add(ident);
               return args;
             }
@@ -417,7 +414,6 @@ public class JavaCodeVisitorGeneratorTest {
     }
 
     @Test
-    @Disabled
     public void quotedPunctuationNoTerminalMethod() {
       var code = generateFromDsl("""
         grammar {
@@ -445,10 +441,11 @@ public class JavaCodeVisitorGeneratorTest {
               return new PlusExp(exp, exp2);
             }
           
-            @ProductionName("Exp : Num")
+            @ProductionName("Exp : num")
             public Exp numExp(String num) {
               return new NumExp(num);
             }
+          
           }
           """, code);
     }
