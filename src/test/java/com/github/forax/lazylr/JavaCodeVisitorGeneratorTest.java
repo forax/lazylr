@@ -343,14 +343,14 @@ public class JavaCodeVisitorGeneratorTest {
               return new LabelStmt(label);
             }
           
-            @ProductionName("Label : ε")
-            public Optional<Ident> emptyLabel() {
-              return Optional.empty();
-            }
-          
             @ProductionName("Label : ident")
             public Optional<Ident> identLabel(String ident) {
               return Optional.of(ident);
+            }
+          
+            @ProductionName("Label : ε")
+            public Optional<Ident> emptyLabel() {
+              return Optional.empty();
             }
           
           }

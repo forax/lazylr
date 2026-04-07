@@ -10,11 +10,11 @@ import java.util.stream.Collectors;
 /// Generates a Java [Visitor] implementation from a [Grammar].
 class JavaCodeVisitorGenerator {
 
-  sealed interface NtInfo permits NormalNtInfo, PassThroughNtInfo, OptionalNtInfo, ListNtInfo {}
-  enum NormalNtInfo implements NtInfo { INSTANCE }
-  record PassThroughNtInfo(Symbol element) implements NtInfo {}
-  record OptionalNtInfo(Production empty, Production present, Symbol element) implements NtInfo {}
-  record ListNtInfo(Production recursive, Production base, Symbol element) implements NtInfo {}
+  private sealed interface NtInfo {}
+  private enum NormalNtInfo implements NtInfo { INSTANCE }
+  private record PassThroughNtInfo(Symbol element) implements NtInfo {}
+  private record OptionalNtInfo(Production empty, Production present, Symbol element) implements NtInfo {}
+  private record ListNtInfo(Production recursive, Production base, Symbol element) implements NtInfo {}
 
   /// Generates a Java [Visitor] implementation from a [Grammar].
   public static String generateVisitor(Grammar grammar) {
@@ -74,10 +74,6 @@ class JavaCodeVisitorGenerator {
 
     // ---------------------------------------------------------------------------
     // 2. Detect precedence ladders via Union-Find
-    //
-    //    A NORMAL NT that has a single-symbol production pointing to another
-    //    NORMAL NT is a ladder step: both NTs share the same sealed interface.
-    //    We union them and keep the root's name as the interface name.
     // ---------------------------------------------------------------------------
 
     // Union-Find over NonTerminals
@@ -120,10 +116,7 @@ class JavaCodeVisitorGenerator {
     }
 
     // ---------------------------------------------------------------------------
-    // 3. Assign types
-    //
-    //    NORMAL NTs in the same union group share the sealed interface of the root.
-    //    PASS_THROUGH / OPTIONAL / LIST get structural types, resolved via fixpoint.
+    // 3. Assign types (fixpoint)
     // ---------------------------------------------------------------------------
 
     var ntTypeMap = new LinkedHashMap<NonTerminal, String>();
@@ -175,7 +168,6 @@ class JavaCodeVisitorGenerator {
 
     // ---------------------------------------------------------------------------
     // 4. Determine which NTs own a sealed interface
-    //    Only the root of each NORMAL union group emits a sealed interface.
     // ---------------------------------------------------------------------------
 
     var sealedRoots = new LinkedHashSet<NonTerminal>();
@@ -192,8 +184,8 @@ class JavaCodeVisitorGenerator {
       for (var nt : nonTerminals) {
         if (ntInfoMap.get(nt) instanceof NormalNtInfo && unionFind.findRef(nt).equals(root)) {
           grammar.productionsFor(nt).stream()
-              .filter(p -> !p.body().isEmpty())              // skip epsilon
-              .filter(p -> !(p.body().size() == 1            // skip ladder passthroughs
+              .filter(p -> !p.body().isEmpty())
+              .filter(p -> !(p.body().size() == 1
                   && p.body().getFirst() instanceof NonTerminal target
                   && ntInfoMap.get(target) instanceof NormalNtInfo
                   && unionFind.findRef(target).equals(root)))
@@ -273,40 +265,47 @@ class JavaCodeVisitorGenerator {
 
     // Production methods for OPTIONAL and LIST non-terminals
     for (var nonTerminal : nonTerminals) {
-      var info = ntInfoMap.get(nonTerminal);
-      if (info instanceof PassThroughNtInfo|| info instanceof NormalNtInfo) {
-        continue;
-      }
-      for (var production : grammar.productionsFor(nonTerminal)) {
-        var returnType = ntTypeMap.getOrDefault(nonTerminal, "Object");
-        sb.append("  @ProductionName(\"").append(production.name()).append("\")\n");
-        sb.append("  public ").append(returnType).append(" ").append(methodNameFor(production)).append("(");
-        sb.append(buildComponentList(production, ntTypeMap));
-        sb.append(") {\n");
-
-        if (info instanceof OptionalNtInfo) {
-          if (production.body().isEmpty()) {
-            sb.append("    return Optional.empty();\n");
-          } else {
-            sb.append("    return Optional.of(").append(componentNames(production, ntTypeMap).getFirst()).append(");\n");
-          }
-        } else {
-          // LIST
-          if (production.body().size() == 2 && production.body().getFirst().equals(nonTerminal)) {
-            var names = componentNames(production, ntTypeMap);
-            sb.append("    ").append(names.getFirst()).append(".add(").append(names.get(1)).append(");\n");
-            sb.append("    return ").append(names.getFirst()).append(";\n");
-          } else {
-            var listType = ntTypeMap.getOrDefault(nonTerminal, "List<Object>");
-            var elementType = listType.substring(listType.indexOf('<') + 1, listType.lastIndexOf('>'));
-            var elementName = componentNames(production, ntTypeMap).getFirst();
-            var listName = javaId(elementName) + "List";
-            sb.append("    var ").append(listName).append(" = new ArrayList<").append(elementType).append(">();\n");
-            sb.append("    ").append(listName).append(".add(").append(elementName).append(");\n");
-            sb.append("    return ").append(listName).append(";\n");
-          }
+      switch (ntInfoMap.get(nonTerminal)) {
+        case PassThroughNtInfo _, NormalNtInfo _ -> { continue; }
+        case OptionalNtInfo(var emptyProd, var presentProd, var _) -> {
+          var returnType = ntTypeMap.getOrDefault(nonTerminal, "Object");
+          // present production
+          sb.append("  @ProductionName(\"").append(presentProd.name()).append("\")\n");
+          sb.append("  public ").append(returnType).append(" ").append(methodNameFor(presentProd)).append("(");
+          sb.append(buildComponentList(presentProd, ntTypeMap));
+          sb.append(") {\n");
+          sb.append("    return Optional.of(").append(componentNames(presentProd, ntTypeMap).getFirst()).append(");\n");
+          sb.append("  }\n\n");
+          // empty production
+          sb.append("  @ProductionName(\"").append(emptyProd.name()).append("\")\n");
+          sb.append("  public ").append(returnType).append(" ").append(methodNameFor(emptyProd)).append("() {\n");
+          sb.append("    return Optional.empty();\n");
+          sb.append("  }\n\n");
         }
-        sb.append("  }\n\n");
+        case ListNtInfo(var recursiveProd, var baseProd, var _) -> {
+          var returnType = ntTypeMap.getOrDefault(nonTerminal, "Object");
+          var elementType = returnType.substring(returnType.indexOf('<') + 1, returnType.lastIndexOf('>'));
+          // recursive production
+          sb.append("  @ProductionName(\"").append(recursiveProd.name()).append("\")\n");
+          sb.append("  public ").append(returnType).append(" ").append(methodNameFor(recursiveProd)).append("(");
+          sb.append(buildComponentList(recursiveProd, ntTypeMap));
+          sb.append(") {\n");
+          var names = componentNames(recursiveProd, ntTypeMap);
+          sb.append("    ").append(names.get(0)).append(".add(").append(names.get(1)).append(");\n");
+          sb.append("    return ").append(names.getFirst()).append(";\n");
+          sb.append("  }\n\n");
+          // base production
+          sb.append("  @ProductionName(\"").append(baseProd.name()).append("\")\n");
+          sb.append("  public ").append(returnType).append(" ").append(methodNameFor(baseProd)).append("(");
+          sb.append(buildComponentList(baseProd, ntTypeMap));
+          sb.append(") {\n");
+          var elementName = componentNames(baseProd, ntTypeMap).getFirst();
+          var listName = javaId(elementName) + "List";
+          sb.append("    var ").append(listName).append(" = new ArrayList<").append(elementType).append(">();\n");
+          sb.append("    ").append(listName).append(".add(").append(elementName).append(");\n");
+          sb.append("    return ").append(listName).append(";\n");
+          sb.append("  }\n\n");
+        }
       }
     }
 
@@ -314,58 +313,31 @@ class JavaCodeVisitorGenerator {
     return sb.toString();
   }
 
-// ---------------------------------------------------------------------------
-// Symbol → readable name map
-// ---------------------------------------------------------------------------
+  // ---------------------------------------------------------------------------
+  // (All private helpers below are unchanged)
+  // ---------------------------------------------------------------------------
 
   private static final Map<String, String> SYMBOL_NAMES = Map.ofEntries(
-      Map.entry("+",  "Plus"),
-      Map.entry("-",  "Minus"),
-      Map.entry("*",  "Mul"),
-      Map.entry("/",  "Div"),
-      Map.entry("%",  "Mod"),
-      Map.entry("^",  "Pow"),
-      Map.entry("&",  "And"),
-      Map.entry("|",  "Or"),
-      Map.entry("~",  "BitNot"),
-      Map.entry("!",  "Not"),
-      Map.entry("<",  "Lt"),
-      Map.entry(">",  "Gt"),
-      Map.entry("<=", "Le"),
-      Map.entry(">=", "Ge"),
-      Map.entry("==", "Eq"),
-      Map.entry("!=", "Ne"),
-      Map.entry("=",  "Assign"),
-      Map.entry("->", "Arrow"),
-      Map.entry("=>", "FatArrow"),
-      Map.entry("::", "ColonColon"),
-      Map.entry(":",  "Colon"),
-      Map.entry(";",  "Semi"),
-      Map.entry(",",  "Comma"),
-      Map.entry(".",  "Dot"),
-      Map.entry("..", "DotDot"),
-      Map.entry("(",  "LParen"),
-      Map.entry(")",  "RParen"),
-      Map.entry("{",  "LBrace"),
-      Map.entry("}",  "RBrace"),
-      Map.entry("[",  "LBracket"),
+      Map.entry("+",  "Plus"),   Map.entry("-",  "Minus"),  Map.entry("*",  "Mul"),
+      Map.entry("/",  "Div"),    Map.entry("%",  "Mod"),    Map.entry("^",  "Pow"),
+      Map.entry("&",  "And"),    Map.entry("|",  "Or"),     Map.entry("~",  "BitNot"),
+      Map.entry("!",  "Not"),    Map.entry("<",  "Lt"),     Map.entry(">",  "Gt"),
+      Map.entry("<=", "Le"),     Map.entry(">=", "Ge"),     Map.entry("==", "Eq"),
+      Map.entry("!=", "Ne"),     Map.entry("=",  "Assign"), Map.entry("->", "Arrow"),
+      Map.entry("=>", "FatArrow"), Map.entry("::", "ColonColon"), Map.entry(":", "Colon"),
+      Map.entry(";",  "Semi"),   Map.entry(",",  "Comma"),  Map.entry(".",  "Dot"),
+      Map.entry("..", "DotDot"), Map.entry("(",  "LParen"), Map.entry(")",  "RParen"),
+      Map.entry("{",  "LBrace"), Map.entry("}",  "RBrace"), Map.entry("[",  "LBracket"),
       Map.entry("]",  "RBracket")
   );
 
   private static String symbolReadableName(Symbol symbol) {
     if (symbol instanceof Terminal terminal && isQuotedPunctuation(terminal.name())) {
       var symbolName = SYMBOL_NAMES.get(terminal.name());
-      if (symbolName != null) {
-        return symbolName;
-      }
-      return javaId(terminal.name());
+      return symbolName != null ? symbolName : javaId(terminal.name());
     }
     return capitalize(symbol.name());
   }
-
-// ---------------------------------------------------------------------------
-// Naming helpers
-// ---------------------------------------------------------------------------
 
   private static String lowerFirst(String s) {
     return Character.toLowerCase(s.charAt(0)) + s.substring(1);
@@ -384,9 +356,6 @@ class JavaCodeVisitorGenerator {
     return !Character.isLetter(terminalName.charAt(0));
   }
 
-  /// Returns true if a production is a transparent wrapper:
-  /// its meaningful symbols (non-quoted punctuation) reduce to exactly one parameter
-  /// whose type equals the sealed interface type (i.e. just forwarding the value up).
   private static boolean isTransparentWrapper(Production p, Map<NonTerminal, String> ntTypeMap) {
     var meaningful = p.body().stream()
         .filter(s -> !(s instanceof Terminal t && isQuotedPunctuation(t.name())))
@@ -399,9 +368,6 @@ class JavaCodeVisitorGenerator {
     return symType.equals(headType);
   }
 
-  /// Record name: driven by the first symbol that is not a self-reference to the head's ladder group.
-  /// e.g. Exp : Exp '+' Term  →  PlusExp
-  ///      Factor : num         →  NumExp   (if Factor is in Exp's group)
   private static String recordNameFor(Production p) {
     for (var symbol : p.body()) {
       if (symbol.equals(p.head())) continue;
@@ -414,17 +380,10 @@ class JavaCodeVisitorGenerator {
     if (p.body().isEmpty()) {
       return "empty" + capitalize(p.head().name());
     }
-    // same logic as recordNameFor but camelCase: plusExp(...)
     var recName = recordNameFor(p);
     return Character.toLowerCase(recName.charAt(0)) + recName.substring(1);
   }
 
-// ---------------------------------------------------------------------------
-// Component / parameter helpers — unified names used for both records and methods
-// ---------------------------------------------------------------------------
-
-  /// Returns a list of "Type name" strings for the meaningful symbols of a production
-  /// (quoted punctuation is excluded). Names are deduplicated with a counter suffix.
   private static List<String> buildComponentDecls(Production p, Map<NonTerminal, String> ntTypeMap) {
     var parts = new ArrayList<String>();
     var nameCounts = new LinkedHashMap<String, Integer>();
@@ -434,27 +393,23 @@ class JavaCodeVisitorGenerator {
           if (isQuotedPunctuation(t.name())) continue;
           var base = javaId(t.name());
           var n = nameCounts.merge(base, 1, Integer::sum);
-          var rawName = n == 1 ? base : base + n;
-          parts.add("String " + lowerFirst(rawName));
+          parts.add("String " + lowerFirst(n == 1 ? base : base + n));
         }
         case NonTerminal nt -> {
           var type = ntTypeMap.getOrDefault(nt, "Object");
           var base = nt.name();
           var n = nameCounts.merge(base, 1, Integer::sum);
-          var rawName = n == 1 ? base : base + n;
-          parts.add(type + " " + lowerFirst(rawName));
+          parts.add(type + " " + lowerFirst(n == 1 ? base : base + n));
         }
       }
     }
     return parts;
   }
 
-  /// Comma-separated "Type name" list — shared by record components and method parameters.
   private static String buildComponentList(Production p, Map<NonTerminal, String> ntTypeMap) {
     return String.join(", ", buildComponentDecls(p, ntTypeMap));
   }
 
-  /// Just the parameter names (right-hand side of each decl), for use in `new Record(...)`.
   private static List<String> componentNames(Production p, Map<NonTerminal, String> ntTypeMap) {
     return buildComponentDecls(p, ntTypeMap).stream()
         .map(decl -> decl.substring(decl.lastIndexOf(' ') + 1))
