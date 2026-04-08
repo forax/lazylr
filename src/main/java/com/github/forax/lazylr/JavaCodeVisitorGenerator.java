@@ -69,10 +69,11 @@ final class JavaCodeVisitorGenerator {
     Objects.requireNonNull(grammar);
     var patterns = PatternDetector.buildPatterns(grammar);
     var types = new TypeResolver(patterns).resolveTypes(grammar);
-    return new CodeEmitter(patterns, types).emitCode(grammar);
+    return new CodeEmitter(patterns, types).emit(grammar);
   }
 
 
+  /// find patterns in the grammar
   private static final class PatternDetector {
 
     private PatternDetector() {
@@ -168,6 +169,7 @@ final class JavaCodeVisitorGenerator {
   }
 
 
+  /// find the types of all non-terminals
   private static final class TypeResolver {
     private final LinkedHashMap<NonTerminal, Pattern> patternMap;
 
@@ -224,6 +226,7 @@ final class JavaCodeVisitorGenerator {
   }
 
 
+  /// generate the code of the visitor
   private static final class CodeEmitter {
     private final Map<NonTerminal, Pattern> patternMap;
     private final Map<NonTerminal, String> types;
@@ -250,7 +253,7 @@ final class JavaCodeVisitorGenerator {
 
     /// Emits the complete Java source: type declarations, then the visitor class
     /// with terminal methods and production methods.
-    private String emitCode(Grammar grammar) {
+    private String emit(Grammar grammar) {
       var sb = new StringBuilder();
 
       for (var entry : patternMap.entrySet()) {
