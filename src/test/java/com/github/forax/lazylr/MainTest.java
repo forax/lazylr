@@ -545,7 +545,7 @@ public class MainTest {
 
       var result = runProcess(tempDir, "--generate", grammar);
       assertEquals(0, result.exitCode());
-      assertEquals(JavaCodeGenerator.generate(MetaGrammar.load(grammarText), false), result.stdout);
+      assertEquals(JavaCodeGenerator.generate(MetaGrammar.load(grammarText), true), result.stdout);
     }
 
     @Test
@@ -568,7 +568,7 @@ public class MainTest {
 
       var result = runProcess(tempDir, "--generate", grammar);
       assertEquals(0, result.exitCode());
-      assertEquals(JavaCodeGenerator.generate(MetaGrammar.load(grammarText), false), result.stdout);
+      assertEquals(JavaCodeGenerator.generate(MetaGrammar.load(grammarText), true), result.stdout);
     }
 
     @Test
@@ -592,7 +592,7 @@ public class MainTest {
 
       var result = runProcess(tempDir, "--generate", grammar);
       assertEquals(0, result.exitCode());
-      assertEquals(JavaCodeGenerator.generate(MetaGrammar.load(grammarText), false), result.stdout);
+      assertEquals(JavaCodeGenerator.generate(MetaGrammar.load(grammarText), true), result.stdout);
     }
   }
 
