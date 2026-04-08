@@ -16,7 +16,7 @@ import java.util.stream.Collectors;
 ///    [OptionalPattern], or [ListPattern] based on the shape of its productions.
 /// 2. **Type resolution** — a Java type string (`String`, `Optional<X>`, `List<X>`,
 ///    or a record/sealed-interface name) is assigned to each non-terminal.
-///    Resolution is memoised and follows symbol references recursively.
+///    Resolution follows symbol references recursively and is memoized.
 /// 3. **Code emission** — sealed interfaces, records, and visitor methods are
 ///    written to a source string ready for compilation.
 ///
