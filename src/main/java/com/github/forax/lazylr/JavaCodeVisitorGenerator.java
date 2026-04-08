@@ -401,13 +401,6 @@ public final class JavaCodeVisitorGenerator {
     return builder.toString();
   }
 
-  private static String paramNameFor(Symbol symbol) {
-    return decapitalize(switch (symbol) {
-      case Terminal t -> isJavaIdentifier(t.name()) ? t.name() : "value";
-      case NonTerminal nt -> nt.name();
-    });
-  }
-
   private static String capitalize(String s) {
     return Character.toUpperCase(s.charAt(0)) + s.substring(1);
   }
