@@ -260,5 +260,6 @@ Validates the grammar, parses the input file against it, and prints the derivati
 java -jar lazylr.jar --generate grammar.txt
 ```
 
-Emits Java source containing a static method `createGrammar()` that reconstructs
-the grammar programmatically, useful for embedding a grammar in a non-textual form.
+Emits Java source code containing a visitor and a static method `createGrammar()`
+that reconstructs the grammar programmatically, useful for embedding a grammar
+in a non-textual form.

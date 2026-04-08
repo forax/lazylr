@@ -16,7 +16,8 @@ import java.util.Objects;
 ///
 /// - With `--print` and a grammar file: print the **automaton** unconditionally.
 /// - With `--generate` and a grammar file: generates Java source code for a
-///   `createGrammar()` static method that reconstructs the grammar programmatically.
+///   `createGrammar()` static method that reconstructs the grammar programmatically
+///    and also generate a visitor class.
 ///
 /// Usage:
 /// ```
@@ -43,7 +44,7 @@ public final class Main {
       Examples:
         lazylr grammar.txt              # validate grammar and print the automaton if there is a conflict
         lazylr --print grammar.txt      # as above, but the automaton is printed unconditionally
-        lazylr --generate grammar.txt   # generate Java code that builds the grammar
+        lazylr --generate grammar.txt   # generate Java code that builds the grammar, also generate a visitor
         lazylr grammar.txt input.txt    # parse input and print derivation tree
       
       """);
