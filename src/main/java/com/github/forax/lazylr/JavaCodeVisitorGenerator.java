@@ -89,18 +89,18 @@ public final class JavaCodeVisitorGenerator {
   }
 
   private static Pattern.@Nullable Optional tryOptional(NonTerminal nt, List<List<Symbol>> filtered) {
-    var empty = false;
+    var emptySeen = false;
     var symbol = (Symbol) null;
     for (var body : filtered) {
       switch (body.size()) {
-        case 0 -> empty = true;
+        case 0 -> emptySeen = true;
         case 1 -> symbol = body.getFirst();
         default -> {
           return null;
         }
       }
     }
-    if (empty == false || symbol == null) {
+    if (!emptySeen || symbol == null) {
       return null;
     }
     return new Pattern.Optional(nt, symbol);
