@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
 
 /// Generates source code for a [Visitor] implementation from a [Grammar] definition.
 ///
-/// Call [#generate(Grammar)] to get a Java source string
+/// Call [#generateVisitor(Grammar)] to get a Java source string
 /// containing a ready-to-compile visitor class.
 public final class JavaCodeVisitorGenerator {
 
@@ -30,7 +30,7 @@ public final class JavaCodeVisitorGenerator {
   ///
   /// @param grammar   the grammar to generate a visitor for
   /// @return Java source code as a string
-  public static String generate(Grammar grammar) {
+  public static String generateVisitor(Grammar grammar) {
     // step 1: pattern detection
     var patterns = buildPatterns(grammar);
 

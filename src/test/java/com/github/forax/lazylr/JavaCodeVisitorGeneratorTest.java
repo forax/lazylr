@@ -8,9 +8,9 @@ import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class JavaCodeVisitorGeneratorTest {
 
-  private static String generateFromDsl(String inputText) {
+  private static String generateVisitor(String inputText) {
     var grammar = MetaGrammar.load(inputText).grammar();
-    return JavaCodeVisitorGenerator.generate(grammar);
+    return JavaCodeVisitorGenerator.generateVisitor(grammar);
   }
 
   @Test
@@ -24,7 +24,7 @@ public class JavaCodeVisitorGeneratorTest {
         }
         """;
 
-    var actual = generateFromDsl(inputText);
+    var actual = generateVisitor(inputText);
     assertEquals("""
         public sealed interface Factor permits NumFactor, LParenFactorRParenFactor {}
         public record NumFactor(String num) implements Factor {}
@@ -59,7 +59,7 @@ public class JavaCodeVisitorGeneratorTest {
         }
         """;
 
-    var actual = generateFromDsl(inputText);
+    var actual = generateVisitor(inputText);
     assertEquals("""
         public sealed interface Expr permits ExprPlusExprExpr, NumExpr {}
         public record ExprPlusExprExpr(Expr expr, Expr expr2) implements Expr {}
@@ -93,7 +93,7 @@ public class JavaCodeVisitorGeneratorTest {
         }
         """;
 
-    var actual = generateFromDsl(inputText);
+    var actual = generateVisitor(inputText);
 
     assertEquals("""
         public record Point(String x, String y) {}
@@ -205,7 +205,7 @@ public class JavaCodeVisitorGeneratorTest {
         }
         """;
 
-    var actual = generateFromDsl(inputText);
+    var actual = generateVisitor(inputText);
     assertEquals(expected, actual);
   }
 
@@ -219,7 +219,7 @@ public class JavaCodeVisitorGeneratorTest {
         }
         """;
 
-    var actual = generateFromDsl(inputText);
+    var actual = generateVisitor(inputText);
 
     assertEquals("""
         public record Stmt(String name, Optional<String> opt_label) {}
@@ -264,7 +264,7 @@ public class JavaCodeVisitorGeneratorTest {
         }
         """;
 
-    var actual = generateFromDsl(inputText);
+    var actual = generateVisitor(inputText);
     assertEquals("""
         public record Decl(String name, Optional<Expr> opt_init) {}
         public record Expr(String num) {}
@@ -312,7 +312,7 @@ public class JavaCodeVisitorGeneratorTest {
         }
         """;
 
-    var actual = generateFromDsl(inputText);
+    var actual = generateVisitor(inputText);
     assertEquals("""
         
         class MyVisitor implements Visitor<List<String>> {
@@ -348,7 +348,7 @@ public class JavaCodeVisitorGeneratorTest {
         }
         """;
 
-    var actual = generateFromDsl(inputText);
+    var actual = generateVisitor(inputText);
 
     assertTrue(actual.contains("List<Stmt>"));
     assertTrue(actual.contains("new ArrayList<Stmt>()"));
@@ -366,7 +366,7 @@ public class JavaCodeVisitorGeneratorTest {
         }
         """;
 
-    var actual = generateFromDsl(inputText);
+    var actual = generateVisitor(inputText);
 
     // Row is List<String>, Matrix is List<List<String>>
     assertTrue(actual.contains("List<String>"));           // Row
@@ -387,7 +387,7 @@ public class JavaCodeVisitorGeneratorTest {
         }
         """;
 
-    var actual = generateFromDsl(inputText);
+    var actual = generateVisitor(inputText);
 
     assertTrue(actual.contains("ExprPlusExpr"));
     assertTrue(actual.contains("ExprMinusExpr"));
@@ -405,7 +405,7 @@ public class JavaCodeVisitorGeneratorTest {
         }
         """;
 
-    var actual = generateFromDsl(inputText);
+    var actual = generateVisitor(inputText);
     System.out.println(actual);
 
     assertTrue(actual.contains("ExprArrowExpr"));
@@ -425,7 +425,7 @@ public class JavaCodeVisitorGeneratorTest {
         }
         """;
 
-    var actual = generateFromDsl(inputText);
+    var actual = generateVisitor(inputText);
 
     // Program is the start symbol and is a Normal single-production → record Program
     assertTrue(actual.contains("implements Visitor<Program>"));
@@ -441,7 +441,7 @@ public class JavaCodeVisitorGeneratorTest {
         }
         """;
 
-    var actual = generateFromDsl(inputText);
+    var actual = generateVisitor(inputText);
 
     assertTrue(actual.contains("implements Visitor<List<Stmt>>"));
   }
@@ -457,7 +457,7 @@ public class JavaCodeVisitorGeneratorTest {
         }
         """;
 
-    var actual = generateFromDsl(inputText);
+    var actual = generateVisitor(inputText);
     System.out.println(actual);
 
     // Two Expr params should be disambiguated
