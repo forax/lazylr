@@ -18,9 +18,9 @@ public final class JavaCodeVisitorGenerator {
     /// A non-terminal that matches neither Optional nor List.
     record Normal(NonTerminal head, List<Production> productions) implements Pattern {}
     /// NT with two productions: one single-symbol body, one empty body.
-    record Optional(NonTerminal head, Symbol symbol) implements Pattern {}
+    record Optional(NonTerminal head, Symbol symbol, Production emptyProduction) implements Pattern {}
     /// NT with two productions: one single-symbol body, one recursive two-symbol body.
-    record ListPattern(NonTerminal head, Symbol element) implements Pattern {}
+    record ListPattern(NonTerminal head, Symbol element, Production singleProduction) implements Pattern {}
   }
 
   private JavaCodeVisitorGenerator() {
@@ -76,11 +76,11 @@ public final class JavaCodeVisitorGenerator {
     // Work on filtered bodies for pattern recognition
     var filtered = prods.stream().map(JavaCodeVisitorGenerator::filteredBody).toList();
     if (filtered.size() == 2) {
-      var optPat = tryOptional(nt, filtered);
+      var optPat = tryOptional(nt, filtered, prods);
       if (optPat != null) {
         return optPat;
       }
-      var listPat = tryList(nt, filtered);
+      var listPat = tryList(nt, filtered, prods);
       if (listPat != null) {
         return listPat;
       }
@@ -88,39 +88,44 @@ public final class JavaCodeVisitorGenerator {
     return new Pattern.Normal(nt, prods);
   }
 
-  private static Pattern.@Nullable Optional tryOptional(NonTerminal nt, List<List<Symbol>> filtered) {
-    var emptySeen = false;
+  private static Pattern.@Nullable Optional tryOptional(NonTerminal nt, List<List<Symbol>> filtered, List<Production> prods) {
+    var emptyProduction = (Production) null;
     var symbol = (Symbol) null;
-    for (var body : filtered) {
+    for (var i = 0; i < filtered.size(); i++) {
+      var body = filtered.get(i);
       switch (body.size()) {
-        case 0 -> emptySeen = true;
+        case 0 -> emptyProduction = prods.get(i);
         case 1 -> symbol = body.getFirst();
         default -> {
           return null;
         }
       }
     }
-    if (!emptySeen || symbol == null) {
+    if (emptyProduction == null || symbol == null) {
       return null;
     }
-    return new Pattern.Optional(nt, symbol);
+    return new Pattern.Optional(nt, symbol, emptyProduction);
   }
 
   // The grammar is supposed to be LR, so only check for left-recursive list pattern
-  private static Pattern.@Nullable ListPattern tryList(NonTerminal nt, List<List<Symbol>> filtered) {
+  private static Pattern.@Nullable ListPattern tryList(NonTerminal nt, List<List<Symbol>> filtered, List<Production> prods) {
     var singleSymbol = (Symbol) null;
     var recBody = (List<Symbol>) null;
-    for (var body : filtered) {
+    var singleProduction = (Production) null;
+    for (var i = 0; i < filtered.size(); i++) {
+      var body = filtered.get(i);
       switch (body.size()) {
-        case 1 -> singleSymbol = body.getFirst();
+        case 1 -> { singleSymbol = body.getFirst(); singleProduction = prods.get(i); }
         case 2 -> recBody = body;
-        default -> { return null; }
+        default -> {
+          return null;
+        }
       }
     }
     if (recBody == null || !recBody.get(0).equals(nt) || !recBody.get(1).equals(singleSymbol)) {
       return null;
     }
-    return new Pattern.ListPattern(nt, singleSymbol);
+    return new Pattern.ListPattern(nt, singleSymbol, singleProduction);
   }
 
   // -- Step 2: type resolution
@@ -143,9 +148,9 @@ public final class JavaCodeVisitorGenerator {
     }
     var pat = patterns.get(nt);
     var result = switch (pat) {
-      case Pattern.Optional(var _, var sym) ->
+      case Pattern.Optional(var _, var sym, Production emptyProduction) ->
           "Optional<" + findSymbolType(patterns, sym, memo) + ">";
-      case Pattern.ListPattern(var _, var sym) ->
+      case Pattern.ListPattern(var _, var sym, Production singleProduction) ->
           "List<" + findSymbolType(patterns, sym, memo) + ">";
       case Pattern.Normal(var head, var _) ->
           capitalize(head.name());       // record or sealed interface — name never depends on other NTs
@@ -277,16 +282,16 @@ public final class JavaCodeVisitorGenerator {
           }
         }
       }
-      case Pattern.Optional(var nt, var _) -> {
+      case Pattern.Optional(var nt, var _, Production emptyProduction) -> {
         var prods = grammar.productionsFor(nt);
         for (var prod : prods) {
-          emitOptionalMethod(types, sb, nt, prod);
+          emitOptionalMethod(types, sb, nt, prod, prod == emptyProduction);
         }
       }
-      case Pattern.ListPattern(var nt, var _) -> {
+      case Pattern.ListPattern(var nt, var _, Production singleProduction) -> {
         var prods = grammar.productionsFor(nt);
         for (var prod : prods) {
-          emitListMethod(types, sb, nt, prod);
+          emitListMethod(types, sb, nt, prod, prod == singleProduction);
         }
       }
     }
@@ -321,9 +326,9 @@ public final class JavaCodeVisitorGenerator {
   }
 
   // Optional pattern
-  private static void emitOptionalMethod(Map<NonTerminal, String> types, StringBuilder sb, NonTerminal nt, Production prod) {
+  private static void emitOptionalMethod(Map<NonTerminal, String> types, StringBuilder sb, NonTerminal nt, Production prod, boolean isEmptyProduction) {
     var returnType = types.get(nt);
-    if (prod.body().isEmpty()) {
+    if (isEmptyProduction) {
       // epsilon → Optional.empty()
       var params = params(types, prod);
       emitProductionMethodDeclaration(sb, prod, returnType, decapitalize(nt.name()) + "Empty", params);
@@ -339,13 +344,14 @@ public final class JavaCodeVisitorGenerator {
   }
 
   // List pattern
-  private static void emitListMethod(Map<NonTerminal, String> types, StringBuilder sb, NonTerminal nt, Production prod) {
+  private static void emitListMethod(Map<NonTerminal, String> types, StringBuilder sb, NonTerminal nt, Production prod, boolean isSingleProduction) {
     var returnType = types.get(nt);
-    if (prod.body().size() == 1) {
+    if (isSingleProduction) {
       // base case: create list with one element
       var params = params(types, prod);
+      var elementType = returnType.substring(returnType.indexOf('<')+ 1, returnType.length() - 1);
       emitProductionMethodDeclaration(sb, prod, returnType, decapitalize(nt.name()) + "Single", params);
-      sb.append("    var list = new Array").append(returnType).append("();\n");
+      sb.append("    var list = new ArrayList<").append(elementType).append(">();\n");
       sb.append("    list.add(").append(params.getFirst().name).append(");\n");
       sb.append("    return list;\n");
       sb.append("  }\n\n");
