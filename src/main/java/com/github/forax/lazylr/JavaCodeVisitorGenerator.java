@@ -328,15 +328,14 @@ public final class JavaCodeVisitorGenerator {
   // Optional pattern
   private static void emitOptionalMethod(Map<NonTerminal, String> types, StringBuilder sb, NonTerminal nt, Production prod, boolean isEmptyProduction) {
     var returnType = types.get(nt);
+    var params = params(types, prod);
     if (isEmptyProduction) {
       // epsilon → Optional.empty()
-      var params = params(types, prod);
       emitProductionMethodDeclaration(sb, prod, returnType, decapitalize(nt.name()) + "Empty", params);
       sb.append("    return Optional.empty();\n");
       sb.append("  }\n\n");
     } else {
       // single symbol → Optional.of(value)
-      var params = params(types, prod);
       emitProductionMethodDeclaration(sb, prod, returnType, decapitalize(nt.name()) + "Of", params);
       sb.append("    return Optional.of(").append(params.getFirst().name).append(");\n");
       sb.append("  }\n\n");
@@ -346,9 +345,9 @@ public final class JavaCodeVisitorGenerator {
   // List pattern
   private static void emitListMethod(Map<NonTerminal, String> types, StringBuilder sb, NonTerminal nt, Production prod, boolean isSingleProduction) {
     var returnType = types.get(nt);
+    var params = params(types, prod);
     if (isSingleProduction) {
       // base case: create list with one element
-      var params = params(types, prod);
       var elementType = returnType.substring(returnType.indexOf('<')+ 1, returnType.length() - 1);
       emitProductionMethodDeclaration(sb, prod, returnType, decapitalize(nt.name()) + "Single", params);
       sb.append("    var list = new ArrayList<").append(elementType).append(">();\n");
@@ -357,7 +356,6 @@ public final class JavaCodeVisitorGenerator {
       sb.append("  }\n\n");
     } else {
       // recursive case: append to existing list
-      var params = params(types, prod);
       emitProductionMethodDeclaration(sb, prod, returnType, decapitalize(nt.name()) + "Cons", params);
       sb.append("    ").append(params.get(0).name).append(".add(").append(params.get(1).name).append(");\n");
       sb.append("    return ").append(params.get(0).name).append(";\n");
