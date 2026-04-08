@@ -527,7 +527,6 @@ final class JavaCodeVisitorGenerator {
       case ".."  -> "DotDot";
       case "..." -> "Ellipsis";
       case "..<" -> "HalfOpenRange"; // Swift
-      case "...<"-> "HalfOpenRange"; // Swift
 
       // Brackets
       case "("   -> "LParen";
