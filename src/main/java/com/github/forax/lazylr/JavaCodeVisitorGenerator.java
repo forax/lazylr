@@ -461,29 +461,129 @@ final class JavaCodeVisitorGenerator {
 
   // -- Naming Helpers
 
-  private static final Map<String, String> SYMBOL_NAMES = Map.ofEntries(
-      Map.entry("+",  "Plus"),   Map.entry("-",  "Minus"),  Map.entry("*",  "Mul"),
-      Map.entry("/",  "Div"),    Map.entry("%",  "Mod"),    Map.entry("^",  "Pow"),
-      Map.entry("&",  "And"),    Map.entry("|",  "Or"),     Map.entry("~",  "BitNot"),
-      Map.entry("!",  "Not"),    Map.entry("<",  "Lt"),     Map.entry(">",  "Gt"),
-      Map.entry("<=", "Le"),     Map.entry(">=", "Ge"),     Map.entry("==", "Eq"),
-      Map.entry("!=", "Ne"),     Map.entry("=",  "Assign"), Map.entry("->", "Arrow"),
-      Map.entry("=>", "FatArrow"), Map.entry("::", "ColonColon"), Map.entry(":", "Colon"),
-      Map.entry(";",  "Semi"),   Map.entry(",",  "Comma"),  Map.entry(".",  "Dot"),
-      Map.entry("..", "DotDot"), Map.entry("(",  "LParen"), Map.entry(")",  "RParen"),
-      Map.entry("{",  "LBrace"), Map.entry("}",  "RBrace"), Map.entry("[",  "LBracket"),
-      Map.entry("]",  "RBracket")
-  );
+  private static String symbolName(String terminalName) {
+    return switch (terminalName) {
+      // Arithmetic
+      case "+"   -> "Plus";
+      case "-"   -> "Minus";
+      case "*"   -> "Mul";
+      case "/"   -> "Div";
+      case "%"   -> "Mod";
+      case "**"  -> "Pow";
+      case "//"  -> "FloorDiv";  // Python
+
+      // Bitwise
+      case "&"   -> "And";
+      case "|"   -> "Or";
+      case "^"   -> "Xor";
+      case "~"   -> "BitNot";
+      case "<<"  -> "LShift";
+      case ">>"  -> "RShift";
+      case ">>>" -> "URShift";
+
+      // Logical
+      case "!"   -> "Not";
+      case "&&"  -> "LogicalAnd";
+      case "||"  -> "LogicalOr";
+
+      // Comparison
+      case "<"   -> "Lt";
+      case ">"   -> "Gt";
+      case "<="  -> "Le";
+      case ">="  -> "Ge";
+      case "=="  -> "Eq";
+      case "!="  -> "Ne";
+      case "===" -> "StrictEq";  // JavaScript
+      case "!==" -> "StrictNe";  // JavaScript
+
+      // Assignment
+      case "="   -> "Assign";
+      case "+="  -> "PlusAssign";
+      case "-="  -> "MinusAssign";
+      case "*="  -> "MulAssign";
+      case "/="  -> "DivAssign";
+      case "%="  -> "ModAssign";
+      case "&="  -> "AndAssign";
+      case "|="  -> "OrAssign";
+      case "^="  -> "XorAssign";
+      case "<<=" -> "LShiftAssign";
+      case ">>=" -> "RShiftAssign";
+      case ">>>="-> "URShiftAssign";
+      case "**=" -> "PowAssign";
+      case "//=" -> "FloorDivAssign";
+
+      // Arrows
+      case "->"  -> "Arrow";
+      case "=>"  -> "FatArrow";
+      case "<-"  -> "LeftArrow";
+      case "<=>" -> "Spaceship";
+
+      // Separators
+      case "::"  -> "ColonColon";
+      case ":"   -> "Colon";
+      case ";"   -> "Semi";
+      case ","   -> "Comma";
+      case "."   -> "Dot";
+      case ".."  -> "DotDot";
+      case "..." -> "Ellipsis";
+      case "..<" -> "HalfOpenRange"; // Swift
+      case "...<"-> "HalfOpenRange"; // Swift
+
+      // Brackets
+      case "("   -> "LParen";
+      case ")"   -> "RParen";
+      case "{"   -> "LBrace";
+      case "}"   -> "RBrace";
+      case "["   -> "LBracket";
+      case "]"   -> "RBracket";
+
+      // Quotes
+      case "'"   -> "SingleQuote";
+      case "\""  -> "DoubleQuote";
+      case "`"   -> "Backtick";
+
+      // Misc
+      case "?"   -> "Question";
+      case "@"   -> "At";
+      case "#"   -> "Hash";
+      case "$"   -> "Dollar";
+      case "\\"  -> "Backslash";
+
+      // Nullish (JavaScript, Kotlin, etc.)
+      case "??"  -> "NullishCoalesce";
+      case "?."  -> "OptionalChain";
+      case "?:"  -> "Elvis";
+
+      // Others
+      case "|>"  -> "Pipe";
+      case "<|"  -> "ReversePipe";
+      case "<~"  -> "Receive"; // Scala Akka
+      case "~>"  -> "Send";    // Scala Akka
+
+      // Python-specific
+      case ":=" -> "Walrus";  // Python
+
+      // Scala/Kotlin-specific
+      case "<:" -> "Subtype";
+      case ">:" -> "Supertype";
+      case "#::"-> "Cons";    // Scala List
+
+      // Rust
+      case "..=" -> "InclusiveRange";
+
+      default    -> "Unknown";
+    };
+  }
 
   /// Returns the CamelCase name segment contributed by a terminal:
-  /// the capitalized identifier name for identifier terminals, the entry from
-  /// [#SYMBOL_NAMES] for punctuation, or `"Unknown"` as a fallback.
-  private static String terminalSegment(Terminal t) {
-    if (isJavaIdentifier(t.name())) {
-      return capitalize(t.name());
+  /// the capitalized identifier name for identifier terminals,
+  /// a symbol name for punctuation, or `"Unknown"` as a fallback.
+  private static String terminalSegment(Terminal terminal) {
+    var terminalName= terminal.name();
+    if (isJavaIdentifier(terminalName)) {
+      return capitalize(terminalName);
     }
-    var name = SYMBOL_NAMES.get(t.name());
-    return name == null ? "Unknown" : name;
+    return symbolName(terminalName);
   }
 
   /// Derives a unique CamelCase record class name from a production by
