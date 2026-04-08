@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 
 /// Generates source code for a [Visitor] implementation from a [Grammar] definition.
 ///
-/// Call [#generate(Grammar, String)] to obtain a Java source string
+/// Call [#generate(Grammar)] to obtain a Java source string
 /// containing a ready-to-compile visitor class.
 public final class JavaCodeVisitorGenerator {
 
@@ -349,7 +349,7 @@ public final class JavaCodeVisitorGenerator {
     if (prod.body().isEmpty()) {
       // epsilon → Optional.empty()
       sb.append("  public ").append(returnType).append(" ")
-          .append(nt.name()).append("Empty() {\n");
+          .append(decapitalize(nt.name())).append("Empty() {\n");
       sb.append("    return Optional.empty();\n");
       sb.append("  }\n\n");
     } else {
@@ -357,7 +357,7 @@ public final class JavaCodeVisitorGenerator {
       var paramType = symbolType(prod.body().getFirst());
       var paramName = paramNameFor(prod.body().getFirst());
       sb.append("  public ").append(returnType).append(" ")
-          .append(nt.name()).append("(").append(paramType).append(" ").append(paramName).append(") {\n");
+          .append(decapitalize(nt.name())).append("(").append(paramType).append(" ").append(paramName).append(") {\n");
       sb.append("    return Optional.of(").append(paramName).append(");\n");
       sb.append("  }\n\n");
     }
@@ -372,17 +372,17 @@ public final class JavaCodeVisitorGenerator {
       // base case: create list with one element
       var paramName = paramNameFor(prod.body().getFirst());
       sb.append("  public ").append(returnType).append(" ")
-          .append(nt.name()).append("Single(").append(elemType).append(" ").append(paramName).append(") {\n");
+          .append(decapitalize(nt.name())).append("Single(").append(elemType).append(" ").append(paramName).append(") {\n");
       sb.append("    var list = new ArrayList<").append(elemType).append(">();\n");
       sb.append("    list.add(").append(paramName).append(");\n");
       sb.append("    return list;\n");
       sb.append("  }\n\n");
     } else {
       // recursive case: append to existing list
-      var listParamName = nt.name();
+      var listParamName = decapitalize(nt.name());
       var elemParamName = paramNameFor(prod.body().get(1));
       sb.append("  public ").append(returnType).append(" ")
-          .append(nt.name()).append("Cons(")
+          .append(decapitalize(nt.name())).append("Cons(")
           .append(returnType).append(" ").append(listParamName).append(", ")
           .append(elemType).append(" ").append(elemParamName).append(") {\n");
       sb.append("    ").append(listParamName).append(".add(").append(elemParamName).append(");\n");
@@ -429,10 +429,10 @@ public final class JavaCodeVisitorGenerator {
   }
 
   private String paramNameFor(Symbol symbol) {
-    return switch (symbol) {
+    return decapitalize(switch (symbol) {
       case Terminal t -> isJavaIdentifier(t.name()) ? t.name() : "value";
-      case NonTerminal nt -> decapitalize(nt.name());
-    };
+      case NonTerminal nt -> nt.name();
+    });
   }
 
   private static String capitalize(String s) {

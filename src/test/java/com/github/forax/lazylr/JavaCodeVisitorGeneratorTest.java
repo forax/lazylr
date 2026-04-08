@@ -13,8 +13,6 @@ public class JavaCodeVisitorGeneratorTest {
     return JavaCodeVisitorGenerator.generate(grammar);
   }
 
-  // ── Terminal methods ──────────────────────────────────────────────────────────
-
   @Test
   public void testIdentifierTerminalsGetTerminalMethods() {
     // 'num' is an identifier terminal → gets a terminal method
@@ -27,12 +25,29 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var actual = generateFromDsl(inputText);
-
-    // terminal method for 'num' present
-    assertTrue(actual.contains("public String num(Terminal terminal)"));
-    // no terminal method for '(' or ')'
-    assertFalse(actual.contains("public String LParen"));
-    assertFalse(actual.contains("public String RParen"));
+    assertEquals("""
+        public sealed interface Factor permits NumFactor, LParenFactorRParenFactor {}
+        public record NumFactor(String num) implements Factor {}
+        public record LParenFactorRParenFactor(Factor factor) implements Factor {}
+        
+        class MyVisitor implements Visitor<Factor> {
+        
+          public String num(Terminal terminal) {
+            return terminal.value();
+          }
+        
+          @ProductionName("Factor : num")
+          public Factor numFactor(String num) {
+            return new NumFactor(num);
+          }
+        
+          @ProductionName("Factor : ( Factor )")
+          public Factor lParenFactorRParenFactor(Factor factor) {
+            return new LParenFactorRParenFactor(factor);
+          }
+        
+        }
+        """, actual);
   }
 
   @Test
@@ -70,8 +85,6 @@ public class JavaCodeVisitorGeneratorTest {
         """, actual);
   }
 
-  // ── Normal pattern – single production ───────────────────────────────────────
-
   @Test
   public void testSingleProductionGeneratesRecord() {
     var inputText = """
@@ -82,15 +95,27 @@ public class JavaCodeVisitorGeneratorTest {
 
     var actual = generateFromDsl(inputText);
 
-    // record declaration
-    assertTrue(actual.contains("public record Point("));
-    // visitor method
-    assertTrue(actual.contains("@ProductionName(\"Point : x y\")"));
-    assertTrue(actual.contains("public Point point("));
-    assertTrue(actual.contains("return new Point("));
+    assertEquals("""
+        public record Point(String x, String y) {}
+        
+        class MyVisitor implements Visitor<Point> {
+        
+          public String x(Terminal terminal) {
+            return terminal.value();
+          }
+        
+          public String y(Terminal terminal) {
+            return terminal.value();
+          }
+        
+          @ProductionName("Point : x y")
+          public Point point(String x, String y) {
+            return new Point(x, y);
+          }
+        
+        }
+        """, actual);
   }
-
-  // ── Normal pattern – multiple productions → sealed interface ─────────────────
 
   @Test
   public void testArithmeticExpressionGeneratesSealedInterface() {
@@ -184,8 +209,6 @@ public class JavaCodeVisitorGeneratorTest {
     assertEquals(expected, actual);
   }
 
-  // ── Optional pattern ──────────────────────────────────────────────────────────
-
   @Test
   public void testOptionalTerminalProducesOptionalString() {
     var inputText = """
@@ -198,12 +221,36 @@ public class JavaCodeVisitorGeneratorTest {
 
     var actual = generateFromDsl(inputText);
 
-    // return type of the NT
-    assertTrue(actual.contains("Optional<String>"));
-    // epsilon arm
-    assertTrue(actual.contains("return Optional.empty();"));
-    // single-symbol arm
-    assertTrue(actual.contains("return Optional.of("));
+    assertEquals("""
+        public record Stmt(String name, Optional<String> opt_label) {}
+        
+        class MyVisitor implements Visitor<Stmt> {
+        
+          public String name(Terminal terminal) {
+            return terminal.value();
+          }
+        
+          public String label(Terminal terminal) {
+            return terminal.value();
+          }
+        
+          @ProductionName("Stmt : name opt_label")
+          public Stmt stmt(String name, Optional<String> opt_label) {
+            return new Stmt(name, opt_label);
+          }
+        
+          @ProductionName("opt_label : label")
+          public Optional<String> opt_label(String label) {
+            return Optional.of(label);
+          }
+        
+          @ProductionName("opt_label : ε")
+          public Optional<String> opt_labelEmpty() {
+            return Optional.empty();
+          }
+        
+        }
+        """, actual);
   }
 
   @Test
@@ -218,14 +265,43 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var actual = generateFromDsl(inputText);
-    System.out.println(actual);
-
-    assertTrue(actual.contains("Optional<Expr>"));
-    assertTrue(actual.contains("return Optional.empty();"));
-    assertTrue(actual.contains("return Optional.of(expr);"));
+    assertEquals("""
+        public record Decl(String name, Optional<Expr> opt_init) {}
+        public record Expr(String num) {}
+        
+        class MyVisitor implements Visitor<Decl> {
+        
+          public String name(Terminal terminal) {
+            return terminal.value();
+          }
+        
+          public String num(Terminal terminal) {
+            return terminal.value();
+          }
+        
+          @ProductionName("Decl : name opt_init")
+          public Decl decl(String name, Optional<Expr> opt_init) {
+            return new Decl(name, opt_init);
+          }
+        
+          @ProductionName("opt_init : Expr")
+          public Optional<Expr> opt_init(Expr expr) {
+            return Optional.of(expr);
+          }
+        
+          @ProductionName("opt_init : ε")
+          public Optional<Expr> opt_initEmpty() {
+            return Optional.empty();
+          }
+        
+          @ProductionName("Expr : num")
+          public Expr expr(String num) {
+            return new Expr(num);
+          }
+        
+        }
+        """, actual);
   }
-
-  // ── List pattern ──────────────────────────────────────────────────────────────
 
   @Test
   public void testListOfTerminalProducesListString() {
@@ -237,12 +313,29 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var actual = generateFromDsl(inputText);
-
-    assertTrue(actual.contains("List<String>"));
-    // base case creates ArrayList
-    assertTrue(actual.contains("new ArrayList<String>()"));
-    // recursive case appends
-    assertTrue(actual.contains(".add("));
+    assertEquals("""
+        
+        class MyVisitor implements Visitor<List<String>> {
+        
+          public String name(Terminal terminal) {
+            return terminal.value();
+          }
+        
+          @ProductionName("Names : name")
+          public List<String> namesSingle(String name) {
+            var list = new ArrayList<String>();
+            list.add(name);
+            return list;
+          }
+        
+          @ProductionName("Names : Names name")
+          public List<String> namesCons(List<String> names, String name) {
+            names.add(name);
+            return names;
+          }
+        
+        }
+        """, actual);
   }
 
   @Test
