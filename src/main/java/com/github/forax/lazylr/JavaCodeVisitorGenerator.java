@@ -14,14 +14,13 @@ import java.util.stream.Collectors;
 /// containing a ready-to-compile visitor class.
 public final class JavaCodeVisitorGenerator {
 
-  sealed interface Pattern {
-    /// A non-terminal that matches neither Optional nor List.
-    record Normal(NonTerminal head, List<Production> productions) implements Pattern {}
-    /// NT with two productions: one single-symbol body, one empty body.
-    record Optional(NonTerminal head, Symbol symbol, Production emptyProduction) implements Pattern {}
-    /// NT with two productions: one single-symbol body, one recursive two-symbol body.
-    record ListPattern(NonTerminal head, Symbol element, Production singleProduction) implements Pattern {}
-  }
+  private sealed interface Pattern { }
+  /// A non-terminal that matches neither Optional nor List.
+  record NormalPattern(NonTerminal head, List<Production> productions) implements Pattern {}
+  /// NT with two productions: one single-symbol body, one empty body.
+  record OptionalPattern(NonTerminal head, Symbol symbol, Production emptyProduction) implements Pattern {}
+  /// NT with two productions: one single-symbol body, one recursive two-symbol body.
+  record ListPattern(NonTerminal head, Symbol element, Production singleProduction) implements Pattern {}
 
   private JavaCodeVisitorGenerator() {
     throw new AssertionError();
@@ -85,10 +84,10 @@ public final class JavaCodeVisitorGenerator {
         return listPat;
       }
     }
-    return new Pattern.Normal(nt, prods);
+    return new NormalPattern(nt, prods);
   }
 
-  private static Pattern.@Nullable Optional tryOptional(NonTerminal nt, List<List<Symbol>> filtered, List<Production> prods) {
+  private static @Nullable OptionalPattern tryOptional(NonTerminal nt, List<List<Symbol>> filtered, List<Production> prods) {
     var emptyProduction = (Production) null;
     var symbol = (Symbol) null;
     for (var i = 0; i < filtered.size(); i++) {
@@ -104,11 +103,11 @@ public final class JavaCodeVisitorGenerator {
     if (emptyProduction == null || symbol == null) {
       return null;
     }
-    return new Pattern.Optional(nt, symbol, emptyProduction);
+    return new OptionalPattern(nt, symbol, emptyProduction);
   }
 
   // The grammar is supposed to be LR, so only check for left-recursive list pattern
-  private static Pattern.@Nullable ListPattern tryList(NonTerminal nt, List<List<Symbol>> filtered, List<Production> prods) {
+  private static @Nullable ListPattern tryList(NonTerminal nt, List<List<Symbol>> filtered, List<Production> prods) {
     var singleSymbol = (Symbol) null;
     var recBody = (List<Symbol>) null;
     var singleProduction = (Production) null;
@@ -125,7 +124,7 @@ public final class JavaCodeVisitorGenerator {
     if (recBody == null || !recBody.get(0).equals(nt) || !recBody.get(1).equals(singleSymbol)) {
       return null;
     }
-    return new Pattern.ListPattern(nt, singleSymbol, singleProduction);
+    return new ListPattern(nt, singleSymbol, singleProduction);
   }
 
   // -- Step 2: type resolution
@@ -148,11 +147,11 @@ public final class JavaCodeVisitorGenerator {
     }
     var pat = patterns.get(nt);
     var result = switch (pat) {
-      case Pattern.Optional(var _, var sym, Production emptyProduction) ->
+      case OptionalPattern(var _, var sym, Production emptyProduction) ->
           "Optional<" + findSymbolType(patterns, sym, memo) + ">";
-      case Pattern.ListPattern(var _, var sym, Production singleProduction) ->
+      case ListPattern(var _, var sym, Production singleProduction) ->
           "List<" + findSymbolType(patterns, sym, memo) + ">";
-      case Pattern.Normal(var head, var _) ->
+      case NormalPattern(var head, var _) ->
           capitalize(head.name());       // record or sealed interface — name never depends on other NTs
     };
     memo.put(nt, result);
@@ -211,7 +210,7 @@ public final class JavaCodeVisitorGenerator {
 
   private static void emitTypeDeclarations(Map<NonTerminal, String> types, StringBuilder sb, Pattern pat) {
     switch (pat) {
-      case Pattern.Normal(var nt, var prods) -> {
+      case NormalPattern(var nt, var prods) -> {
         if (prods.size() == 1) {
           emitRecord(types, sb, capitalize(nt.name()), null, prods.getFirst());
         } else {
@@ -227,7 +226,7 @@ public final class JavaCodeVisitorGenerator {
           }
         }
       }
-      case Pattern.Optional _, Pattern.ListPattern _ -> { /* no named types needed */ }
+      case OptionalPattern _, ListPattern _ -> { /* no named types needed */ }
     }
   }
 
@@ -273,7 +272,7 @@ public final class JavaCodeVisitorGenerator {
 
   private static void emitProductionMethods(Grammar grammar, Map<NonTerminal, String> types, StringBuilder sb, Pattern pat) {
     switch (pat) {
-      case Pattern.Normal(var nt, var prods) -> {
+      case NormalPattern(var nt, var prods) -> {
         if (prods.size() == 1) {
           emitNormalSingleMethod(types, sb, nt, prods.getFirst());
         } else {
@@ -282,13 +281,13 @@ public final class JavaCodeVisitorGenerator {
           }
         }
       }
-      case Pattern.Optional(var nt, var _, Production emptyProduction) -> {
+      case OptionalPattern(var nt, var _, Production emptyProduction) -> {
         var prods = grammar.productionsFor(nt);
         for (var prod : prods) {
           emitOptionalMethod(types, sb, nt, prod, prod == emptyProduction);
         }
       }
-      case Pattern.ListPattern(var nt, var _, Production singleProduction) -> {
+      case ListPattern(var nt, var _, Production singleProduction) -> {
         var prods = grammar.productionsFor(nt);
         for (var prod : prods) {
           emitListMethod(types, sb, nt, prod, prod == singleProduction);
