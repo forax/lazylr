@@ -3,6 +3,8 @@ package com.github.forax.lazylr;
 import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public class JavaCodeVisitorGeneratorTest {
 
@@ -89,82 +91,82 @@ public class JavaCodeVisitorGeneratorTest {
 
     var expected = """
         package com.example;
-
+        
         import com.github.forax.lazylr.Terminal;
         import com.github.forax.lazylr.Visitor;
         import com.github.forax.lazylr.ProductionName;
         import java.util.ArrayList;
         import java.util.List;
         import java.util.Optional;
-
-        public sealed interface Exp permits ExpPlusExp, ExpMinusTerm, ExpTerm {}
-        public record ExpPlusExp(Exp exp, Term term) implements Exp {}
-        public record ExpMinusTerm(Exp exp, Term term) implements Exp {}
-        public record ExpTerm(Term term) implements Exp {}
-        public sealed interface Term permits TermMulTerm, TermDivFactor, TermFactor {}
-        public record TermMulTerm(Term term, Factor factor) implements Term {}
-        public record TermDivFactor(Term term, Factor factor) implements Term {}
-        public record TermFactor(Factor factor) implements Term {}
-        public sealed interface Factor permits FactorNum, FactorIdent, FactorLParenExpRParen {}
-        public record FactorNum(String num) implements Factor {}
-        public record FactorIdent(String ident) implements Factor {}
-        public record FactorLParenExpRParen(Exp exp) implements Factor {}
-
+        
+        public sealed interface Exp permits ExpPlusTermExp, ExpMinusTermExp, TermExp {}
+        public record ExpPlusTermExp(Exp exp, Term term) implements Exp {}
+        public record ExpMinusTermExp(Exp exp, Term term) implements Exp {}
+        public record TermExp(Term term) implements Exp {}
+        public sealed interface Term permits TermMulFactorTerm, TermDivFactorTerm, FactorTerm {}
+        public record TermMulFactorTerm(Term term, Factor factor) implements Term {}
+        public record TermDivFactorTerm(Term term, Factor factor) implements Term {}
+        public record FactorTerm(Factor factor) implements Term {}
+        public sealed interface Factor permits NumFactor, IdentFactor, LParenExpRParenFactor {}
+        public record NumFactor(String num) implements Factor {}
+        public record IdentFactor(String ident) implements Factor {}
+        public record LParenExpRParenFactor(Exp exp) implements Factor {}
+        
         public class MyVisitor implements Visitor<Exp> {
-
+        
           public String num(Terminal terminal) {
             return terminal.value();
           }
-
+        
           public String ident(Terminal terminal) {
             return terminal.value();
           }
-
+        
           @ProductionName("Exp : Exp + Term")
-          public Exp expPlusExp(Exp exp, Term term) {
-            return new ExpPlusExp(exp, term);
+          public Exp expPlusTermExp(Exp exp, Term term) {
+            return new ExpPlusTermExp(exp, term);
           }
-
+        
           @ProductionName("Exp : Exp - Term")
-          public Exp expMinusTerm(Exp exp, Term term) {
-            return new ExpMinusTerm(exp, term);
+          public Exp expMinusTermExp(Exp exp, Term term) {
+            return new ExpMinusTermExp(exp, term);
           }
-
+        
           @ProductionName("Exp : Term")
-          public Exp expTerm(Term term) {
-            return new ExpTerm(term);
+          public Exp termExp(Term term) {
+            return new TermExp(term);
           }
-
+        
           @ProductionName("Term : Term * Factor")
-          public Term termMulTerm(Term term, Factor factor) {
-            return new TermMulTerm(term, factor);
+          public Term termMulFactorTerm(Term term, Factor factor) {
+            return new TermMulFactorTerm(term, factor);
           }
-
+        
           @ProductionName("Term : Term / Factor")
-          public Term termDivFactor(Term term, Factor factor) {
-            return new TermDivFactor(term, factor);
+          public Term termDivFactorTerm(Term term, Factor factor) {
+            return new TermDivFactorTerm(term, factor);
           }
-
+        
           @ProductionName("Term : Factor")
-          public Term termFactor(Factor factor) {
-            return new TermFactor(factor);
+          public Term factorTerm(Factor factor) {
+            return new FactorTerm(factor);
           }
-
+        
           @ProductionName("Factor : num")
-          public Factor factorNum(String num) {
-            return new FactorNum(num);
+          public Factor numFactor(String num) {
+            return new NumFactor(num);
           }
-
+        
           @ProductionName("Factor : ident")
-          public Factor factorIdent(String ident) {
-            return new FactorIdent(ident);
+          public Factor identFactor(String ident) {
+            return new IdentFactor(ident);
           }
-
+        
           @ProductionName("Factor : ( Exp )")
-          public Factor factorLParenExpRParen(Exp exp) {
-            return new FactorLParenExpRParen(exp);
+          public Factor lParenExpRParenFactor(Exp exp) {
+            return new LParenExpRParenFactor(exp);
           }
-
+        
         }
         """;
 
@@ -206,6 +208,7 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var actual = generateFromDsl(inputText);
+    System.out.println(actual);
 
     assertTrue(actual.contains("Optional<Expr>"));
     assertTrue(actual.contains("return Optional.empty();"));
@@ -300,6 +303,7 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var actual = generateFromDsl(inputText);
+    System.out.println(actual);
 
     assertTrue(actual.contains("ExprArrowExpr"));
     assertTrue(actual.contains("ExprFatArrowExpr"));
@@ -376,15 +380,5 @@ public class JavaCodeVisitorGeneratorTest {
     assertTrue(actual.contains("import java.util.ArrayList;"));
     assertTrue(actual.contains("import java.util.List;"));
     assertTrue(actual.contains("import java.util.Optional;"));
-  }
-
-  // ── Helpers ───────────────────────────────────────────────────────────────────
-
-  private static void assertTrue(boolean condition) {
-    org.junit.jupiter.api.Assertions.assertTrue(condition);
-  }
-
-  private static void assertFalse(boolean condition) {
-    org.junit.jupiter.api.Assertions.assertFalse(condition);
   }
 }

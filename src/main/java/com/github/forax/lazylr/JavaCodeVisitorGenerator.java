@@ -1,5 +1,7 @@
 package com.github.forax.lazylr;
 
+import org.jspecify.annotations.Nullable;
+
 import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -66,10 +68,13 @@ public final class JavaCodeVisitorGenerator {
   }
 
   private static boolean isJavaIdentifier(String name) {
-    if (name.isEmpty()) return false;
-    if (!Character.isJavaIdentifierStart(name.charAt(0))) return false;
-    for (int i = 1; i < name.length(); i++) {
-      if (!Character.isJavaIdentifierPart(name.charAt(i))) return false;
+    if (!Character.isJavaIdentifierStart(name.charAt(0))) {
+      return false;
+    }
+    for (var i = 1; i < name.length(); i++) {
+      if (!Character.isJavaIdentifierPart(name.charAt(i))) {
+        return false;
+      }
     }
     return true;
   }
@@ -91,7 +96,7 @@ public final class JavaCodeVisitorGenerator {
     return map;
   }
 
-  private static Pattern classify(NonTerminal nt, List<Production> prods) {
+  private static @Nullable Pattern classify(NonTerminal nt, List<Production> prods) {
     // Work on filtered bodies for pattern recognition
     var filtered = prods.stream().map(JavaCodeVisitorGenerator::filteredBody).toList();
     if (filtered.size() == 2) {
@@ -103,7 +108,7 @@ public final class JavaCodeVisitorGenerator {
     return new Pattern.Normal(nt, prods);
   }
 
-  private static Pattern.Optional tryOptional(NonTerminal nt, List<Production> prods, List<List<Symbol>> filtered) {
+  private static Pattern.@Nullable Optional tryOptional(NonTerminal nt, List<Production> prods, List<List<Symbol>> filtered) {
     Production single = null, empty = null;
     for (var i = 0; i < filtered.size(); i++) {
       var body = filtered.get(i);
@@ -114,7 +119,7 @@ public final class JavaCodeVisitorGenerator {
     return new Pattern.Optional(nt, filteredBody(single).getFirst());
   }
 
-  private static Pattern.ListPattern tryList(NonTerminal nt, List<Production> prods, List<List<Symbol>> filtered) {
+  private static Pattern.@Nullable ListPattern tryList(NonTerminal nt, List<Production> prods, List<List<Symbol>> filtered) {
     Production single = null, recursive = null;
     List<Symbol> singleBody = null, recBody = null;
     for (var i = 0; i < filtered.size(); i++) {
@@ -190,14 +195,14 @@ public final class JavaCodeVisitorGenerator {
     // ── Visitor class ─────────────────────────────────────────────────────────
     var startType = types.get(grammar.startSymbol());
     sb.append("public class ").append(className)
-      .append(" implements Visitor<").append(startType).append("> {\n\n");
+        .append(" implements Visitor<").append(startType).append("> {\n\n");
 
     // terminal methods
     for (var term : identifierTerminals) {
       sb.append("  public String ").append(term.name())
-        .append("(Terminal terminal) {\n")
-        .append("    return terminal.value();\n")
-        .append("  }\n\n");
+          .append("(Terminal terminal) {\n")
+          .append("    return terminal.value();\n")
+          .append("  }\n\n");
     }
 
     // production methods
@@ -219,7 +224,7 @@ public final class JavaCodeVisitorGenerator {
         } else {
           var sealedName = capitalize(nt.name());
           sb.append("public sealed interface ").append(sealedName)
-            .append(" permits ");
+              .append(" permits ");
           sb.append(prods.stream()
               .map(p -> recordNameForProduction(p))
               .collect(Collectors.joining(", ")));
@@ -233,14 +238,16 @@ public final class JavaCodeVisitorGenerator {
     }
   }
 
-  private void emitRecord(StringBuilder sb, String name, String sealedParent, Production prod) {
+  private void emitRecord(StringBuilder sb, String name, @Nullable String sealedParent, Production prod) {
     var params = recordParams(prod);
     sb.append("public record ").append(name).append("(");
     sb.append(params.stream()
         .map(p -> p.type() + " " + p.name())
         .collect(Collectors.joining(", ")));
     sb.append(")");
-    if (sealedParent != null) sb.append(" implements ").append(sealedParent);
+    if (sealedParent != null) {
+      sb.append(" implements ").append(sealedParent);
+    }
     sb.append(" {}\n");
   }
 
@@ -259,7 +266,7 @@ public final class JavaCodeVisitorGenerator {
         }
         case NonTerminal nt -> {
           params.add(new Param(types.getOrDefault(nt, capitalize(nt.name())),
-              uniqueName(nt.name(), ntNameCounts)));
+              uniqueName(decapitalize(nt.name()), ntNameCounts)));
         }
       }
     }
@@ -307,7 +314,7 @@ public final class JavaCodeVisitorGenerator {
       // epsilon with single production – edge case, just return empty record
       sb.append("  @ProductionName(\"").append(prod.name()).append("\")\n");
       sb.append("  public ").append(returnType).append(" ")
-        .append(decapitalize(returnType)).append("() {\n");
+          .append(decapitalize(returnType)).append("() {\n");
       sb.append("    return new ").append(returnType).append("();\n");
       sb.append("  }\n\n");
       return;
@@ -319,7 +326,7 @@ public final class JavaCodeVisitorGenerator {
     }
     sb.append("  @ProductionName(\"").append(prod.name()).append("\")\n");
     sb.append("  public ").append(returnType).append(" ")
-      .append(decapitalize(returnType)).append("(");
+        .append(decapitalize(returnType)).append("(");
     sb.append(params.stream().map(p -> p.type() + " " + p.name()).collect(Collectors.joining(", ")));
     sb.append(") {\n");
     sb.append("    return new ").append(returnType).append("(");
@@ -338,7 +345,7 @@ public final class JavaCodeVisitorGenerator {
     }
     sb.append("  @ProductionName(\"").append(prod.name()).append("\")\n");
     sb.append("  public ").append(returnType).append(" ")
-      .append(decapitalize(recName)).append("(");
+        .append(decapitalize(recName)).append("(");
     sb.append(params.stream().map(p -> p.type() + " " + p.name()).collect(Collectors.joining(", ")));
     sb.append(") {\n");
     sb.append("    return new ").append(recName).append("(");
@@ -353,7 +360,7 @@ public final class JavaCodeVisitorGenerator {
     if (prod.body().isEmpty()) {
       // epsilon → Optional.empty()
       sb.append("  public ").append(returnType).append(" ")
-        .append(nt.name()).append("Empty() {\n");
+          .append(nt.name()).append("Empty() {\n");
       sb.append("    return Optional.empty();\n");
       sb.append("  }\n\n");
     } else {
@@ -361,7 +368,7 @@ public final class JavaCodeVisitorGenerator {
       var paramType = symbolType(prod.body().getFirst());
       var paramName = paramNameFor(prod.body().getFirst());
       sb.append("  public ").append(returnType).append(" ")
-        .append(nt.name()).append("(").append(paramType).append(" ").append(paramName).append(") {\n");
+          .append(nt.name()).append("(").append(paramType).append(" ").append(paramName).append(") {\n");
       sb.append("    return Optional.of(").append(paramName).append(");\n");
       sb.append("  }\n\n");
     }
@@ -376,7 +383,7 @@ public final class JavaCodeVisitorGenerator {
       // base case: create list with one element
       var paramName = paramNameFor(prod.body().getFirst());
       sb.append("  public ").append(returnType).append(" ")
-        .append(nt.name()).append("Single(").append(elemType).append(" ").append(paramName).append(") {\n");
+          .append(nt.name()).append("Single(").append(elemType).append(" ").append(paramName).append(") {\n");
       sb.append("    var list = new ArrayList<").append(elemType).append(">();\n");
       sb.append("    list.add(").append(paramName).append(");\n");
       sb.append("    return list;\n");
@@ -386,9 +393,9 @@ public final class JavaCodeVisitorGenerator {
       var listParamName = nt.name();
       var elemParamName = paramNameFor(prod.body().get(1));
       sb.append("  public ").append(returnType).append(" ")
-        .append(nt.name()).append("Cons(")
-        .append(returnType).append(" ").append(listParamName).append(", ")
-        .append(elemType).append(" ").append(elemParamName).append(") {\n");
+          .append(nt.name()).append("Cons(")
+          .append(returnType).append(" ").append(listParamName).append(", ")
+          .append(elemType).append(" ").append(elemParamName).append(") {\n");
       sb.append("    ").append(listParamName).append(".add(").append(elemParamName).append(");\n");
       sb.append("    return ").append(listParamName).append(";\n");
       sb.append("  }\n\n");
@@ -412,39 +419,38 @@ public final class JavaCodeVisitorGenerator {
   );
 
   private static String terminalSegment(Terminal t) {
-    if (isJavaIdentifier(t.name())) return capitalize(t.name());
-    return SYMBOL_NAMES.getOrDefault(t.name(), null);
+    if (isJavaIdentifier(t.name())) {
+      return capitalize(t.name());
+    }
+    var name = SYMBOL_NAMES.get(t.name());
+    return name == null ? "Unknown" : name;
   }
 
-  private String recordNameForProduction(Production prod) {
+  private String recordNameForProduction(Production production) {
     // Build a CamelCase name from all symbols that have a known name segment
-    var sb = new StringBuilder(capitalize(prod.head().name()));
-    for (var sym : prod.body()) {
-      switch (sym) {
-        case Terminal t -> {
-          var seg = terminalSegment(t);
-          if (seg != null) sb.append(seg);
-        }
-        case NonTerminal nt -> sb.append(capitalize(nt.name()));
+    var builder = new StringBuilder();
+    for (var symbol : production.body()) {
+      switch (symbol) {
+        case Terminal t -> builder.append(terminalSegment(t));
+        case NonTerminal nt -> builder.append(capitalize(nt.name()));
       }
     }
-    return sb.toString();
+    builder.append(capitalize(production.head().name()));
+    return builder.toString();
   }
 
-  private String paramNameFor(Symbol sym) {
-    return switch (sym) {
+  private String paramNameFor(Symbol symbol) {
+    return switch (symbol) {
       case Terminal t -> isJavaIdentifier(t.name()) ? t.name() : "value";
-      case NonTerminal nt -> nt.name();
+      case NonTerminal nt -> decapitalize(nt.name());
     };
   }
 
   private static String capitalize(String s) {
-    if (s.isEmpty()) return s;
     return Character.toUpperCase(s.charAt(0)) + s.substring(1);
   }
 
   private static String decapitalize(String s) {
-    if (s.isEmpty()) return s;
     return Character.toLowerCase(s.charAt(0)) + s.substring(1);
   }
 }
