@@ -10,7 +10,7 @@ public class JavaCodeVisitorGeneratorTest {
 
   private static String generateFromDsl(String inputText) {
     var grammar = MetaGrammar.load(inputText).grammar();
-    return JavaCodeVisitorGenerator.generate(grammar, "MyVisitor", "com.example");
+    return JavaCodeVisitorGenerator.generate(grammar);
   }
 
   // ── Terminal methods ──────────────────────────────────────────────────────────
@@ -39,16 +39,35 @@ public class JavaCodeVisitorGeneratorTest {
   public void testNonIdentifierTerminalsDoNotGetTerminalMethods() {
     var inputText = """
         grammar {
-          E : E '+' E
-          E : num
+          Expr : Expr '+' Expr
+          Expr : num
         }
         """;
 
     var actual = generateFromDsl(inputText);
-
-    assertFalse(actual.contains("public String plus(Terminal terminal)"));
-    assertFalse(actual.contains("public String Plus(Terminal terminal)"));
-    assertTrue(actual.contains("public String num(Terminal terminal)"));
+    assertEquals("""
+        public sealed interface Expr permits ExprPlusExprExpr, NumExpr {}
+        public record ExprPlusExprExpr(Expr expr, Expr expr2) implements Expr {}
+        public record NumExpr(String num) implements Expr {}
+        
+        class MyVisitor implements Visitor<Expr> {
+        
+          public String num(Terminal terminal) {
+            return terminal.value();
+          }
+        
+          @ProductionName("Expr : Expr + Expr")
+          public Expr exprPlusExprExpr(Expr expr, Expr expr2) {
+            return new ExprPlusExprExpr(expr, expr2);
+          }
+        
+          @ProductionName("Expr : num")
+          public Expr numExpr(String num) {
+            return new NumExpr(num);
+          }
+        
+        }
+        """, actual);
   }
 
   // ── Normal pattern – single production ───────────────────────────────────────
@@ -90,15 +109,6 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var expected = """
-        package com.example;
-        
-        import com.github.forax.lazylr.Terminal;
-        import com.github.forax.lazylr.Visitor;
-        import com.github.forax.lazylr.ProductionName;
-        import java.util.ArrayList;
-        import java.util.List;
-        import java.util.Optional;
-        
         public sealed interface Exp permits ExpPlusTermExp, ExpMinusTermExp, TermExp {}
         public record ExpPlusTermExp(Exp exp, Term term) implements Exp {}
         public record ExpMinusTermExp(Exp exp, Term term) implements Exp {}
@@ -112,7 +122,7 @@ public class JavaCodeVisitorGeneratorTest {
         public record IdentFactor(String ident) implements Factor {}
         public record LParenExpRParenFactor(Exp exp) implements Factor {}
         
-        public class MyVisitor implements Visitor<Exp> {
+        class MyVisitor implements Visitor<Exp> {
         
           public String num(Terminal terminal) {
             return terminal.value();
@@ -359,26 +369,5 @@ public class JavaCodeVisitorGeneratorTest {
 
     // Two Expr params should be disambiguated
     assertTrue(actual.contains("Expr expr,") || actual.contains("Expr expr2"));
-  }
-
-  // ── Package and imports ───────────────────────────────────────────────────────
-
-  @Test
-  public void testGeneratedFileHasCorrectPackageAndImports() {
-    var inputText = """
-        grammar {
-          E : num
-        }
-        """;
-
-    var actual = generateFromDsl(inputText);
-
-    assertTrue(actual.startsWith("package com.example;"));
-    assertTrue(actual.contains("import com.github.forax.lazylr.Terminal;"));
-    assertTrue(actual.contains("import com.github.forax.lazylr.Visitor;"));
-    assertTrue(actual.contains("import com.github.forax.lazylr.ProductionName;"));
-    assertTrue(actual.contains("import java.util.ArrayList;"));
-    assertTrue(actual.contains("import java.util.List;"));
-    assertTrue(actual.contains("import java.util.Optional;"));
   }
 }

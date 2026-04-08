@@ -11,7 +11,7 @@ import java.util.stream.Collectors;
 
 /// Generates source code for a [Visitor] implementation from a [Grammar] definition.
 ///
-/// Call [#generate(Grammar, String, String)] to obtain a Java source string
+/// Call [#generate(Grammar, String)] to obtain a Java source string
 /// containing a ready-to-compile visitor class.
 public final class JavaCodeVisitorGenerator {
 
@@ -31,12 +31,10 @@ public final class JavaCodeVisitorGenerator {
   /// Generates a visitor source file.
   ///
   /// @param grammar   the grammar to generate a visitor for
-  /// @param className the simple name of the generated class
-  /// @param pkg       the package name (e.g. {@code "com.example"})
   /// @return Java source code as a string
-  public static String generate(Grammar grammar, String className, String pkg) {
+  public static String generate(Grammar grammar) {
     var gen = new JavaCodeVisitorGenerator(grammar);
-    return gen.emit(className, pkg);
+    return gen.emit();
   }
 
   // ── Internal state ────────────────────────────────────────────────────────────
@@ -175,16 +173,8 @@ public final class JavaCodeVisitorGenerator {
 
   // ── Step 4 – code emission ───────────────────────────────────────────────────
 
-  private String emit(String className, String pkg) {
+  private String emit() {
     var sb = new StringBuilder();
-
-    sb.append("package ").append(pkg).append(";\n\n");
-    sb.append("import com.github.forax.lazylr.Terminal;\n");
-    sb.append("import com.github.forax.lazylr.Visitor;\n");
-    sb.append("import com.github.forax.lazylr.ProductionName;\n");
-    sb.append("import java.util.ArrayList;\n");
-    sb.append("import java.util.List;\n");
-    sb.append("import java.util.Optional;\n\n");
 
     // ── Nested type declarations ──────────────────────────────────────────────
     for (var entry : patterns.entrySet()) {
@@ -194,8 +184,7 @@ public final class JavaCodeVisitorGenerator {
 
     // ── Visitor class ─────────────────────────────────────────────────────────
     var startType = types.get(grammar.startSymbol());
-    sb.append("public class ").append(className)
-        .append(" implements Visitor<").append(startType).append("> {\n\n");
+    sb.append("class MyVisitor implements Visitor<").append(startType).append("> {\n\n");
 
     // terminal methods
     for (var term : identifierTerminals) {
