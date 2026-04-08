@@ -32,14 +32,18 @@ public final class JavaCodeVisitorGenerator {
   /// @param grammar   the grammar to generate a visitor for
   /// @return Java source code as a string
   public static String generate(Grammar grammar) {
+    // step 1
     var patterns = buildPatterns(grammar);
+
+    // step 2
     var types = resolveTypes(grammar, patterns);
+
+    // step 3
     return emit(grammar, patterns, types);
   }
 
+
   // -- Step 1 – collect identifier terminals
-
-
 
   private static boolean isJavaIdentifier(String name) {
     if (!Character.isJavaIdentifierStart(name.charAt(0))) {
@@ -59,8 +63,6 @@ public final class JavaCodeVisitorGenerator {
         .filter(s -> !(s instanceof Terminal t) || isJavaIdentifier(t.name()))
         .toList();
   }
-
-  // -- Step 1
 
   private static Map<NonTerminal, Pattern> buildPatterns(Grammar grammar) {
     var map = new LinkedHashMap<NonTerminal, Pattern>();
@@ -120,7 +122,7 @@ public final class JavaCodeVisitorGenerator {
     return new Pattern.ListPattern(nt, singleSymbol);
   }
 
-  // -- Step 3 – resolve Java types (lazy, memoized, cycle-safe)
+  // -- Step 2 – resolve Java types (lazy, memoized, cycle-safe)
 
   private static Map<NonTerminal, String> resolveTypes(Grammar grammar, Map<NonTerminal, Pattern> patterns) {
     var map = new LinkedHashMap<NonTerminal, String>();
@@ -156,7 +158,7 @@ public final class JavaCodeVisitorGenerator {
     };
   }
 
-  // ─--Step 4 – code emission
+  // -- Step 3 – code emission
 
   private static List<Terminal> collectIdentifierTerminals(Grammar grammar) {
     return grammar.productions().stream()
@@ -291,7 +293,7 @@ public final class JavaCodeVisitorGenerator {
   private static void emitProductionMethodDeclaration(StringBuilder sb, Production prod, String returnType, String name, List<Param> params) {
     sb.append("  @ProductionName(\"").append(prod.name()).append("\")\n");
     sb.append("  public ").append(returnType).append(" ").append(decapitalize(name)).append("(");
-    sb.append(params.stream().map(p -> p.type() + " " + p.name()).collect(Collectors.joining(", ")));
+    sb.append(params.stream().map(p -> p.type + " " + p.name).collect(Collectors.joining(", ")));
     sb.append(") {\n");
   }
 
