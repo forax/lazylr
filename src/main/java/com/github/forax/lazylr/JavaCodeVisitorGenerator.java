@@ -75,36 +75,51 @@ public final class JavaCodeVisitorGenerator {
     var filtered = prods.stream().map(JavaCodeVisitorGenerator::filteredBody).toList();
     if (filtered.size() == 2) {
       var optPat = tryOptional(nt, prods, filtered);
-      if (optPat != null) return optPat;
+      if (optPat != null) {
+        return optPat;
+      }
       var listPat = tryList(nt, prods, filtered);
-      if (listPat != null) return listPat;
+      if (listPat != null) {
+        return listPat;
+      }
     }
     return new Pattern.Normal(nt, prods);
   }
 
   private static Pattern.@Nullable Optional tryOptional(NonTerminal nt, List<Production> prods, List<List<Symbol>> filtered) {
-    Production single = null, empty = null;
-    for (var i = 0; i < filtered.size(); i++) {
-      var body = filtered.get(i);
-      if (body.isEmpty()) empty = prods.get(i);
-      else if (body.size() == 1) single = prods.get(i);
+    var empty = false;
+    var symbol = (Symbol) null;
+    for (var body : filtered) {
+      switch (body.size()) {
+        case 0 -> empty = true;
+        case 1 -> symbol = body.getFirst();
+        default -> {
+          return null;
+        }
+      }
     }
-    if (single == null || empty == null) return null;
-    return new Pattern.Optional(nt, filteredBody(single).getFirst());
+    if (empty == false || symbol == null) {
+      return null;
+    }
+    return new Pattern.Optional(nt, symbol);
   }
 
   private static Pattern.@Nullable ListPattern tryList(NonTerminal nt, List<Production> prods, List<List<Symbol>> filtered) {
-    Production single = null, recursive = null;
-    List<Symbol> singleBody = null, recBody = null;
-    for (var i = 0; i < filtered.size(); i++) {
-      var body = filtered.get(i);
-      if (body.size() == 1) { single = prods.get(i); singleBody = body; }
-      else if (body.size() == 2) { recursive = prods.get(i); recBody = body; }
+    var singleSymbol = (Symbol) null;
+    var recBody = (List<Symbol>) null;
+    for (var body : filtered) {
+      switch (body.size()) {
+        case 1 -> singleSymbol = body.getFirst();
+        case 2 -> recBody = body;
+        default -> { return null; }
+      }
     }
-    if (single == null || recursive == null) return null;
-    if (!recBody.getFirst().equals(nt)) return null;
-    if (!recBody.get(1).equals(singleBody.getFirst())) return null;
-    return new Pattern.ListPattern(nt, singleBody.getFirst());
+    if (singleSymbol == null || recBody == null ||
+        !recBody.get(0).equals(nt) ||
+        !recBody.get(1).equals(singleSymbol)) {
+      return null;
+    }
+    return new Pattern.ListPattern(nt, singleSymbol);
   }
 
   // -- Step 3 – resolve Java types (lazy, memoized, cycle-safe)
@@ -209,7 +224,7 @@ public final class JavaCodeVisitorGenerator {
   }
 
   private static void emitRecord(Map<NonTerminal, String> types, StringBuilder sb, String name, @Nullable String sealedParent, Production prod) {
-    var params = recordParams(types, prod);
+    var params = params(types, prod);
     sb.append("public record ").append(name).append("(");
     sb.append(params.stream()
         .map(p -> p.type() + " " + p.name())
@@ -223,7 +238,7 @@ public final class JavaCodeVisitorGenerator {
 
   private record Param(String type, String name) {}
 
-  private static List<Param> recordParams(Map<NonTerminal, String> types, Production prod) {
+  private static List<Param> params(Map<NonTerminal, String> types, Production prod) {
     var params = new ArrayList<Param>();
     var terminalNameCounts = new LinkedHashMap<String, Integer>();
     var ntNameCounts = new LinkedHashMap<String, Integer>();
@@ -275,29 +290,18 @@ public final class JavaCodeVisitorGenerator {
     }
   }
 
+  private static void emitProductionMethodDeclaration(StringBuilder sb, Production prod, String returnType, String name, List<Param> params) {
+    sb.append("  @ProductionName(\"").append(prod.name()).append("\")\n");
+    sb.append("  public ").append(returnType).append(" ").append(decapitalize(name)).append("(");
+    sb.append(params.stream().map(p -> p.type() + " " + p.name()).collect(Collectors.joining(", ")));
+    sb.append(") {\n");
+  }
+
   // Normal pattern, single production → record constructor
   private static void emitNormalSingleMethod(Map<NonTerminal, String> types, StringBuilder sb, NonTerminal nt, Production prod) {
     var returnType = capitalize(nt.name());
-    var params = recordParams(types, prod);
-    if (params.isEmpty() && prod.body().isEmpty()) {
-      // epsilon with single production – edge case, just return empty record
-      sb.append("  @ProductionName(\"").append(prod.name()).append("\")\n");
-      sb.append("  public ").append(returnType).append(" ")
-          .append(decapitalize(returnType)).append("() {\n");
-      sb.append("    return new ").append(returnType).append("();\n");
-      sb.append("  }\n\n");
-      return;
-    }
-    if (params.isEmpty()) {
-      // all symbols are non-identifier terminals – pass-through (single body)
-      // handled by Visitor default pass-through; no method needed
-      return;
-    }
-    sb.append("  @ProductionName(\"").append(prod.name()).append("\")\n");
-    sb.append("  public ").append(returnType).append(" ")
-        .append(decapitalize(returnType)).append("(");
-    sb.append(params.stream().map(p -> p.type() + " " + p.name()).collect(Collectors.joining(", ")));
-    sb.append(") {\n");
+    var params = params(types, prod);
+    emitProductionMethodDeclaration(sb, prod, returnType, returnType, params);
     sb.append("    return new ").append(returnType).append("(");
     sb.append(params.stream().map(Param::name).collect(Collectors.joining(", ")));
     sb.append(");\n  }\n\n");
@@ -307,16 +311,8 @@ public final class JavaCodeVisitorGenerator {
   private static void emitNormalMultiMethod(Map<NonTerminal, String> types, StringBuilder sb, NonTerminal nt, Production prod) {
     var returnType = capitalize(nt.name());
     var recName = recordNameForProduction(prod);
-    var params = recordParams(types, prod);
-    if (params.isEmpty() && !prod.body().isEmpty()) {
-      // all symbols are non-identifier terminals – no method, pass-through
-      return;
-    }
-    sb.append("  @ProductionName(\"").append(prod.name()).append("\")\n");
-    sb.append("  public ").append(returnType).append(" ")
-        .append(decapitalize(recName)).append("(");
-    sb.append(params.stream().map(p -> p.type() + " " + p.name()).collect(Collectors.joining(", ")));
-    sb.append(") {\n");
+    var params = params(types, prod);
+    emitProductionMethodDeclaration(sb, prod, returnType, recName, params);
     sb.append("    return new ").append(recName).append("(");
     sb.append(params.stream().map(Param::name).collect(Collectors.joining(", ")));
     sb.append(");\n  }\n\n");
@@ -331,49 +327,39 @@ public final class JavaCodeVisitorGenerator {
 
   // Optional pattern
   private static void emitOptionalMethod(Map<NonTerminal, String> types, StringBuilder sb, NonTerminal nt, Symbol sym, Production prod) {
-    var returnType = "Optional<" + symbolType(types, sym) + ">";
-    sb.append("  @ProductionName(\"").append(prod.name()).append("\")\n");
+    var returnType = types.get(nt);
     if (prod.body().isEmpty()) {
       // epsilon → Optional.empty()
-      sb.append("  public ").append(returnType).append(" ")
-          .append(decapitalize(nt.name())).append("Empty() {\n");
+      var params = params(types, prod);
+      emitProductionMethodDeclaration(sb, prod, returnType, nt.name() + "Empty", params);
       sb.append("    return Optional.empty();\n");
       sb.append("  }\n\n");
     } else {
       // single symbol → Optional.of(value)
-      var paramType = symbolType(types, prod.body().getFirst());
-      var paramName = paramNameFor(prod.body().getFirst());
-      sb.append("  public ").append(returnType).append(" ")
-          .append(decapitalize(nt.name())).append("(").append(paramType).append(" ").append(paramName).append(") {\n");
-      sb.append("    return Optional.of(").append(paramName).append(");\n");
+      var params = params(types, prod);
+      emitProductionMethodDeclaration(sb, prod, returnType, nt.name() + "Of", params);
+      sb.append("    return Optional.of(").append(params.getFirst().name).append(");\n");
       sb.append("  }\n\n");
     }
   }
 
   // List pattern
   private static void emitListMethod(Map<NonTerminal, String> types, StringBuilder sb, NonTerminal nt, Symbol sym, Production prod) {
-    var elemType = symbolType(types, sym);
-    var returnType = "List<" + elemType + ">";
-    sb.append("  @ProductionName(\"").append(prod.name()).append("\")\n");
+    var returnType = types.get(nt);
     if (prod.body().size() == 1) {
       // base case: create list with one element
-      var paramName = paramNameFor(prod.body().getFirst());
-      sb.append("  public ").append(returnType).append(" ")
-          .append(decapitalize(nt.name())).append("Single(").append(elemType).append(" ").append(paramName).append(") {\n");
-      sb.append("    var list = new ArrayList<").append(elemType).append(">();\n");
-      sb.append("    list.add(").append(paramName).append(");\n");
+      var params = params(types, prod);
+      emitProductionMethodDeclaration(sb, prod, returnType, nt.name() + "Single", params);
+      sb.append("    var list = new Array").append(returnType).append("();\n");
+      sb.append("    list.add(").append(params.getFirst().name).append(");\n");
       sb.append("    return list;\n");
       sb.append("  }\n\n");
     } else {
       // recursive case: append to existing list
-      var listParamName = decapitalize(nt.name());
-      var elemParamName = paramNameFor(prod.body().get(1));
-      sb.append("  public ").append(returnType).append(" ")
-          .append(decapitalize(nt.name())).append("Cons(")
-          .append(returnType).append(" ").append(listParamName).append(", ")
-          .append(elemType).append(" ").append(elemParamName).append(") {\n");
-      sb.append("    ").append(listParamName).append(".add(").append(elemParamName).append(");\n");
-      sb.append("    return ").append(listParamName).append(";\n");
+      var params = params(types, prod);
+      emitProductionMethodDeclaration(sb, prod, returnType, nt.name() + "Cons", params);
+      sb.append("    ").append(params.get(0).name).append(".add(").append(params.get(1).name).append(");\n");
+      sb.append("    return ").append(params.get(0).name).append(";\n");
       sb.append("  }\n\n");
     }
   }

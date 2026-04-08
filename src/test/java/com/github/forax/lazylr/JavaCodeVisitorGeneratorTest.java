@@ -240,7 +240,7 @@ public class JavaCodeVisitorGeneratorTest {
           }
         
           @ProductionName("opt_label : label")
-          public Optional<String> opt_label(String label) {
+          public Optional<String> opt_labelOf(String label) {
             return Optional.of(label);
           }
         
@@ -285,7 +285,7 @@ public class JavaCodeVisitorGeneratorTest {
           }
         
           @ProductionName("opt_init : Expr")
-          public Optional<Expr> opt_init(Expr expr) {
+          public Optional<Expr> opt_initOf(Expr expr) {
             return Optional.of(expr);
           }
         
