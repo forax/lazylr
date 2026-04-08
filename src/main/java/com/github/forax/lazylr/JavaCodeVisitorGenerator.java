@@ -6,7 +6,6 @@ import java.util.ArrayList;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.SequencedMap;
 import java.util.stream.Collectors;
 
 /// Generates source code for a [Visitor] implementation from a [Grammar] definition.
@@ -14,8 +13,6 @@ import java.util.stream.Collectors;
 /// Call [#generate(Grammar)] to obtain a Java source string
 /// containing a ready-to-compile visitor class.
 public final class JavaCodeVisitorGenerator {
-
-  // ── Pattern model ────────────────────────────────────────────────────────────
 
   sealed interface Pattern {
     /// A non-terminal that matches neither Optional nor List.
@@ -26,44 +23,23 @@ public final class JavaCodeVisitorGenerator {
     record ListPattern(NonTerminal head, Symbol element) implements Pattern {}
   }
 
-  // ── Public API ───────────────────────────────────────────────────────────────
+  private JavaCodeVisitorGenerator() {
+    throw new AssertionError();
+  }
 
   /// Generates a visitor source file.
   ///
   /// @param grammar   the grammar to generate a visitor for
   /// @return Java source code as a string
   public static String generate(Grammar grammar) {
-    var gen = new JavaCodeVisitorGenerator(grammar);
-    return gen.emit();
+    var patterns = buildPatterns(grammar);
+    var types = resolveTypes(grammar, patterns);
+    return emit(grammar, patterns, types);
   }
 
-  // ── Internal state ────────────────────────────────────────────────────────────
+  // -- Step 1 – collect identifier terminals
 
-  private final Grammar grammar;
-  /// Terminals whose names are valid Java identifiers.
-  private final List<Terminal> identifierTerminals;
-  /// Pattern for every non-terminal, in grammar declaration order.
-  private final SequencedMap<NonTerminal, Pattern> patterns;
-  /// Resolved Java type name for each non-terminal.
-  private final Map<NonTerminal, String> types;
 
-  private JavaCodeVisitorGenerator(Grammar grammar) {
-    this.grammar = grammar;
-    this.identifierTerminals = collectIdentifierTerminals();
-    this.patterns = buildPatterns();
-    this.types = resolveTypes();
-  }
-
-  // ── Step 1 – collect identifier terminals ────────────────────────────────────
-
-  private List<Terminal> collectIdentifierTerminals() {
-    return grammar.productions().stream()
-        .flatMap(p -> p.body().stream())
-        .filter(s -> s instanceof Terminal t && isJavaIdentifier(t.name()))
-        .map(s -> (Terminal) s)
-        .distinct()
-        .toList();
-  }
 
   private static boolean isJavaIdentifier(String name) {
     if (!Character.isJavaIdentifierStart(name.charAt(0))) {
@@ -77,8 +53,6 @@ public final class JavaCodeVisitorGenerator {
     return true;
   }
 
-  // ── Step 2 – recognise patterns ──────────────────────────────────────────────
-
   /// Returns the body of a production with non-identifier terminals filtered out.
   private static List<Symbol> filteredBody(Production prod) {
     return prod.body().stream()
@@ -86,7 +60,9 @@ public final class JavaCodeVisitorGenerator {
         .toList();
   }
 
-  private SequencedMap<NonTerminal, Pattern> buildPatterns() {
+  // -- Step 1
+
+  private static Map<NonTerminal, Pattern> buildPatterns(Grammar grammar) {
     var map = new LinkedHashMap<NonTerminal, Pattern>();
     for (var nt : grammar.nonTerminals()) {
       map.put(nt, classify(nt, grammar.productionsFor(nt)));
@@ -94,7 +70,7 @@ public final class JavaCodeVisitorGenerator {
     return map;
   }
 
-  private static @Nullable Pattern classify(NonTerminal nt, List<Production> prods) {
+  private static Pattern classify(NonTerminal nt, List<Production> prods) {
     // Work on filtered bodies for pattern recognition
     var filtered = prods.stream().map(JavaCodeVisitorGenerator::filteredBody).toList();
     if (filtered.size() == 2) {
@@ -131,62 +107,67 @@ public final class JavaCodeVisitorGenerator {
     return new Pattern.ListPattern(nt, singleBody.getFirst());
   }
 
-  // ── Step 3 – resolve Java types (lazy, memoised, cycle-safe) ────────────────
+  // -- Step 3 – resolve Java types (lazy, memoized, cycle-safe)
 
-  private Map<NonTerminal, String> resolveTypes() {
+  private static Map<NonTerminal, String> resolveTypes(Grammar grammar, Map<NonTerminal, Pattern> patterns) {
     var map = new LinkedHashMap<NonTerminal, String>();
     for (var nt : grammar.nonTerminals()) {
-      typeOf(nt, map);
+      typeOf(patterns, nt, map);
     }
     return map;
   }
 
   /// Returns (and memoises) the Java type string for `nt`.
-  private String typeOf(NonTerminal nt, Map<NonTerminal, String> memo) {
+  private static String typeOf(Map<NonTerminal, Pattern> patterns, NonTerminal nt, Map<NonTerminal, String> memo) {
     var cached = memo.get(nt);
     if (cached != null) {
       return cached;
     }
     var pat = patterns.get(nt);
     var result = switch (pat) {
-      case Pattern.Optional(var head, var sym) ->
-          "Optional<" + symbolType(sym, memo) + ">";
-      case Pattern.ListPattern(var head, var sym) ->
-          "List<" + symbolType(sym, memo) + ">";
-      case Pattern.Normal(var head, var prods) ->
+      case Pattern.Optional(var _, var sym) ->
+          "Optional<" + findSymbolType(patterns, sym, memo) + ">";
+      case Pattern.ListPattern(var _, var sym) ->
+          "List<" + findSymbolType(patterns, sym, memo) + ">";
+      case Pattern.Normal(var head, var _) ->
           capitalize(head.name());       // record or sealed interface — name never depends on other NTs
     };
     memo.put(nt, result);
     return result;
   }
 
-  private String symbolType(Symbol sym, Map<NonTerminal, String> memo) {
+  private static String findSymbolType(Map<NonTerminal, Pattern> patterns, Symbol sym, Map<NonTerminal, String> memo) {
     return switch (sym) {
-      case Terminal t -> "String";
-      case NonTerminal nt -> typeOf(nt, memo);
+      case Terminal _ -> "String";
+      case NonTerminal nt -> typeOf(patterns, nt, memo);
     };
   }
 
-  private String symbolType(Symbol sym) {
-    return symbolType(sym, types);
+  // ─--Step 4 – code emission
+
+  private static List<Terminal> collectIdentifierTerminals(Grammar grammar) {
+    return grammar.productions().stream()
+        .flatMap(p -> p.body().stream())
+        .filter(s -> s instanceof Terminal t && isJavaIdentifier(t.name()))
+        .map(s -> (Terminal) s)
+        .distinct()
+        .toList();
   }
 
-  // ── Step 4 – code emission ───────────────────────────────────────────────────
-
-  private String emit() {
+  private static String emit(Grammar grammar, Map<NonTerminal, Pattern> patterns, Map<NonTerminal, String> types) {
     var sb = new StringBuilder();
 
-    // ── Nested type declarations ──────────────────────────────────────────────
+    // nested type declarations
     for (var entry : patterns.entrySet()) {
-      emitTypeDeclarations(sb, entry.getValue());
+      emitTypeDeclarations(types, sb, entry.getValue());
     }
     sb.append("\n");
 
-    // ── Visitor class ─────────────────────────────────────────────────────────
     var startType = types.get(grammar.startSymbol());
     sb.append("class MyVisitor implements Visitor<").append(startType).append("> {\n\n");
 
     // terminal methods
+    var identifierTerminals = collectIdentifierTerminals(grammar);
     for (var term : identifierTerminals) {
       sb.append("  public String ").append(term.name())
           .append("(Terminal terminal) {\n")
@@ -196,30 +177,30 @@ public final class JavaCodeVisitorGenerator {
 
     // production methods
     for (var entry : patterns.entrySet()) {
-      emitProductionMethods(sb, entry.getValue());
+      emitProductionMethods(grammar, types, sb, entry.getValue());
     }
 
     sb.append("}\n");
     return sb.toString();
   }
 
-  // ── Type declarations (records / sealed interfaces) ───────────────────────────
+  // -- Type declarations (records / sealed interfaces)
 
-  private void emitTypeDeclarations(StringBuilder sb, Pattern pat) {
+  private static void emitTypeDeclarations(Map<NonTerminal, String> types, StringBuilder sb, Pattern pat) {
     switch (pat) {
       case Pattern.Normal(var nt, var prods) -> {
         if (prods.size() == 1) {
-          emitRecord(sb, capitalize(nt.name()), null, prods.getFirst());
+          emitRecord(types, sb, capitalize(nt.name()), null, prods.getFirst());
         } else {
           var sealedName = capitalize(nt.name());
           sb.append("public sealed interface ").append(sealedName)
               .append(" permits ");
           sb.append(prods.stream()
-              .map(p -> recordNameForProduction(p))
+              .map(JavaCodeVisitorGenerator::recordNameForProduction)
               .collect(Collectors.joining(", ")));
           sb.append(" {}\n");
           for (var prod : prods) {
-            emitRecord(sb, recordNameForProduction(prod), sealedName, prod);
+            emitRecord(types, sb, recordNameForProduction(prod), sealedName, prod);
           }
         }
       }
@@ -227,8 +208,8 @@ public final class JavaCodeVisitorGenerator {
     }
   }
 
-  private void emitRecord(StringBuilder sb, String name, @Nullable String sealedParent, Production prod) {
-    var params = recordParams(prod);
+  private static void emitRecord(Map<NonTerminal, String> types, StringBuilder sb, String name, @Nullable String sealedParent, Production prod) {
+    var params = recordParams(types, prod);
     sb.append("public record ").append(name).append("(");
     sb.append(params.stream()
         .map(p -> p.type() + " " + p.name())
@@ -242,7 +223,7 @@ public final class JavaCodeVisitorGenerator {
 
   private record Param(String type, String name) {}
 
-  private List<Param> recordParams(Production prod) {
+  private static List<Param> recordParams(Map<NonTerminal, String> types, Production prod) {
     var params = new ArrayList<Param>();
     var terminalNameCounts = new LinkedHashMap<String, Integer>();
     var ntNameCounts = new LinkedHashMap<String, Integer>();
@@ -254,8 +235,7 @@ public final class JavaCodeVisitorGenerator {
           }
         }
         case NonTerminal nt -> {
-          params.add(new Param(types.getOrDefault(nt, capitalize(nt.name())),
-              uniqueName(decapitalize(nt.name()), ntNameCounts)));
+          params.add(new Param(types.get(nt), uniqueName(decapitalize(nt.name()), ntNameCounts)));
         }
       }
     }
@@ -267,38 +247,38 @@ public final class JavaCodeVisitorGenerator {
     return count == 1 ? base : base + count;
   }
 
-  // ── Production methods on the Visitor ────────────────────────────────────────
+  // -- Production methods on the Visitor
 
-  private void emitProductionMethods(StringBuilder sb, Pattern pat) {
+  private static void emitProductionMethods(Grammar grammar, Map<NonTerminal, String> types, StringBuilder sb, Pattern pat) {
     switch (pat) {
       case Pattern.Normal(var nt, var prods) -> {
         if (prods.size() == 1) {
-          emitNormalSingleMethod(sb, nt, prods.getFirst());
+          emitNormalSingleMethod(types, sb, nt, prods.getFirst());
         } else {
           for (var prod : prods) {
-            emitNormalMultiMethod(sb, nt, prod);
+            emitNormalMultiMethod(types, sb, nt, prod);
           }
         }
       }
       case Pattern.Optional(var nt, var sym) -> {
         var prods = grammar.productionsFor(nt);
         for (var prod : prods) {
-          emitOptionalMethod(sb, nt, sym, prod);
+          emitOptionalMethod(types, sb, nt, sym, prod);
         }
       }
       case Pattern.ListPattern(var nt, var sym) -> {
         var prods = grammar.productionsFor(nt);
         for (var prod : prods) {
-          emitListMethod(sb, nt, sym, prod);
+          emitListMethod(types, sb, nt, sym, prod);
         }
       }
     }
   }
 
-  // Normal – single production → record constructor
-  private void emitNormalSingleMethod(StringBuilder sb, NonTerminal nt, Production prod) {
+  // Normal pattern, single production → record constructor
+  private static void emitNormalSingleMethod(Map<NonTerminal, String> types, StringBuilder sb, NonTerminal nt, Production prod) {
     var returnType = capitalize(nt.name());
-    var params = recordParams(prod);
+    var params = recordParams(types, prod);
     if (params.isEmpty() && prod.body().isEmpty()) {
       // epsilon with single production – edge case, just return empty record
       sb.append("  @ProductionName(\"").append(prod.name()).append("\")\n");
@@ -323,11 +303,11 @@ public final class JavaCodeVisitorGenerator {
     sb.append(");\n  }\n\n");
   }
 
-  // Normal – multiple productions → sealed subtypes
-  private void emitNormalMultiMethod(StringBuilder sb, NonTerminal nt, Production prod) {
+  // Normal pattern, multiple productions → sealed subtypes
+  private static void emitNormalMultiMethod(Map<NonTerminal, String> types, StringBuilder sb, NonTerminal nt, Production prod) {
     var returnType = capitalize(nt.name());
     var recName = recordNameForProduction(prod);
-    var params = recordParams(prod);
+    var params = recordParams(types, prod);
     if (params.isEmpty() && !prod.body().isEmpty()) {
       // all symbols are non-identifier terminals – no method, pass-through
       return;
@@ -342,9 +322,16 @@ public final class JavaCodeVisitorGenerator {
     sb.append(");\n  }\n\n");
   }
 
+  private static String symbolType(Map<NonTerminal, String> types, Symbol sym) {
+    return switch(sym) {
+      case Terminal t -> "String";
+      case NonTerminal nt -> types.get(nt);
+    };
+  }
+
   // Optional pattern
-  private void emitOptionalMethod(StringBuilder sb, NonTerminal nt, Symbol sym, Production prod) {
-    var returnType = "Optional<" + symbolType(sym) + ">";
+  private static void emitOptionalMethod(Map<NonTerminal, String> types, StringBuilder sb, NonTerminal nt, Symbol sym, Production prod) {
+    var returnType = "Optional<" + symbolType(types, sym) + ">";
     sb.append("  @ProductionName(\"").append(prod.name()).append("\")\n");
     if (prod.body().isEmpty()) {
       // epsilon → Optional.empty()
@@ -354,7 +341,7 @@ public final class JavaCodeVisitorGenerator {
       sb.append("  }\n\n");
     } else {
       // single symbol → Optional.of(value)
-      var paramType = symbolType(prod.body().getFirst());
+      var paramType = symbolType(types, prod.body().getFirst());
       var paramName = paramNameFor(prod.body().getFirst());
       sb.append("  public ").append(returnType).append(" ")
           .append(decapitalize(nt.name())).append("(").append(paramType).append(" ").append(paramName).append(") {\n");
@@ -364,8 +351,8 @@ public final class JavaCodeVisitorGenerator {
   }
 
   // List pattern
-  private void emitListMethod(StringBuilder sb, NonTerminal nt, Symbol sym, Production prod) {
-    var elemType = symbolType(sym);
+  private static void emitListMethod(Map<NonTerminal, String> types, StringBuilder sb, NonTerminal nt, Symbol sym, Production prod) {
+    var elemType = symbolType(types, sym);
     var returnType = "List<" + elemType + ">";
     sb.append("  @ProductionName(\"").append(prod.name()).append("\")\n");
     if (prod.body().size() == 1) {
@@ -391,7 +378,7 @@ public final class JavaCodeVisitorGenerator {
     }
   }
 
-  // ── Helpers ──────────────────────────────────────────────────────────────────
+  // -- Helpers
 
   private static final Map<String, String> SYMBOL_NAMES = Map.ofEntries(
       Map.entry("+",  "Plus"),   Map.entry("-",  "Minus"),  Map.entry("*",  "Mul"),
@@ -415,7 +402,7 @@ public final class JavaCodeVisitorGenerator {
     return name == null ? "Unknown" : name;
   }
 
-  private String recordNameForProduction(Production production) {
+  private static String recordNameForProduction(Production production) {
     // Build a CamelCase name from all symbols that have a known name segment
     var builder = new StringBuilder();
     for (var symbol : production.body()) {
@@ -428,7 +415,7 @@ public final class JavaCodeVisitorGenerator {
     return builder.toString();
   }
 
-  private String paramNameFor(Symbol symbol) {
+  private static String paramNameFor(Symbol symbol) {
     return decapitalize(switch (symbol) {
       case Terminal t -> isJavaIdentifier(t.name()) ? t.name() : "value";
       case NonTerminal nt -> nt.name();
