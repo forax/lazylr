@@ -159,7 +159,7 @@ public final class Main {
     }
 
     if (cmdLineArgument.generate) {
-      System.out.print(JavaCodeGenerator.generate(mg));
+      System.out.print(JavaCodeGenerator.generate(mg, false));
       return;
     }
 

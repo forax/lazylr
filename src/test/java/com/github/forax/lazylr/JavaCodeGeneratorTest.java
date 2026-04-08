@@ -76,7 +76,7 @@ public final class JavaCodeGeneratorTest {
   @Test
   @SuppressWarnings("DataFlowIssue")
   public void generateThrowsOnNullMetaGrammar() {
-    assertThrows(NullPointerException.class, () -> JavaCodeGenerator.generate(null));
+    assertThrows(NullPointerException.class, () -> JavaCodeGenerator.generate(null, false));
   }
 
   @Test
@@ -90,7 +90,7 @@ public final class JavaCodeGeneratorTest {
         }
         """);
 
-    var code = JavaCodeGenerator.generate(mg);
+    var code = JavaCodeGenerator.generate(mg, false);
 
     assertCompilesSuccessfully("SingleNumberGrammar", code);
     assertEquals("""
@@ -140,7 +140,7 @@ public final class JavaCodeGeneratorTest {
         }
         """);
 
-    var code = JavaCodeGenerator.generate(mg);
+    var code = JavaCodeGenerator.generate(mg, false);
 
     assertCompilesSuccessfully("EpsilonProduction", code);
     assertEquals("""
@@ -191,7 +191,7 @@ public final class JavaCodeGeneratorTest {
         }
         """);
 
-    var code = JavaCodeGenerator.generate(mg);
+    var code = JavaCodeGenerator.generate(mg, false);
     assertCompilesSuccessfully("UnnamedToken", code);
 
     assertEquals("""
@@ -246,7 +246,7 @@ public final class JavaCodeGeneratorTest {
         }
         """);
 
-    var code = JavaCodeGenerator.generate(mg);
+    var code = JavaCodeGenerator.generate(mg, false);
 
     assertCompilesSuccessfully("AdditionLeftAssociative", code);
     assertEquals("""
@@ -307,7 +307,7 @@ public final class JavaCodeGeneratorTest {
         }
         """);
 
-    var code = JavaCodeGenerator.generate(mg);
+    var code = JavaCodeGenerator.generate(mg, false);
 
     assertCompilesSuccessfully("AdditionAndMultiplicationPrecedence", code);
     assertEquals("""
@@ -374,7 +374,7 @@ public final class JavaCodeGeneratorTest {
         }
         """);
 
-    var code = JavaCodeGenerator.generate(mg);
+    var code = JavaCodeGenerator.generate(mg, false);
 
     assertCompilesSuccessfully("ExponentiationRightAssociative", code);
     assertEquals("""
@@ -442,7 +442,7 @@ public final class JavaCodeGeneratorTest {
         }
         """);
 
-    var code = JavaCodeGenerator.generate(mg);
+    var code = JavaCodeGenerator.generate(mg, false);
 
     assertCompilesSuccessfully("FunctionCallGrammar", code);
     assertEquals("""
@@ -517,7 +517,7 @@ public final class JavaCodeGeneratorTest {
         }
         """);
 
-    var code = JavaCodeGenerator.generate(mg);
+    var code = JavaCodeGenerator.generate(mg, false);
 
     assertCompilesSuccessfully("DanglingElseGrammar", code);
     assertEquals("""
@@ -559,6 +559,78 @@ public final class JavaCodeGeneratorTest {
           precedenceMap.put(t_if, new Precedence(1, Precedence.Associativity.RIGHT));
           precedenceMap.put(t__, new Precedence(2, Precedence.Associativity.LEFT));
           precedenceMap.put(t_else, new Precedence(3, Precedence.Associativity.RIGHT));
+        
+          return new MetaGrammar(tokens, precedenceMap, grammar);
+        }
+        
+        static void main() {
+          var mg = createGrammar();
+          mg.verify();
+        }
+        """, code);
+  }
+
+  @Test
+  public void generateWithVisitor() throws IOException {
+    var mg = MetaGrammar.load("""
+        grammar {
+          Expr : num
+          Expr : Expr '+' Expr
+        }
+        """);
+
+    var code = JavaCodeGenerator.generate(mg, true);
+
+    assertCompilesSuccessfully("WithVisitor", code);
+    assertEquals("""
+        import com.github.forax.lazylr.*;
+        import java.util.*;
+        
+        public sealed interface Expr permits NumExpr, ExprPlusExprExpr {}
+        public record NumExpr(String num) implements Expr {}
+        public record ExprPlusExprExpr(Expr expr, Expr expr2) implements Expr {}
+        
+        class MyVisitor implements Visitor<Expr> {
+        
+          public String num(Terminal terminal) {
+            return terminal.value();
+          }
+        
+          @ProductionName("Expr : num")
+          public Expr numExpr(String num) {
+            return new NumExpr(num);
+          }
+        
+          @ProductionName("Expr : Expr + Expr")
+          public Expr exprPlusExprExpr(Expr expr, Expr expr2) {
+            return new ExprPlusExprExpr(expr, expr2);
+          }
+        
+        }
+        
+        public static MetaGrammar createGrammar() {
+          // Non-terminals
+          var nt_Expr = new NonTerminal("Expr");
+        
+          // Terminals
+          var t_num = new Terminal("num");
+          var t__ = new Terminal("+");
+        
+          // Productions
+          var p_0 = new Production(nt_Expr, List.of(t_num));
+          var p_1 = new Production(nt_Expr, List.of(nt_Expr, t__, nt_Expr));
+        
+          // Grammar
+          var startSymbol = nt_Expr;
+          var grammar = new Grammar(startSymbol, List.of(p_0, p_1));
+        
+          // Tokens
+          var tokens = List.of(
+            new Token("+", Pattern.quote("+"))
+          );
+        
+          // Precedence map
+          var precedenceMap = Map.<PrecedenceEntity, Precedence>of();
         
           return new MetaGrammar(tokens, precedenceMap, grammar);
         }

@@ -110,16 +110,21 @@ final class JavaCodeGenerator {
   /// a fully constructed {@link MetaGrammar} using its public constructor.
   ///
   /// @param mg the {@code MetaGrammar} to generate code for; must not be {@code null}.
+  /// @param generateVisitor whether to generate a visitor class.
   /// @return a {@code String} containing the formatted Java source of the method.
-  public static String generate(MetaGrammar mg) {
+  public static String generate(MetaGrammar mg, boolean generateVisitor) {
     Objects.requireNonNull(mg);
 
     var sb = new StringBuilder();
-    sb.append("""
-      import com.github.forax.lazylr.*;
-      
-      public static MetaGrammar createGrammar() {
-      """);
+    sb.append("import com.github.forax.lazylr.*;\n");
+
+    // generate visitor
+    if (generateVisitor) {
+      sb.append("import java.util.*;\n\n");
+      sb.append(JavaCodeVisitorGenerator.generateVisitor(mg.grammar()));
+    }
+
+    sb.append("\npublic static MetaGrammar createGrammar() {\n");
 
     var grammar = mg.grammar();
     var productions = grammar.productions();
