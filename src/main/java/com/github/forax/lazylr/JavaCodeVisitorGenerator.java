@@ -74,11 +74,11 @@ public final class JavaCodeVisitorGenerator {
     // Work on filtered bodies for pattern recognition
     var filtered = prods.stream().map(JavaCodeVisitorGenerator::filteredBody).toList();
     if (filtered.size() == 2) {
-      var optPat = tryOptional(nt, prods, filtered);
+      var optPat = tryOptional(nt, filtered);
       if (optPat != null) {
         return optPat;
       }
-      var listPat = tryList(nt, prods, filtered);
+      var listPat = tryList(nt, filtered);
       if (listPat != null) {
         return listPat;
       }
@@ -86,7 +86,7 @@ public final class JavaCodeVisitorGenerator {
     return new Pattern.Normal(nt, prods);
   }
 
-  private static Pattern.@Nullable Optional tryOptional(NonTerminal nt, List<Production> prods, List<List<Symbol>> filtered) {
+  private static Pattern.@Nullable Optional tryOptional(NonTerminal nt, List<List<Symbol>> filtered) {
     var empty = false;
     var symbol = (Symbol) null;
     for (var body : filtered) {
@@ -104,7 +104,7 @@ public final class JavaCodeVisitorGenerator {
     return new Pattern.Optional(nt, symbol);
   }
 
-  private static Pattern.@Nullable ListPattern tryList(NonTerminal nt, List<Production> prods, List<List<Symbol>> filtered) {
+  private static Pattern.@Nullable ListPattern tryList(NonTerminal nt, List<List<Symbol>> filtered) {
     var singleSymbol = (Symbol) null;
     var recBody = (List<Symbol>) null;
     for (var body : filtered) {
@@ -114,9 +114,7 @@ public final class JavaCodeVisitorGenerator {
         default -> { return null; }
       }
     }
-    if (singleSymbol == null || recBody == null ||
-        !recBody.get(0).equals(nt) ||
-        !recBody.get(1).equals(singleSymbol)) {
+    if (recBody == null || !recBody.get(0).equals(nt) || !recBody.get(1).equals(singleSymbol)) {
       return null;
     }
     return new Pattern.ListPattern(nt, singleSymbol);
@@ -275,16 +273,16 @@ public final class JavaCodeVisitorGenerator {
           }
         }
       }
-      case Pattern.Optional(var nt, var sym) -> {
+      case Pattern.Optional(var nt, var _) -> {
         var prods = grammar.productionsFor(nt);
         for (var prod : prods) {
-          emitOptionalMethod(types, sb, nt, sym, prod);
+          emitOptionalMethod(types, sb, nt, prod);
         }
       }
-      case Pattern.ListPattern(var nt, var sym) -> {
+      case Pattern.ListPattern(var nt, var _) -> {
         var prods = grammar.productionsFor(nt);
         for (var prod : prods) {
-          emitListMethod(types, sb, nt, sym, prod);
+          emitListMethod(types, sb, nt, prod);
         }
       }
     }
@@ -318,15 +316,8 @@ public final class JavaCodeVisitorGenerator {
     sb.append(");\n  }\n\n");
   }
 
-  private static String symbolType(Map<NonTerminal, String> types, Symbol sym) {
-    return switch(sym) {
-      case Terminal t -> "String";
-      case NonTerminal nt -> types.get(nt);
-    };
-  }
-
   // Optional pattern
-  private static void emitOptionalMethod(Map<NonTerminal, String> types, StringBuilder sb, NonTerminal nt, Symbol sym, Production prod) {
+  private static void emitOptionalMethod(Map<NonTerminal, String> types, StringBuilder sb, NonTerminal nt, Production prod) {
     var returnType = types.get(nt);
     if (prod.body().isEmpty()) {
       // epsilon → Optional.empty()
@@ -344,7 +335,7 @@ public final class JavaCodeVisitorGenerator {
   }
 
   // List pattern
-  private static void emitListMethod(Map<NonTerminal, String> types, StringBuilder sb, NonTerminal nt, Symbol sym, Production prod) {
+  private static void emitListMethod(Map<NonTerminal, String> types, StringBuilder sb, NonTerminal nt, Production prod) {
     var returnType = types.get(nt);
     if (prod.body().size() == 1) {
       // base case: create list with one element
