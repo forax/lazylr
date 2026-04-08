@@ -10,7 +10,7 @@ import java.util.stream.Collectors;
 
 /// Generates source code for a [Visitor] implementation from a [Grammar] definition.
 ///
-/// Call [#generate(Grammar)] to obtain a Java source string
+/// Call [#generate(Grammar)] to get a Java source string
 /// containing a ready-to-compile visitor class.
 public final class JavaCodeVisitorGenerator {
 
@@ -252,9 +252,8 @@ public final class JavaCodeVisitorGenerator {
             params.add(new Param("String", uniqueName(t.name(), terminalNameCounts)));
           }
         }
-        case NonTerminal nt -> {
+        case NonTerminal nt ->
           params.add(new Param(types.get(nt), uniqueName(decapitalize(nt.name()), ntNameCounts)));
-        }
       }
     }
     return params;
