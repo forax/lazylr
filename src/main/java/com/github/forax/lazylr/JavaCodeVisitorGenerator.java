@@ -32,7 +32,7 @@ final class JavaCodeVisitorGenerator {
   /// A non-terminal that does not match the [OptionalPattern] or [ListPattern] shapes.
   /// @param head        the non-terminal being classified.
   /// @param productions all productions for `head`, in grammar order.
-  record NormalPattern(NonTerminal head, List<Production> productions) implements Pattern {}
+  private record NormalPattern(NonTerminal head, List<Production> productions) implements Pattern {}
 
   /// A non-terminal with exactly two productions: one empty body (ε) and one
   /// single-symbol body.
@@ -40,7 +40,7 @@ final class JavaCodeVisitorGenerator {
   /// @param head            the non-terminal being classified
   /// @param symbol          the single symbol of the non-empty production
   /// @param emptyProduction the ε production (used to emit `Optional.empty()`)
-  record OptionalPattern(NonTerminal head, Symbol symbol, Production emptyProduction) implements Pattern {}
+  private record OptionalPattern(NonTerminal head, Symbol symbol, Production emptyProduction) implements Pattern {}
 
   /// A non-terminal with exactly two productions: a single-symbol base case and
   /// a left-recursive two-symbol case of the form {@code NT sym}.
@@ -48,7 +48,7 @@ final class JavaCodeVisitorGenerator {
   /// @param head             the non-terminal being classified.
   /// @param element          the element symbol (shared by both productions).
   /// @param singleProduction the base production (used to emit `List<Element>`).
-  record ListPattern(NonTerminal head, Symbol element, Production singleProduction) implements Pattern {}
+  private record ListPattern(NonTerminal head, Symbol element, Production singleProduction) implements Pattern {}
 
   private JavaCodeVisitorGenerator() {
     throw new AssertionError();
