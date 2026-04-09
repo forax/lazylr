@@ -54,31 +54,31 @@ public class JavaCodeVisitorGeneratorTest {
   public void testNonIdentifierTerminalsDoNotGetTerminalMethods() {
     var inputText = """
         grammar {
-          Expr : Expr '+' Expr
-          Expr : num
+          E : E '+' E
+          E : num
         }
         """;
 
     var actual = generateVisitor(inputText);
     assertEquals("""
-        public sealed interface Expr permits ExprPlusExprExpr, NumExpr {}
-        public record ExprPlusExprExpr(Expr expr, Expr expr2) implements Expr {}
-        public record NumExpr(String num) implements Expr {}
+        public sealed interface E permits EPlusEE, NumE {}
+        public record EPlusEE(E e, E e2) implements E {}
+        public record NumE(String num) implements E {}
         
-        class MyVisitor implements Visitor<Expr> {
+        class MyVisitor implements Visitor<E> {
         
           public String num(Terminal terminal) {
             return terminal.value();
           }
         
-          @ProductionName("Expr : Expr + Expr")
-          public Expr exprPlusExprExpr(Expr expr, Expr expr2) {
-            return new ExprPlusExprExpr(expr, expr2);
+          @ProductionName("E : E + E")
+          public E ePlusEE(E e, E e2) {
+            return new EPlusEE(e, e2);
           }
         
-          @ProductionName("Expr : num")
-          public Expr numExpr(String num) {
-            return new NumExpr(num);
+          @ProductionName("E : num")
+          public E numE(String num) {
+            return new NumE(num);
           }
         
         }

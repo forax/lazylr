@@ -126,7 +126,7 @@ System.out.println(ast);
 ### API highlights
 
 - `MetaGrammar.load(String text)` parses the MetaGrammar DSL text.
-- `mg.verify(...)` checks for unresolved LALR(1) conflicts.
+- `mg.verify(...)` checks for invalid grammar rules and unresolved LALR(1) conflicts.
 - `mg.parse(input, evaluatorOrVisitorOrVisitorFactory)` performs lexing then parsing in one call.
 
 ---
@@ -1315,13 +1315,13 @@ add tests that call `mg.verify(errorReporter)` and assert no errors are reported
 ### Verification overloads
 
 ```java
-// Print conflicts to System.err; print automaton to System.err only on conflict
+// Print problems and conflicts to System.err; print automaton to System.err only on conflict
 mg.verify();
 
 // Always print the full automaton to System.out; conflicts go to System.err
 mg.verify(true);
 
-// Route conflicts to a callback; never print automatically
+// Route problems and conflicts to a callback; never print automatically
 var errors = new ArrayList<String>();
 mg.verify(errors::add);
 assertTrue(errors.isEmpty());
@@ -1366,8 +1366,8 @@ Symbols:
 lazylr [--generate | --print] <grammar-file> [input-file]
 ```
 
-All output goes to stdout for normal results and to stderr for errors and conflict
-diagnostics.
+All output goes to stdout for normal results and to stderr for errors and
+conflict diagnostics.
 
 ### Modes
 
@@ -1377,8 +1377,9 @@ Mode **Validation (default):**
 lazylr grammar.txt
 ```
 
-Parses and validates the grammar. On conflict, prints the LALR(1) automaton to stderr
-and exits with code 2. On success, exits silently with code 0.
+Parses and validates the grammar (find invalid rules and conflicts).
+On conflict, prints the LALR(1) automaton to stderr and exits with code 2.
+On success, exits silently with code 0.
 
 Mode **Unconditional automaton printing:**
 
@@ -1386,8 +1387,9 @@ Mode **Unconditional automaton printing:**
 lazylr --print grammar.txt
 ```
 
-Validates the grammar and always prints the full LALR(1) automaton to stdout. Conflicts
-are additionally reported to stderr. Exit code 0 if conflict-free, 2 if conflicts remain.
+Validates the grammar and always prints the full LALR(1) automaton to stdout.
+Invalid rules and conflicts are additionally reported to stderr.
+Exit code 0 if the grammar is well-formed, 2 if problems remain.
 
 Mode **Java source generation:**
 
@@ -1395,9 +1397,14 @@ Mode **Java source generation:**
 lazylr --generate grammar.txt
 ```
 
-Validates the grammar, then emits a Java source snippet with a static `createGrammar()`
-method to stdout. The generated code reconstructs the exact same `MetaGrammar`
-programmatically. Exit code 0 on success, 2 on conflicts.
+Validates the grammar, then emits to stdout a Java source snippet containing
+- a Visitor creating an abstract syntax tree and
+- a static `createGrammar()` method.
+
+The `createGrammar()` method reconstructs the exact same `MetaGrammar`
+programmatically.
+
+Exit code 0 on success, 2 on conflicts.
 
 Mode **Parse and print derivation tree:**
 
@@ -1437,8 +1444,69 @@ Terminal nodes are shown as `[name=value]` when name ≠ value, or `[name]` when
 
 ## Code Generation
 
-The generated output is a standalone static method named `createGrammar()` that returns
-a fully constructed `MetaGrammar`. It faithfully reproduces:
+The generated output an AST `Visitor` and a static method named `createGrammar()`
+that returns a fully constructed `MetaGrammar.
+
+### AST Visitor
+
+The generator produces a Java representation of the grammar using a `Visitor`.
+It maps grammar symbols and productions to **sealed interfaces** and **records**.
+
+```java
+// Data Structures (AST Nodes)
+public sealed interface E permits EPlusEE, NumE {}
+public record EPlusEE(E e, E e2) implements E {}
+public record NumE(String num) implements E {}
+
+// The Visitor Implementation
+class MyVisitor implements Visitor<E> {
+  
+  // Terminal mapping
+  public String num(Terminal terminal) {
+    return terminal.value();
+  }
+  
+  // Production mapping
+  @ProductionName("E : E + E")
+  public E ePlusEE(E e, E e2) {
+    return new EPlusEE(e, e2);
+  }
+  
+  @ProductionName("E : num")
+  public E numE(String num) {
+    return new NumE(num);
+  }
+}
+```
+
+#### The Generation Algorithm
+
+- **Terminals as Strings**: Any terminal with a name that is a valid Java identifier
+  (e.g., `num`, `id`) is treated as a "meaningful" value.
+  The visitor generates a method for these terminals that returns their raw `String` value.
+- **Non-Terminals as Interfaces**: Each non-terminal is mapped to a Java type.
+  If a non-terminal has multiple productions, it is generated as a sealed interface
+  to enable exhaustive pattern matching.
+- **Productions as Records**: Each individual production is transformed into a record
+  that implements the corresponding non-terminal's interface.
+- **Factory Method Dispatch**: For every production, the visitor includes a factory method
+  annotated with `@ProductionName`.
+  These methods receive processed sub-elements (either `String` values for terminals or
+  AST nodes for non-terminals) and instantiate the appropriate record.
+
+#### Pattern Recognition
+The generator automatically detects and simplifies common grammar structures:
+
+- **Optional Patterns**: Rules representing optionality (e.g., `Option : ε | Symbol`)
+  are mapped to `java.util.Optional<T>` instead of a custom record.
+- **List Patterns**: Left-recursive rules (e.g., `List : Element | List Element`)
+  are flattened into standard Java `java.util.List<T>`.
+- **Automatic Naming**: Record names are derived by concatenating the body symbols
+  with the head name (e.g., `E : E + E` becomes `EPlusEE`).
+
+### Grammar creation using the programmatic API
+
+The `createGrammar()` method faithfully reproduces:
 
 - All non-terminal variable declarations.
 - All terminal variable declarations (with collision-safe names for symbols like `+`, `*`).
@@ -1450,8 +1518,6 @@ a fully constructed `MetaGrammar`. It faithfully reproduces:
 
 ```java
 // Example output structure:
-import com.github.forax.lazylr.*;
-
 public static MetaGrammar createGrammar() {
   // Non-terminals
   var nt_E = new NonTerminal("E");
