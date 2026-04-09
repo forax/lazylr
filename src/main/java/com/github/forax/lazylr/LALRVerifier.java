@@ -123,6 +123,9 @@ public final class LALRVerifier {
     Objects.requireNonNull(grammar);
     Objects.requireNonNull(precedenceMap);
     Objects.requireNonNull(errorReporter);
+    if (preAnalysis(grammar, errorReporter)) {
+      return;
+    }
     var augmentedStart = buildAugmentedProduction(grammar);
     var firstSets = computeFirstSets(grammar);
     var lr0Automaton = buildLR0Automaton(grammar, augmentedStart);
@@ -135,6 +138,96 @@ public final class LALRVerifier {
     }
   }
 
+  // -- pre-analysis
+
+  /// Computes the set of productive non-terminals.
+  ///
+  /// A non-terminal `A` is productive if there exists a derivation
+  /// `A ->* w` where `w ∈ Σ*` (a string of terminals only).
+  ///
+  ///
+  /// @param grammar the grammar to analyse
+  /// @return a set of generating non-terminals
+  static Set<NonTerminal> productiveNonTerminals(Grammar grammar) {
+    var productive = new HashSet<NonTerminal>();
+    var changed = true;
+
+    while (changed) {
+      changed = false;
+      for (var production : grammar.productions()) {
+        // If the head is already productive, skip
+        if (productive.contains(production.head())) {
+          continue;
+        }
+
+        // A production is productive if all its body symbols are
+        // either Terminals or already marked as productive NonTerminals
+        var allBodyProductive = true;
+        for (var symbol : production.body()) {
+          if (symbol instanceof NonTerminal nt && !productive.contains(nt)) {
+            allBodyProductive = false;
+            break;
+          }
+        }
+
+        if (allBodyProductive) {
+          if (productive.add(production.head())) {
+            changed = true;
+          }
+        }
+      }
+    }
+    return productive;
+  }
+
+  /// Computes the set of reachable non-terminals.
+  ///
+  /// A non-terminal `A` is reachable if there exists `a` derivation
+  /// `S ->*  αAβ` starting from the grammar's start symbol `S`.
+  ///
+  /// @param grammar the grammar to analyse
+  /// @return a set of reachable non-terminals
+  static Set<NonTerminal> reachableNonTerminals(Grammar grammar) {
+    var reachable = new HashSet<NonTerminal>();
+    reachable.add(grammar.startSymbol());
+
+    var stack = new ArrayDeque<NonTerminal>();
+    stack.add(grammar.startSymbol());
+
+    while (!stack.isEmpty()) {
+      var current = stack.pop();
+      for (var production : grammar.productionsFor(current)) {
+        for (var symbol : production.body()) {
+          if (symbol instanceof NonTerminal nt) {
+            if (reachable.add(nt)) {
+              stack.push(nt);
+            }
+          }
+        }
+      }
+    }
+    return reachable;
+  }
+
+  static boolean preAnalysis(Grammar grammar, Consumer<? super String> errorReporter) {
+    var allNonTerminals = grammar.nonTerminals();
+
+    // check un-productive non-terminals
+    var unproductive = new LinkedHashSet<>(allNonTerminals);
+    unproductive.removeAll(productiveNonTerminals(grammar));
+    for (var nonTerminal : unproductive) {
+      errorReporter.accept("unproductive non-terminal: " + nonTerminal);
+    }
+
+    // check un-reachable non-terminals
+    var unreachable = new LinkedHashSet<>(allNonTerminals);
+    unreachable.removeAll(reachableNonTerminals(grammar));
+    for (var nonTerminal : unreachable) {
+      errorReporter.accept("unreachable non-terminal: " + nonTerminal);
+    }
+
+    return !unproductive.isEmpty() || !unreachable.isEmpty();
+  }
 
   // -----------------------------------------------------------------------
   // Internal representation

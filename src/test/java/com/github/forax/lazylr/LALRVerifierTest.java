@@ -1,11 +1,14 @@
 package com.github.forax.lazylr;
 
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.io.ByteArrayOutputStream;
 import java.io.PrintStream;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Consumer;
 
 import static org.junit.jupiter.api.Assertions.*;
@@ -639,5 +642,260 @@ public final class LALRVerifierTest {
            reduce( E : E * E          ) on [$, *, +]
         
         """, output);
+  }
+
+
+  @Nested
+  public class PreAnalysis {
+    @Test
+    public void productiveNonTerminalsSimple() {
+      var s = new NonTerminal("S");
+      var a = new NonTerminal("A");
+      var terminal = new Terminal("a");
+
+      // S -> A, A -> "a"
+      var grammar = new Grammar(s, List.of(
+          new Production(s, List.of(a)),
+          new Production(a, List.of(terminal))
+      ));
+
+      var productive = LALRVerifier.productiveNonTerminals(grammar);
+      assertEquals(Set.of(s, a), productive);
+    }
+
+    @Test
+    public void productiveNonTerminalsWithCycle() {
+      var s = new NonTerminal("S");
+      var a = new NonTerminal("A");
+      var terminal = new Terminal("a");
+
+      // S -> a, A -> A (A is unproductive)
+      var grammar = new Grammar(s, List.of(
+          new Production(s, List.of(terminal)),
+          new Production(a, List.of(a))
+      ));
+
+      var productive = LALRVerifier.productiveNonTerminals(grammar);
+      assertEquals(Set.of(s), productive);
+    }
+
+    @Test
+    public void productiveNonTerminalsWithCycleOfLengthTwo() {
+      var s = new NonTerminal("S");
+      var a = new NonTerminal("A");
+      var b = new NonTerminal("B");
+      var terminal = new Terminal("a");
+
+      // S -> a, A -> A (A is unproductive)
+      var grammar = new Grammar(s, List.of(
+          new Production(s, List.of(terminal)),
+          new Production(a, List.of(b)),
+          new Production(b, List.of(a))
+      ));
+
+      var productive = LALRVerifier.productiveNonTerminals(grammar);
+      assertEquals(Set.of(s), productive);
+    }
+
+    @Test
+    public void productiveNonTerminalsWithCycleAndTerminal() {
+      var s = new NonTerminal("S");
+      var a = new NonTerminal("A");
+      var terminalA = new Terminal("a");
+      var terminalB = new Terminal("b");
+
+      // S -> a, A -> A (A is unproductive)
+      var grammar = new Grammar(s, List.of(
+          new Production(s, List.of(terminalA)),
+          new Production(a, List.of(terminalB, a))
+      ));
+
+      var productive = LALRVerifier.productiveNonTerminals(grammar);
+      assertEquals(Set.of(s), productive);
+    }
+
+    @Test
+    public void productiveNonTerminalWithMultipleProductiveProductions() {
+      var s = new NonTerminal("S");
+      var terminalA = new Terminal("a");
+      var terminalB = new Terminal("b");
+
+      // S has two different productions, both are immediately productive.
+      var grammar = new Grammar(s, List.of(
+          new Production(s, List.of(terminalA)),
+          new Production(s, List.of(terminalB))
+      ));
+
+      var productive = LALRVerifier.productiveNonTerminals(grammar);
+
+      assertEquals(Set.of(s), productive);
+    }
+
+    @Test
+    public void checkStartSymbolUnproductive() {
+      var s = new NonTerminal("S");
+      // S -> S
+      var grammar = new Grammar(s, List.of(new Production(s, List.of(s))));
+
+      var errors = new ArrayList<String>();
+      var hasError = LALRVerifier.preAnalysis(grammar, errors::add);
+
+      assertTrue(hasError);
+      assertTrue(errors.stream().anyMatch(e -> e.contains("unproductive") && e.contains("S")));
+    }
+
+    @Test
+    public void emptyProductionIsProductive() {
+      var s = new NonTerminal("S");
+      // S -> ε (empty body)
+      var grammar = new Grammar(s, List.of(new Production(s, List.of())));
+
+      var productive = LALRVerifier.productiveNonTerminals(grammar);
+      assertTrue(productive.contains(s));
+    }
+
+    @Test
+    public void checkUnproductiveGrammar() {
+      var s = new NonTerminal("S");
+      var a = new NonTerminal("A");
+
+      // S -> A, A -> A
+      var grammar = new Grammar(s, List.of(
+          new Production(s, List.of(a)),
+          new Production(a, List.of(a))
+      ));
+
+      var errors = new ArrayList<String>();
+      var hasError = LALRVerifier.preAnalysis(grammar, errors::add);
+
+      assertTrue(hasError);
+      assertTrue(errors.stream().anyMatch(e -> e.contains("unproductive") && e.contains("S")));
+      assertTrue(errors.stream().anyMatch(e -> e.contains("unproductive") && e.contains("A")));
+    }
+
+    @Test
+    public void partialProductivity() {
+      var s = new NonTerminal("S");
+      var a = new NonTerminal("A");
+
+      // S -> A (A is unproductive)
+      // S -> "s" (This makes S productive)
+      var grammar = new Grammar(s, List.of(
+          new Production(s, List.of(a)),
+          new Production(s, List.of(new Terminal("s"))),
+          new Production(a, List.of(a))
+      ));
+
+      var productive = LALRVerifier.productiveNonTerminals(grammar);
+      assertTrue(productive.contains(s));
+      assertFalse(productive.contains(a));
+    }
+
+    @Test
+    public void checkMutuallyRecursiveProductive() {
+      var s = new NonTerminal("S");
+      var a = new NonTerminal("A");
+
+      // S -> A | "s", A -> S
+      // Both are productive because S can derive "s"
+      var grammar = new Grammar(s, List.of(
+          new Production(s, List.of(a)),
+          new Production(s, List.of(new Terminal("s"))),
+          new Production(a, List.of(s))
+      ));
+
+      var errors = new ArrayList<String>();
+      var hasError = LALRVerifier.preAnalysis(grammar, errors::add);
+      assertFalse(hasError);
+      assertTrue(errors.isEmpty());
+    }
+
+    @Test
+    public void chainWithIndirectUnproductive() {
+      var s = new NonTerminal("S");
+      var a = new NonTerminal("A");
+      var b = new NonTerminal("B");
+      var c = new NonTerminal("C");
+
+      // S -> A, A -> B, B -> C, C -> C
+      var grammar = new Grammar(s, List.of(
+          new Production(s, List.of(a)),
+          new Production(a, List.of(b)),
+          new Production(b, List.of(c)),
+          new Production(c, List.of(c))
+      ));
+
+      var productive = LALRVerifier.productiveNonTerminals(grammar);
+      assertTrue(productive.isEmpty());
+    }
+
+
+    @Test
+    public void reachableNonTerminalsSimple() {
+      var s = new NonTerminal("S");
+      var a = new NonTerminal("A");
+      var b = new NonTerminal("B");
+
+      // S -> A, B -> "b" (B is unreachable)
+      var grammar = new Grammar(s, List.of(
+          new Production(s, List.of(a)),
+          new Production(a, List.of()),
+          new Production(b, List.of())
+      ));
+
+      var reachable = LALRVerifier.reachableNonTerminals(grammar);
+      assertEquals(Set.of(s, a), reachable);
+    }
+
+    @Test
+    public void checkValidGrammar() {
+      var s = new NonTerminal("S");
+      var grammar = new Grammar(s,
+          List.of(new Production(s, List.of(new Terminal("a")))));
+
+      var errors = new ArrayList<String>();
+      var hasError = LALRVerifier.preAnalysis(grammar, errors::add);
+
+      assertFalse(hasError);
+      assertTrue(errors.isEmpty());
+    }
+
+    @Test
+    public void productiveButUnreachable() {
+      var s = new NonTerminal("S");
+      var a = new NonTerminal("A");
+
+      // S -> "s"
+      // A -> "a" (A is productive but unreachable)
+      var grammar = new Grammar(s, List.of(
+          new Production(s, List.of(new Terminal("s"))),
+          new Production(a, List.of(new Terminal("a")))
+      ));
+
+      var reachable = LALRVerifier.reachableNonTerminals(grammar);
+      assertFalse(reachable.contains(a));
+
+      var errors = new ArrayList<String>();
+      LALRVerifier.preAnalysis(grammar, errors::add);
+      assertTrue(errors.stream().anyMatch(e -> e.contains("unreachable") && e.contains("A")));
+    }
+
+    @Test
+    public void checkUnreachableGrammar() {
+      var s = new NonTerminal("S");
+      var a = new NonTerminal("A");
+
+      // S -> "s", A -> "a"
+      var grammar = new Grammar(s, List.of(
+          new Production(s, List.of(new Terminal("s"))),
+          new Production(a, List.of(new Terminal("a")))
+      ));
+
+      var errors = new ArrayList<String>();
+      var hasError = LALRVerifier.preAnalysis(grammar, errors::add);
+
+      assertTrue(hasError);
+      assertTrue(errors.stream().anyMatch(e -> e.contains("unreachable") && e.contains("A")));
+    }
   }
 }
