@@ -149,33 +149,43 @@ public final class LALRVerifier {
   /// @param grammar the grammar to analyse
   /// @return a set of generating non-terminals
   static Set<NonTerminal> productiveNonTerminals(Grammar grammar) {
+    // Count how many non-terminal body symbols are still unproductive, per production.
+    // When the count hits 0, the head becomes productive.
+    var pendingCount = new HashMap<Production, Integer>();
+    // Reverse index: non-terminal -> productions that have non-terminal in their body
+    var dependents = new HashMap<NonTerminal, List<Production>>();
+
     var productive = new HashSet<NonTerminal>();
-    var changed = true;
+    var worklist = new ArrayDeque<NonTerminal>();
 
-    while (changed) {
-      changed = false;
-      for (var production : grammar.productions()) {
-        // If the head is already productive, skip
-        if (productive.contains(production.head())) {
-          continue;
+    // Compute the dependent map and count the number of non-terminals per production
+    for (var production : grammar.productions()) {
+      var count = 0;
+      for (var symbol : production.body()) {
+        if (symbol instanceof NonTerminal nonTerminal) {
+          dependents.computeIfAbsent(nonTerminal, _ -> new ArrayList<>()).add(production);
+          count++;
         }
+      }
+      pendingCount.put(production, count);
 
-        // A production is productive if all its body symbols are
-        // either Terminals or already marked as productive NonTerminals
-        var allBodyProductive = true;
-        for (var symbol : production.body()) {
-          if (symbol instanceof NonTerminal nt && !productive.contains(nt)) {
-            allBodyProductive = false;
-            break;
-          }
-        }
+      // Seed: if no non-terminals in body, head is immediately productive
+      if (count == 0 && productive.add(production.head())) {
+        worklist.add(production.head());
+      }
+    }
 
-        if (allBodyProductive) {
-          productive.add(production.head());
-          changed = true;
+    // Propagate
+    while (!worklist.isEmpty()) {
+      var nonTerminal = worklist.poll();
+      for (var production : dependents.getOrDefault(nonTerminal, List.of())) {
+        var remaining = (int) pendingCount.merge(production, -1, Integer::sum);
+        if (remaining == 0 && productive.add(production.head())) {
+          worklist.add(production.head());
         }
       }
     }
+
     return productive;
   }
 
