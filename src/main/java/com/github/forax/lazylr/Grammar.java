@@ -43,7 +43,7 @@ public final class Grammar {
     var productionMap = productions.stream()
         .collect(Collectors.groupingBy(Production::head, LinkedHashMap::new, Collectors.toUnmodifiableList()));
     if (!productionMap.containsKey(startSymbol)) {
-      throw new IllegalArgumentException("start symbol is not a non-terminal symbol");
+      throw new IllegalArgumentException("start symbol has no production");
     }
     checkOrphanNonTerminals(productionMap);
     this(startSymbol, productions, productionMap);
