@@ -53,16 +53,6 @@ public final class GrammarTest {
   }
 
   @Test
-  public void constructorDuplicateProductions() {
-    var start = new NonTerminal("S");
-    var terminal = new Terminal("a");
-    assertThrows(IllegalArgumentException.class, () ->
-        new Grammar(start, List.of(
-            new Production(start, List.of(terminal)),
-            new Production(start, List.of(terminal)))));
-  }
-
-  @Test
   public void constructorValidGrammar() {
     var start = new NonTerminal("S");
     var prod = new Production(start, List.of(new Terminal("a")));

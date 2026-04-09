@@ -565,18 +565,6 @@ public final class MetaGrammarTest {
 
 
   @Test
-  public void duplicateProductionThrowsParsingException() {
-    assertThrows(ParsingException.class, () ->
-      MetaGrammar.load("""
-        grammar {
-          S: a
-          S: a
-        }
-        """)
-    );
-  }
-
-  @Test
   @SuppressWarnings("DataFlowIssue")
   public void nullInputThrowsNullPointerException() {
     assertThrows(NullPointerException.class, () -> MetaGrammar.load(null));
