@@ -20,7 +20,7 @@ import java.util.List;
 ///    [#evaluate(Production, List)] with the results of its children.
 ///
 /// ### Exception propagation
-/// / Any exception thrown by either `evaluate` method stops the parse loop
+/// Any exception thrown by either `evaluate` method stops the parse loop
 /// and propagates out of [Parser#parse(java.util.Iterator, Evaluator)].
 /// The parser may be reused normally with another input after an evaluator exception.
 ///
