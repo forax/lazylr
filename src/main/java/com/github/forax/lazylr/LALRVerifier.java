@@ -171,9 +171,8 @@ public final class LALRVerifier {
         }
 
         if (allBodyProductive) {
-          if (productive.add(production.head())) {
-            changed = true;
-          }
+          productive.add(production.head());
+          changed = true;
         }
       }
     }
