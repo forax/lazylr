@@ -21,6 +21,15 @@ public final class Grammar {
   private final List<Production> productions;
   private final Map<NonTerminal, List<Production>> productionMap;
 
+  /// Also used by MetaGrammar which does not allow orphan non-terminals
+  /// and guarantee that the start symbol has a production by construction.
+  Grammar(NonTerminal startSymbol, List<Production> productions, Map<NonTerminal, List<Production>> productionMap) {
+    this.startSymbol = startSymbol;
+    this.productions = productions;
+    this.productionMap = productionMap;
+    super();
+  }
+
   /// Creates a new immutable Grammar.
   ///
   /// @param startSymbol The entry point of the grammar (e.g., `program` or `expr`).
@@ -33,14 +42,11 @@ public final class Grammar {
     productions = List.copyOf(productions);
     var productionMap = productions.stream()
         .collect(Collectors.groupingBy(Production::head, LinkedHashMap::new, Collectors.toUnmodifiableList()));
-    checkOrphanNonTerminals(productionMap);
     if (!productionMap.containsKey(startSymbol)) {
       throw new IllegalArgumentException("start symbol is not a non-terminal symbol");
     }
-    this.startSymbol = startSymbol;
-    this.productions = productions;
-    this.productionMap = productionMap;
-    super();
+    checkOrphanNonTerminals(productionMap);
+    this(startSymbol, productions, productionMap);
   }
 
   /// Checks for non-terminals with no production.
