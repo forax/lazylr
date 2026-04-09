@@ -68,7 +68,7 @@ public final class LALRVerifier {
   /// @param grammar       the grammar to verify.
   /// @param precedenceMap maps terminals and productions to their precedence;
   ///                      used to resolve shift/reduce conflicts.
-  /// @throws NullPointerException if `grammar`, `precedenceMap`.
+  /// @throws NullPointerException if `grammar`, `precedenceMap` is null.
   public static void verify(Grammar grammar, Map<? extends PrecedenceEntity, Precedence> precedenceMap) {
     verify(grammar, precedenceMap, System.err, false, System.err::println);
   }
