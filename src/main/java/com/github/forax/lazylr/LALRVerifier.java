@@ -335,10 +335,9 @@ public final class LALRVerifier {
           case Terminal _ -> {
             break loop;
           }
-          case NonTerminal bodyNt -> {
+          case NonTerminal bodyNt ->
             dependents.computeIfAbsent(bodyNt, _ -> new HashSet<>())
                 .add(production.head());
-          }
         }
       }
     }
