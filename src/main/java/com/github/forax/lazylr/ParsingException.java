@@ -3,8 +3,35 @@ package com.github.forax.lazylr;
 import org.jspecify.annotations.Nullable;
 
 /// Exception thrown by the [Parser] during parsing.
-/// 
-/// @see Parser#parse(java.util.Iterator, ParserListener)
+///
+/// All runtime parse failures surface as this exception type:
+/// - Lexing error: no token pattern matches.
+/// - Parsing error: a token exists but is not valid in the current grammar state.
+/// - Unexpected end of input: the input ends before the grammar is satisfied.
+///
+/// Example:
+/// ```java
+/// var mg = MetaGrammar.load("""
+///     tokens {
+///       number: /[0-9]+/
+///       /[ \\t]+/
+///     }
+///     grammar {
+///       E : number
+///       E : '(' E ')'
+///     }
+///     """);
+///
+/// // 1) Lexing error, unexpected character 'f'
+/// mg.parse("foo", new PrintEvaluator());
+///
+/// // 2) Parsing error, unexpected terminal ')', expected number
+/// mg.parse("( )", new PrintEvaluator());
+///
+/// // 3) Parsing error, unexpected end of input, expected ')'
+/// mg.parse("( 32", new PrintEvaluator());
+/// ```
+///
 /// @see Parser#parse(java.util.Iterator, Evaluator)
 public final class ParsingException extends RuntimeException {
   /// Creates a new ParsingException with a message.
