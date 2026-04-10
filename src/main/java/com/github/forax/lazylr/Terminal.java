@@ -10,7 +10,7 @@ import java.util.Objects;
 /// * **Grammar Definition**: Used as placeholders in a [Production].
 /// * **Lexical Analysis**: Created by the [Lexer] to represent actual text fragments.
 ///
-/// This record implements [PrecedenceEntity], allowing it to participate in
+/// This class implements [PrecedenceEntity], allowing it to participate in
 /// conflict resolution when multiple productions could be applied (e.g., in
 /// expressions with mixed operators).
 ///

@@ -12,9 +12,8 @@ import java.util.stream.Collectors;
 /// known as the body. It defines how the head can be expanded or reduced during
 /// the parsing process.
 ///
-/// This record implements [PrecedenceEntity], allowing it to participate in
-/// conflict resolution when multiple productions could be applied (e.g., in
-/// expressions with mixed operators).
+/// This class implements [PrecedenceEntity], allowing it to participate in
+/// conflict resolution when multiple productions could be applied.
 ///
 /// ### Name
 /// The [name()] of a production is used as a unique identifier for
