@@ -557,10 +557,9 @@ E : '-' E    %prec UMINUS
 It must appear somewhere in the `precedence` section but not in the `tokens` section.
 It does not correspond to any lexer token.
 
-#### Duplicate and self-referential rules
+#### Self-referential rules
 
-- Left recursion is handled correctly: `E : E '+' E` will not cause infinite loops.
-- Duplicate productions (same head and same body) are rejected.
+Left recursion is handled correctly: `E : E '+' E` will not cause infinite loops.
 
 #### Multiple grammar sections
 
@@ -708,7 +707,6 @@ var grammar = new Grammar(E, List.of(
 Construction validates:
 - The start symbol must be the head of at least one production.
 - Every non-terminal that appears in a rule body must itself have at least one production.
-- Duplicate productions (same head and same body) are rejected.
 
 `Grammar` is thread-safe and can be reused across many parsers and threads.
 
