@@ -18,17 +18,21 @@ import java.util.Set;
 /// The parser uses a bottom-up approach to recognize languages defined by a [Grammar].
 ///
 /// ### Evaluation
-/// The parser supports two ways to process the input:
+/// The parser supports three ways to process the input:
 /// 1. **TypeChecked**: Using [Visitor#reflect(MethodHandles.Lookup, Visitor)] to create
 ///    an evaluator and [#parse(Iterator, Evaluator)] to parse it.
 /// 2. **Functional**: Using [#parse(Iterator, Evaluator)] to directly produce a result.
 /// 3. **Event-driven**: Using [#parse(Iterator, ParserListener)] to observe transitions
 ///    as they occur.
 ///
+/// ### Thread Safety
+///
 /// This class is not thread-safe. Each instance is permanently bound to the thread
 /// that created it (via [#createParser] or [ParserFactory#createParser]).
 /// Calling [#parse] from any other thread will throw [WrongThreadException].
 /// To parse concurrently, create one [Parser] per thread using a shared [ParserFactory].
+///
+/// @see ParserFactory
 public final class Parser {
   private final Thread ownerThread;
   private final LRTransitionEngine engine;
