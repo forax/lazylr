@@ -63,6 +63,9 @@ import java.util.stream.IntStream;
 /// }
 /// ```
 ///
+/// `@ProductionName` is a repeatable annotation, a production method can
+/// be annotated by more than one `@ProductionName`.
+///
 /// ### Single-body pass-through
 /// If a production has exactly one symbol in its body and no `@ProductionName`
 /// method is defined for it, the single argument is returned as-is without
