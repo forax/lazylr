@@ -4,7 +4,7 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.Objects;
 
-/// Represents a terminal symbol (token) in the grammar.
+/// Represents a terminal symbol in the grammar.
 ///
 /// Terminals are the "atoms" of the parsing process. They serve two roles:
 /// * **Grammar Definition**: Used as placeholders in a [Production].
@@ -24,7 +24,7 @@ public final class Terminal implements Symbol, PrecedenceEntity {
   /// The parser uses this terminal internally.
   public static final Terminal EPSILON = new Terminal("ε");
 
-  /// Represents the end-of-stream marker ($), indicating no more tokens are available.
+  /// Represents the end-of-stream marker ($), indicating no more terminals are available.
   /// The parser uses this terminal internally.
   public static final Terminal EOF = new Terminal("$");
 
