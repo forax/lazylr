@@ -50,6 +50,8 @@ import java.util.stream.IntStream;
 /// of the production body symbols, in left-to-right order.
 /// If a symbol is a terminal and there is no corresponding terminal method,
 /// the production method has no corresponding parameter.
+/// If a terminal method returns `null`, `null` is passed as argument
+/// to the production method.
 ///
 /// ```java
 /// class NodeVisitor implements Visitor<Node> {
