@@ -14,8 +14,8 @@ import java.util.Objects;
 /// conflict resolution when multiple productions could be applied (e.g., in
 /// expressions with mixed operators).
 ///
-/// In this library, two terminals are considered equals if their [name]s
-/// match, even if their [value]s differ.
+/// Two terminals are considered equals if their [name]s match,
+/// even if their [value]s differ.
 ///
 /// This class is immutable, thus thread-safe.
 public final class Terminal implements Symbol, PrecedenceEntity {
