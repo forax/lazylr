@@ -17,6 +17,13 @@ import java.util.Objects;
 /// Two terminals are considered equals if their [name]s match,
 /// even if their [value]s differ.
 ///
+/// ### Usage Example
+/// ```java
+/// var plus = new Terminal("+");
+/// var expr = new NonTerminal("expr");
+/// var prod = new Production(expr, List.of(expr, plus, expr));
+/// ```
+///
 /// This class is immutable, thus thread-safe.
 public final class Terminal implements Symbol, PrecedenceEntity {
 

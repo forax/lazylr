@@ -20,6 +20,13 @@ import java.util.stream.Collectors;
 /// [evaluation][Evaluator#evaluate(Production, List)]. It follows the format:
 /// `head : symbol1 symbol2 ...` (or `head : ε` for empty productions).
 ///
+/// ### Usage Example
+/// ```java
+/// var plus = new Terminal("+");
+/// var expr = new NonTerminal("expr");
+/// var prod = new Production(expr, List.of(expr, plus, expr));
+/// ```
+///
 /// This class is immutable, thus thread-safe.
 public final class Production implements PrecedenceEntity {
   private final NonTerminal head;
