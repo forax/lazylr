@@ -264,7 +264,7 @@ This is exactly how precedence declarations control the parsing.
 ### Lazy state construction
 
 A traditional LR table-driven parser pre-computes every possible parser state from the
-grammar before any input is seen. For large grammars (like SQL), this can mean thousands
+grammar before any input is seen. For large grammars like SQL, this can mean thousands
 of states computed upfront, even if most of them are never reached for any given input.
 
 LazyLR instead computes states on demand: the first time the parser visits a
