@@ -665,7 +665,7 @@ Construction validates that the name is non-empty and that the value, if specifi
 
 Key methods:
 - `name()`, returns the symbolic name.
-- `value()`, returns the string value, or `null` for grammar-level placeholders.
+- `value()`, returns the string value, or throw an exception for grammar-level placeholders.
 - `hasValue()`, returns `true` if the terminal carries the matched string value
    produced by the lexer.
 
@@ -857,7 +857,8 @@ class PrintParserListener implements ParserListener {
   }
 }
 ...
-parser.parse(inputText, new PrintParserListener());
+Iterator<Terminal> input = ...    
+parser.parse(input, new PrintParserListener());
 ```
 
 Events fire bottom-up: for a production `E : E '+' E`, both inner `onShift` and inner
