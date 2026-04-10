@@ -23,11 +23,10 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 /// }
 /// ```
 ///
-/// The method parameters correspond to the non-`null` evaluated values
+/// The method parameters correspond to the evaluated values
 /// of the production body symbols, in left-to-right order.
-/// Terminal symbols whose evaluation returned `null` (because no
-/// matching terminal method was defined) are filtered out and
-/// do not appear as parameters.
+/// Terminal symbols with no matching terminal method are filtered out
+/// and do not appear as parameters.
 ///
 /// @see Visitor
 /// @see Production#name()
