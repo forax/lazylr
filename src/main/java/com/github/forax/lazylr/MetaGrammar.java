@@ -17,10 +17,10 @@ import java.util.regex.Pattern;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-/// Represents a grammar specification parsed from a DSL that describes tokens,
+/// Represents a grammar specification parsed from a text that describes tokens,
 /// operator precedence, and production rules of a context-free grammar.
 ///
-/// ## DSL Structure
+/// ## Text Representation Structure
 ///
 /// The input is divided into three named sections, each enclosed in braces:
 ///

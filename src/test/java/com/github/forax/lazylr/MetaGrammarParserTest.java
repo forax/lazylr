@@ -12,7 +12,7 @@ import static org.junit.jupiter.api.Assertions.assertThrows;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 import static org.junit.jupiter.api.Assertions.fail;
 
-/// Those are the same tests as in [ParserTest] but using the meta grammar DSL,
+/// Those are the same tests as in [ParserTest] but using the meta grammar text,
 /// Please update both files accordingly
 public final class MetaGrammarParserTest {
 

@@ -84,7 +84,7 @@ MetaGrammar mg = MetaGrammar.load("""
     """);
 ```
 
-The DSL has three sections:
+The text representation has three sections:
 
 - **`tokens`**: named terminals (`name: /regex/`) matched by the lexer using longest-match,
   with declaration order breaking ties.

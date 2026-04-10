@@ -14,7 +14,7 @@
 /// and [com.github.forax.lazylr.NonTerminal] (an abstract construct, e.g. `"E"`).
 ///
 /// [com.github.forax.lazylr.MetaGrammar] lets you describe tokens, precedence,
-/// and productions in a compact text DSL instead of building Java objects by hand:
+/// and productions in a compact text instead of building Java objects programmaticaly:
 ///
 /// ```java
 /// var mg = MetaGrammar.load("""
@@ -36,7 +36,7 @@
 ///     """);
 /// ```
 ///
-/// The DSL has three optional sections:
+/// The text has three optional sections:
 /// - **`tokens`**: named terminals (`name: /regex/`) and unnamed
 ///   skip patterns (`/regex/`).
 /// - **`precedence`**: `left:` or `right:` lines, lowest first,
@@ -94,7 +94,7 @@
 /// which is stateful and bound to the thread that uses it.
 ///
 /// [com.github.forax.lazylr.MetaGrammar] is thread-safe and can be shared globally.
-//
+///
 /// For concurrent workloads, you can share a [com.github.forax.lazylr.ParserFactory]
 /// and call [com.github.forax.lazylr.ParserFactory#createParser()]
 /// once per thread.

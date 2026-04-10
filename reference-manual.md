@@ -20,7 +20,7 @@ optimized for fast development and iterative grammar evolution.
 1. [Introduction](#introduction)
 2. [Quick Start](#quick-start)
 3. [Conceptual Overview](#conceptual-overview)
-4. [Grammar DSL Reference](#grammar-dsl-reference)
+4. [Grammar Text Reference](#grammar-text-reference)
 5. [Lexing Reference](#lexing-reference)
 6. [Parsing Reference](#parsing-reference)
 7. [Semantic Actions](#semantic-actions)
@@ -43,7 +43,7 @@ so they can iterate quickly on a grammar.
 
 - **Lexing** is defined by ordered regex rules (`Token`, `Lexer`).
 - **Parsing** is bottom-up LR(1) with lazy state construction (`Parser`).
-- **Grammar declaration** is usually done with the built-in DSL (`MetaGrammar.load(...)`).
+- **Grammar declaration** is usually done with the built-in text format (`MetaGrammar.load(...)`).
 - **Semantic actions** are implemented with `Evaluator` or typed `Visitor` methods.
 
 ### What it gives you
@@ -125,7 +125,7 @@ System.out.println(ast);
 
 ### API highlights
 
-- `MetaGrammar.load(String text)` parses the MetaGrammar DSL text.
+- `MetaGrammar.load(String text)` parses the MetaGrammar text.
 - `mg.verify(...)` checks for invalid grammar rules and unresolved LALR(1) conflicts.
 - `mg.parse(input, evaluatorOrVisitorOrVisitorFactory)` performs lexing then parsing in one call.
 
@@ -331,7 +331,7 @@ The tree builds from the leaves upward, naturally.
 
 ---
 
-## Grammar DSL Reference
+## Grammar Text Reference
 
 The `MetaGrammar` text format has three named sections: `tokens`, `precedence`, `grammar`.
 Each section is optional and may appear more than once; multiple occurrences of the same section
@@ -362,7 +362,7 @@ The `tokens` section defines the lexer rules.
 The `precedence` section defines the priority information of terminals and productions in the grammar.
 The `grammar` section defines the grammar rules.
 
-> **Note:** DSL keywords (`tokens`, `grammar`, `precedence`, `left`, `right`) are also
+> **Note:** Keywords (`tokens`, `grammar`, `precedence`, `left`, `right`) are also
 > valid non-terminal and terminal names inside a `grammar` section.
 > For example,
 > ```text
@@ -531,7 +531,7 @@ The start symbol is always taken from the head of the very first rule across all
 
 ### Comments and readability
 
-Line comments (`//`) are allowed anywhere in the DSL, including on the same line as a rule.
+Line comments (`//`) are allowed anywhere in the text, including on the same line as a rule.
 
 ```text
 grammar {

@@ -42,7 +42,7 @@ with non-terminals by applying productions in reverse, until it arrives at the s
 
 **Goal:** Load a grammar from text and navigate the resulting Java objects.
 
-`MetaGrammar.load(text)` parses a DSL description and returns a `MetaGrammar` object.
+`MetaGrammar.load(text)` parses a text description and returns a `MetaGrammar` object.
 From it you can retrieve the `Grammar`, which holds the list of `Production` rules.
 Each `Production` has a `NonTerminal` head and a list of `Symbol` objects
 (either `Terminal` or `NonTerminal`) as its body.
@@ -74,7 +74,7 @@ This demo does not yet parse any input — its purpose is purely to show the obj
 Call `mg.grammar()` to get the `Grammar`, then `grammar.productions()` to inspect the rules,
 `production.head()` for the left-hand side, and `production.body()` for the right-hand side symbols.
 
-> 💡 The grammar DSL has three optional sections: `tokens`, `precedence`, and `grammar`.
+> 💡 The grammar text has three optional sections: `tokens`, `precedence`, and `grammar`.
 >    Here we only use `grammar`. Quoted literals like `'+'` in productions are automatically
 >    registered as terminals — no explicit `tokens` entry is needed for them.
 
