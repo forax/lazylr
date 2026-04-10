@@ -1444,34 +1444,54 @@ Terminal nodes are shown as `[name=value]` when name ≠ value, or `[name]` when
 
 ## Code Generation
 
-The generated output an AST `Visitor` and a static method named `createGrammar()`
-that returns a fully constructed `MetaGrammar.
+The code generator outputs an AST `Visitor` and a static method named
+`createGrammar()` that returns a fully constructed `MetaGrammar`.
 
 ### AST Visitor
 
 The generator produces a Java representation of the grammar using a `Visitor`.
 It maps grammar symbols and productions to **sealed interfaces** and **records**.
 
+AST nodes:
+
+- **Non-terminals as interfaces**: Each non-terminal is mapped to a Java type.
+  If a non-terminal has multiple productions, it is generated as a sealed interface
+  to enable exhaustive pattern matching.
+- **Productions as records**: Each production is transformed into a record
+  that implements the corresponding non-terminal interface.
+  Record names are derived by concatenating the body symbols
+  with the non-terminal (e.g., `E : E + E` becomes `EPlusEE`).
+
+Visitor methods:
+
+- **Terminal methods**: Any terminal whose name is a valid Java identifier
+  (e.g., `num`, `id`) is treated as a "meaningful" value.
+  The visitor generates a method for such terminals that returns its String value.
+- **Production methods**: For every production, the visitor adds a method
+  annotated with `@ProductionName`.
+  These methods receive processed sub-elements (either `String values` for terminals or
+  AST nodes for non-terminals) and instantiate the appropriate record.
+
 ```java
-// Data Structures (AST Nodes)
+// Data structures (AST Nodes)
 public sealed interface E permits EPlusEE, NumE {}
 public record EPlusEE(E e, E e2) implements E {}
 public record NumE(String num) implements E {}
 
-// The Visitor Implementation
+// Visitor implementation
 class MyVisitor implements Visitor<E> {
-  
+
   // Terminal mapping
   public String num(Terminal terminal) {
     return terminal.value();
   }
-  
+
   // Production mapping
   @ProductionName("E : E + E")
   public E ePlusEE(E e, E e2) {
     return new EPlusEE(e, e2);
   }
-  
+
   @ProductionName("E : num")
   public E numE(String num) {
     return new NumE(num);
@@ -1479,30 +1499,14 @@ class MyVisitor implements Visitor<E> {
 }
 ```
 
-#### The Generation Algorithm
-
-- **Terminals as Strings**: Any terminal with a name that is a valid Java identifier
-  (e.g., `num`, `id`) is treated as a "meaningful" value.
-  The visitor generates a method for these terminals that returns their raw `String` value.
-- **Non-Terminals as Interfaces**: Each non-terminal is mapped to a Java type.
-  If a non-terminal has multiple productions, it is generated as a sealed interface
-  to enable exhaustive pattern matching.
-- **Productions as Records**: Each individual production is transformed into a record
-  that implements the corresponding non-terminal's interface.
-- **Factory Method Dispatch**: For every production, the visitor includes a factory method
-  annotated with `@ProductionName`.
-  These methods receive processed sub-elements (either `String` values for terminals or
-  AST nodes for non-terminals) and instantiate the appropriate record.
-
 #### Pattern Recognition
+
 The generator automatically detects and simplifies common grammar structures:
 
 - **Optional Patterns**: Rules representing optionality (e.g., `Option : ε | Symbol`)
   are mapped to `java.util.Optional<T>` instead of a custom record.
 - **List Patterns**: Left-recursive rules (e.g., `List : Element | List Element`)
-  are flattened into standard Java `java.util.List<T>`.
-- **Automatic Naming**: Record names are derived by concatenating the body symbols
-  with the head name (e.g., `E : E + E` becomes `EPlusEE`).
+  are flattened into `java.util.List<T>` instead of a sealed interface.
 
 ### Grammar creation using the programmatic API
 
