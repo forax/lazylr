@@ -427,7 +427,7 @@ Input `if foo 42` tokenizes to `keyword_if("if")`, `id("foo")`, `num("42")`.
 For input `iffy`, `keyword_if` and `id` both match at position 0. `id` wins because
 it matches four characters (`iffy`) versus two (`if`), so the result is `id("iffy")`.
 
-For input `if`, `keyword_if` matches two characters and `id` also matches two characters;
+For input `if`, `keyword_if` matches two characters and `id` also matches two characters,
 `keyword_if` wins because it is declared earlier.
 
 ### `precedence` section
