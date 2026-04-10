@@ -580,4 +580,23 @@ public final class LexerTest {
     iterator.next();  // "bar" at 4
     assertEquals(4, Lexer.position(iterator));
   }
+
+  @Test
+  public void javadocDemo() {
+    var lexer = Lexer.createLexer(List.of(
+        new Token("NUMBER", "[0-9]+"),
+        new Token("PLUS", "\\+"),
+        new Token("\\s+")           // ignorable
+    ));
+
+    var tokens = lexer.tokenize("12 + 34");
+    while (tokens.hasNext()) {
+      var terminal = tokens.next();
+      //System.out.println(terminal.name() + " -> " + terminal.value() +
+      //    " at " + Lexer.position(tokens));
+    }
+    // NUMBER -> 12 at 0
+    // PLUS -> + at 3
+    // NUMBER -> 34 at 5
+  }
 }

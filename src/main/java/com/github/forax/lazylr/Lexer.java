@@ -4,7 +4,7 @@ import java.util.Iterator;
 import java.util.List;
 import java.util.Objects;
 
-/// A lexical analyzer that transforms a character sequence into a stream of [Terminal]s.
+/// A lexical analyzer that transforms a character sequence into a stream of [com.github.forax.lazylr.Terminal]s.
 ///
 /// ### Lexing Behavior
 /// - **Terminal Creation**: When a match is found and the rule has a 'name', a
@@ -15,6 +15,25 @@ import java.util.Objects;
 /// - **Priority**: If multiple rules match at the same position, the rule whose
 ///   match is the longest wins. If two rules match the same number of characters,
 ///   the rule that appears earlier in the list provided to the lexer wins.
+///
+/// ### Example
+/// ```java
+/// var lexer = Lexer.createLexer(List.of(
+///     new Token("NUMBER", "[0-9]+"),
+///     new Token("PLUS", "\\+"),
+///     new Token("\\s+")           // ignorable
+/// ));
+///
+/// var tokens = lexer.tokenize("12 + 34");
+/// while (tokens.hasNext()) {
+///   var terminal = tokens.next();
+///   System.out.println(terminal.name() + " -> " + terminal.value() +
+///       " at " + Lexer.position(tokens));
+/// }
+/// // NUMBER -> 12 at 0
+/// // PLUS -> + at 3
+/// // NUMBER -> 34 at 5
+/// ```
 ///
 /// This class is thread-safe and can be safely shared between multiple threads.
 public final class Lexer {
