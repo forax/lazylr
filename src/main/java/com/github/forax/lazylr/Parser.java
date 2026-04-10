@@ -25,6 +25,12 @@ import java.util.Set;
 /// 3. **Event-driven**: Using [#parse(Iterator, ParserListener)] to observe transitions
 ///    as they occur.
 ///
+/// ### Example
+/// ```java
+/// var parser = Parser.createParser(grammar, precedenceMap);
+/// var result = parser.parse(lexer.tokenize("40 + 2"), evaluator);
+/// ```
+///
 /// ### Thread Safety
 ///
 /// This class is not thread-safe. Each instance is permanently bound to the thread
