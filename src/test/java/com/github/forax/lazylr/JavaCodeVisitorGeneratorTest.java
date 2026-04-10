@@ -406,7 +406,6 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var actual = generateVisitor(inputText);
-    System.out.println(actual);
 
     assertTrue(actual.contains("ExprArrowExpr"));
     assertTrue(actual.contains("ExprFatArrowExpr"));
@@ -458,7 +457,6 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var actual = generateVisitor(inputText);
-    System.out.println(actual);
 
     // Two Expr params should be disambiguated
     assertTrue(actual.contains("Expr expr,") || actual.contains("Expr expr2"));
