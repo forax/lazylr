@@ -23,7 +23,7 @@ import java.util.Objects;
 /// ```
 /// lazylr [--generate|--print] <grammar> [input]
 /// ```
-public final class Main {
+final class Main {
   private Main() {
     throw new AssertionError();
   }
