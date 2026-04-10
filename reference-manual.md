@@ -127,7 +127,7 @@ System.out.println(ast);
 
 - `MetaGrammar.load(String text)` parses the MetaGrammar text.
 - `mg.verify(...)` checks for invalid grammar rules and unresolved LALR(1) conflicts.
-- `mg.parse(input, evaluatorOrVisitorOrVisitorFactory)` performs lexing then parsing in one call.
+- `mg.parse(input, visitor)` performs lexing then parsing in one call.
 
 ---
 
