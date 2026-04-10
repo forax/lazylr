@@ -27,8 +27,33 @@ import java.util.Set;
 ///
 /// ### Example
 /// ```java
+/// var E    = new NonTerminal("E");
+/// var plus = new Terminal("+");
+/// var mul  = new Terminal("*");
+/// var id   = new Terminal("id");
+///
+/// var grammar = new Grammar(E, List.of(
+///     new Production(E, List.of(E, plus, E)),
+///     new Production(E, List.of(E, mul, E)),
+///     new Production(E, List.of(id))
+/// ));
+///
+/// var precedenceMap = Map.of(
+///   plus, new Precedence(1, Precedence.Associativity.LEFT),
+///   mul,  new Precedence(2, Precedence.Associativity.LEFT)
+/// );
+///
 /// var parser = Parser.createParser(grammar, precedenceMap);
-/// var result = parser.parse(lexer.tokenize("40 + 2"), evaluator);
+/// var input = List.of(id, plus, id, mul, id).iterator();
+///
+/// parser.parse(input, new ParserListener() {
+///   @Override public void onShift(Terminal terminal) {
+///     System.out.println("shift " + terminal);
+///   }
+///   @Override public void onReduce(Production production) {
+///     System.out.println("reduce " + production);
+///   }
+/// });
 /// ```
 ///
 /// ### Thread Safety

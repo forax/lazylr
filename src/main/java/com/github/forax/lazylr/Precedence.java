@@ -6,7 +6,7 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-/// Defines the priority and grouping rules for a [PrecedenceEntity].
+/// Defines the priority and grouping rules for a [com.github.forax.lazylr.PrecedenceEntity].
 ///
 /// Precedence is used by the [Parser] to resolve shift/reduce conflicts in
 /// ambiguous grammars, such as mathematical expressions.
@@ -18,6 +18,27 @@ import java.util.Objects;
 ///    grouping:
 ///    * `LEFT`: `a + b + c` is parsed as `(a + b) + c`.
 ///    * `RIGHT`: `a ^ b ^ c` is parsed as `a ^ (b ^ c)`.
+///
+/// ### Example
+/// ```java
+/// var E    = new NonTerminal("E");
+/// var plus = new Terminal("+");
+/// var mul  = new Terminal("*");
+/// var id   = new Terminal("id");
+///
+/// var grammar = new Grammar(E, List.of(
+///     new Production(E, List.of(E, plus, E)),
+///     new Production(E, List.of(E, mul, E)),
+///     new Production(E, List.of(id))
+/// ));
+///
+/// var precedenceMap = Map.of(
+///   plus, new Precedence(1, Precedence.Associativity.LEFT),
+///   mul,  new Precedence(2, Precedence.Associativity.LEFT)
+/// );
+///
+/// var parser = Parser.createParser(grammar, precedenceMap);
+/// ```
 ///
 /// @param level A non-negative integer representing priority. Higher is stronger.
 /// @param associativity The direction in which operators of the same level group.
