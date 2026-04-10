@@ -29,7 +29,6 @@ import static java.lang.annotation.RetentionPolicy.RUNTIME;
 /// and do not appear as parameters.
 ///
 /// @see Visitor
-/// @see Production#name()
 @Retention(RUNTIME)
 @Target(METHOD)
 @Documented
