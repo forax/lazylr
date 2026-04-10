@@ -5,8 +5,8 @@ import org.jspecify.annotations.Nullable;
 import java.lang.invoke.MethodHandles;
 import java.util.List;
 
-/// An interface for transforming a successful parse into a domain-specific
-/// result, such as an Abstract Syntax Tree (AST) or an interpreted value.
+/// An interface for transforming a successful parse into a result of type `V`,
+/// such as an Abstract Syntax Tree (AST) or an interpreted value.
 ///
 /// The `Evaluator` maps the formal structures of the [Grammar] (terminals and
 /// productions) to meaningful objects. It is invoked when the [Parser] does
@@ -15,7 +15,7 @@ import java.util.List;
 /// ### Evaluation Flow
 /// - **Leaf Nodes**: When the parser encounters a [Terminal],
 ///   it calls [#evaluate(Terminal)] to convert the raw token into a value
-///   (e.g., parsing a string "123" into an `Integer`).
+///   (e.g., parsing a string "123" into an `int`).
 /// - **Internal Nodes**: When a [Production] is reduced, it calls
 ///    [#evaluate(Production, List)] with the results of its children.
 ///
