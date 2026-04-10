@@ -67,7 +67,7 @@ public final class Lexer {
   ///   the matched text is skipped, and the lexer immediately attempts to find
   ///   the next match starting from the end of the skipped segment.
   /// * **No Match:** If no token matches at the current index, a [Terminal#ERROR]
-  ///   is returned with the first invalid character and the lexer stops.
+  ///   is returned with an error message as value and the lexer stops.
   ///
   /// ### Context-Sensitive Lexing
   /// When used together with a [Parser], the lexer operates in a context-sensitive
