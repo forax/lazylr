@@ -16,12 +16,12 @@ package com.github.forax.lazylr;
 /// When the parser can either shift a [Terminal] or reduce a [Production],
 /// it compares the precedence of the production against the precedence of the
 /// lookahead terminal. The [associativity][Precedence.Associativity] then
-/// determines whether to favor the shift or the reduction.
+/// determines whether to favor the shift (right) or the reduction (left).
 ///
 /// ### Resolution Hierarchy
 /// If a [Production] does not have an explicit [Precedence] assigned in the
-/// configuration map, it typically inherits the precedence of its right-most
-/// terminal (e.g., `expr : expr * expr` would inherit the precedence of `*`).
+/// configuration map, it inherits the precedence of its right-most terminal
+/// (e.g., `expr : expr * expr` would inherit the precedence of `*`).
 ///
 /// @see Precedence
 /// @see Parser#createParser(Grammar, java.util.Map)
