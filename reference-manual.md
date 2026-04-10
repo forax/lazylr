@@ -1106,7 +1106,7 @@ same non-terminals.
 
 #### GraalVM Native Image compatibility
 
-When compiling using native image, do not use a `Visitor`which internally uses the reflection API
+When compiling using Native Image, do not use a `Visitor` which internally uses the reflection API
 but use the `Evaluator` interface instead.
 
 ---
@@ -1135,7 +1135,7 @@ precedence {
 ```
 
 Rules:
-- **Later lines = higher precedence level.**
+- **Later lines indicate higher precedence levels.**
 - `left` means equal-level conflicts resolve by reducing (left-associativity).
 - `right` means equal-level conflicts resolve by shifting (right-associativity).
 - Multiple terminals on one line share the same level.
@@ -1271,7 +1271,7 @@ Lexing error at line 1, column 1: unexpected character '@'
 ^
 ```
 
-The error message includes the character using a human-readable representation:
+The error message represents the character using a human-readable representation:
 - Printable characters: `'@'`
 - Whitespace: `'\n'`, `'\r'`, `'\t'`, `' '`
 - Control characters: `'\u001B'`
@@ -1363,7 +1363,7 @@ Symbols:
 lazylr [--generate | --print] <grammar-file> [input-file]
 ```
 
-All output goes to stdout for normal results and to stderr for errors and
+All output goes to `stdout` for normal results and to `stderr` for errors and
 conflict diagnostics.
 
 ### Modes
@@ -1375,7 +1375,7 @@ lazylr grammar.txt
 ```
 
 Parses and validates the grammar (find invalid rules and conflicts).
-On conflict, prints the LALR(1) automaton to stderr and exits with code 2.
+On conflict, prints the LALR(1) automaton to `stderr` and exits with code 2.
 On success, exits silently with code 0.
 
 Mode **Unconditional automaton printing:**
@@ -1384,8 +1384,8 @@ Mode **Unconditional automaton printing:**
 lazylr --print grammar.txt
 ```
 
-Validates the grammar and always prints the full LALR(1) automaton to stdout.
-Invalid rules and conflicts are additionally reported to stderr.
+Validates the grammar and always prints the full LALR(1) automaton to `stdout`.
+Invalid rules and conflicts are additionally reported to `stderr`.
 Exit code 0 if the grammar is well-formed, 2 if problems remain.
 
 Mode **Java source generation:**:
@@ -1394,7 +1394,7 @@ Mode **Java source generation:**:
 lazylr --generate grammar.txt
 ```
 
-Validates the grammar, then emits to stdout a Java source snippet containing
+Validates the grammar, then emits to `stdout` a Java source snippet containing
 - a Visitor creating an abstract syntax tree and
 - a static `createGrammar()` method.
 
@@ -1466,7 +1466,7 @@ Visitor methods:
   The visitor generates a method for such terminals that returns its String value.
 - **Production methods**: For every production, the visitor adds a method
   annotated with `@ProductionName`.
-  These methods receive processed sub-elements (either `String values` for terminals or
+  These methods receive processed sub-elements (either `String` values for terminals or
   AST nodes for non-terminals) and instantiate the appropriate record.
 
 ```java
@@ -1852,4 +1852,4 @@ environment, but for toy examples, this is usually acceptable.
 
 ## Migration Guide
 
-The document [Migration Guide](migration-guide.md) describes the migration from other parser generators.
+The document [migration guide](migration-guide.md) describes the migration from other parser generators.
