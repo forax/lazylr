@@ -6,18 +6,23 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-/// Defines a lexical rule for the [Lexer].
+/// Defines a lexical rule for the [com.github.forax.lazylr.Lexer].
 ///
 /// A rule consists of a regular expression and an optional name.
+/// The [regex()] must follow standard Java [Pattern] syntax.
+///
 /// During tokenization, the lexer attempts to match the input string against
 /// these patterns to produce [Terminal] tokens.
 ///
-/// The [regex()] must follow standard Java [Pattern] syntax.
-/// During tokenization, the lexer attempts to match the input string against
-/// these patterns to produce [Terminal] tokens.
-/// When a match is found and the rule has a [name], a new [Terminal]
-/// is created using that name and the matched text as 'value'.
-/// If a rule has no name, it is considered an "ignorable token."
+/// When a match is found and the rule has a [#name()],
+/// a new [Terminal] is created using that name and the matched text as 'value'.
+/// If a rule has no name, it is considered an "ignorable token".
+///
+/// Example:
+/// ```java
+///   var number     = new Token("NUMBER", "[0-9]+");
+///   var whitespace = new Token("[ \\t\\n]+");        // ignorable token
+/// ```
 ///
 /// This class is immutable, thus thread-safe.
 public final class Token {
