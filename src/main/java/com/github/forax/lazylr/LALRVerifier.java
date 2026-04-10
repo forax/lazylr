@@ -19,29 +19,44 @@ import java.util.function.Consumer;
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
 
-/// Verifies whether a grammar is LALR(1), using a precedence map
-/// to resolve shift/reduce conflicts.
+/// Verifies whether a grammar is well-formed and conforms to LALR(1) constraints,
+/// using a precedence map to resolve potential shift/reduce conflicts.
 ///
-/// Usage:
+/// A grammar is considered **well-formed** if:
+///
+///   - Every non-terminal is reachable from the start symbol.
+///   - Every non-terminal is productive (can derive a string of terminals).
+///
+/// A grammar is **LALR(1)** if it is free of conflict:
+///
+///   - **Reduce/Reduce conflict:** Two or more distinct productions can be
+///     reduced using the same lookahead symbol.
+///   - **Shift/Reduce conflict:** A terminal can be shifted onto the stack
+///     OR a production can be reduced using the same lookahead symbol, and
+///     no precedence rule is defined to resolve it.
+///
+/// ### Usage Example:
 /// ```java
 /// var PLUS = new Terminal("+");
 /// var NUM = new Terminal("num");
 /// var E = new NonTerminal("E");
-///
 /// var pPlus = new Production(E, List.of(E, PLUS, E));
 /// var pNum = new Production(E, List.of(NUM));
 /// var grammar = new Grammar(E, List.of(pPlus, pNum));
 ///
-/// // Define Left Associativity for PLUS and pPlus
+/// // Define Left Associativity for PLUS and pPlus to resolve ambiguity
 /// var prec = new Precedence(1, Precedence.Associativity.LEFT);
 /// var precedenceMap = Map.of(PLUS, prec, pPlus, prec);
 ///
 /// LALRVerifier.verify(grammar, precedenceMap, error -> {
-///   System.err.println(error);
+///   System.err.println("Verify Error: " + error);
 /// });
 /// ```
 ///
 /// This class is thread-safe and can be safely shared between multiple threads.
+///
+/// @see Grammar
+/// @see Precedence
 public final class LALRVerifier {
   // Design note:
   // LALRVerifier and Parser both build LR automata from the same grammar, and share
@@ -61,8 +76,8 @@ public final class LALRVerifier {
     throw new AssertionError();
   }
 
-  /// Verifies that the grammar is LALR(1) (possibly with precedence-based
-  /// conflict resolution).
+  /// Verifies that the grammar is well-formed and LALR(1)
+  /// (possibly with precedence-based conflict resolution).
   /// In case of conflicts, prints the LALR state automaton to `System.err`.
   ///
   /// @param grammar       the grammar to verify.
@@ -73,8 +88,8 @@ public final class LALRVerifier {
     verify(grammar, precedenceMap, System.err, false, System.err::println);
   }
 
-  /// Verifies that the grammar is LALR(1) (possibly with precedence-based
-  /// conflict resolution).
+  /// Verifies that the grammar is well-formed and LALR(1)
+  /// (possibly with precedence-based conflict resolution).
   /// If `alwaysPrint` is `true`, the LALR state automaton is printed unconditionally on `System.out`.
   /// Otherwise, it is printed only when conflicts are detected on `System.err`.
   ///
@@ -89,8 +104,8 @@ public final class LALRVerifier {
     verify(grammar, precedenceMap, out, alwaysPrint, System.err::println);
   }
 
-  /// Verifies that the grammar is LALR(1) (possibly with precedence-based
-  /// conflict resolution).
+  /// Verifies that the grammar is well-formed and LALR(1)
+  /// (possibly with precedence-based conflict resolution).
   /// In case of conflicts, the 'errorReporter' is called once per unresolved conflict.
   ///
   /// @param grammar       the grammar to verify.
@@ -104,8 +119,9 @@ public final class LALRVerifier {
     verify(grammar, precedenceMap, null, false, errorReporter);
   }
 
-  /// Verifies that the grammar is LALR(1) (possibly with precedence-based
-  /// conflict resolution), optionally printing the LALR state automaton.
+  /// Verifies that the grammar is well-formed and LALR(1)
+  /// (possibly with precedence-based conflict resolution),
+  /// optionally printing the LALR state automaton.
   ///
   /// @param grammar       the grammar to verify.
   /// @param precedenceMap maps terminals and productions to their precedence;
