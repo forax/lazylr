@@ -35,9 +35,11 @@ import java.util.stream.IntStream;
 /// If no method matches a given terminal, the terminal value is ignored.
 ///
 /// ```java
-/// public Node num(Terminal terminal) {
-///   return new NumLit(Integer.parseInt(terminal.value()));
-/// }
+/// class NodeVisitor implements Visitor<Node> {
+///   public Node num(Terminal terminal) {
+///     return new NumLit(Integer.parseInt(terminal.value()));
+///   }
+/// ...
 /// ```
 ///
 /// ### Production methods
@@ -50,9 +52,12 @@ import java.util.stream.IntStream;
 /// the production method has no corresponding parameter.
 ///
 /// ```java
-/// @ProductionName("E : E + E")
-/// public Node add(Node left, Node right) {
-///   return new BinaryOp("+", left, right);
+/// class NodeVisitor implements Visitor<Node> {
+/// ...
+///   @ProductionName("E : E + E")
+///   public Node add(Node left, Node right) {
+///     return new BinaryOp("+", left, right);
+///   }
 /// }
 /// ```
 ///
