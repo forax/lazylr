@@ -46,7 +46,7 @@ so they can iterate quickly on a grammar.
 - **Grammar declaration** is usually done with the built-in text format (`MetaGrammar.load(...)`).
 - **Semantic actions** are implemented with `Evaluator` or typed `Visitor` methods.
 
-### What it gives you
+### What it gives you?
 
 - Runtime grammar loading with lexing + parsing in one library.
 - Parser states are built lazily as input is consumed, so startup cost is low even for large grammars.
@@ -59,7 +59,7 @@ so they can iterate quickly on a grammar.
 - Coverage tracking: `parser.coverage()` returns the set of productions that have been reduced at least once,
   which is useful for verifying test coverage of a grammar.
 
-### What it does *not* try to be
+### What it does not try to be?
 
 - A complete language workbench or IDE plugin.
 - A parser-combinator framework.
@@ -259,23 +259,7 @@ Notice the crucial moment at step 6: the stack holds `E + E` and the lookahead i
 The parser could reduce `E + E` right now (giving `(1+2)`) or shift `*` first.
 Because `*` has higher precedence than `+`, the parser shifts, deferring the addition
 until after the multiplication is resolved.
-This is exactly how precedence declarations control the parse.
-
-### How the parser decides: the action table
-
-The parser never actually thinks about precedence directly at runtime.
-Instead, when LazyLR builds a parser state, it pre-computes for each (state, terminal) pair
-what action to take.
-The precedence rules are baked into these decisions during state construction.
-When the same (state, terminal) pair can lead to either a shift or a reduce,
-and both choices are valid from a pure grammar standpoint,
-that is a **shift/reduce conflict**.
-The `precedence` section resolves such conflicts: higher precedence favors shifting;
-`left` associativity at equal precedence favours reducing; `right` associativity
-favours shifting.
-
-If a conflict cannot be resolved, because neither side has a declared precedence,
-the parser throws `ParsingException` at runtime when it hits that situation.
+This is exactly how precedence declarations control the parsing.
 
 ### Lazy state construction
 
@@ -293,9 +277,23 @@ with hundreds of productions and tokens; this means the first parse may trigger 
 construction for the productions it exercises, while productions for rarely used SQL
 clauses never generate states at all unless the parser actually encounters them.
 
-The practical consequence is that `Parser.createParser(grammar,precedenceMap)`
+The practical consequence is that a call to `Parser.createParser(grammar, precedenceMap)`
 is not expensive regardless of grammar size.
 The startup cost is proportional to what the inputs actually need, not to the total grammar.
+
+### How the parser decides: the action table
+
+When the parser computes a state depending on the previous state and the lookahead terminal,
+it determines what action to take, using the precedence rules in case of conflict.
+When the same (state, terminal) pair can lead to either a shift or a reduce,
+and both choices are valid from a pure grammar standpoint,
+that is a **shift/reduce conflict**.
+The `precedence` section resolves such conflicts: higher precedence favors shifting;
+`left` associativity at equal precedence favors reducing; `right` associativity
+favors shifting.
+
+If a conflict cannot be resolved, because neither side has a declared precedence,
+the parser throws `ParsingException` at runtime when it hits that situation.
 
 ### LR(1) parser vs LALR(1) analysis
 
@@ -1390,7 +1388,7 @@ Validates the grammar and always prints the full LALR(1) automaton to stdout.
 Invalid rules and conflicts are additionally reported to stderr.
 Exit code 0 if the grammar is well-formed, 2 if problems remain.
 
-Mode **Java source generation:**
+Mode **Java source generation:**:
 
 ```bash
 lazylr --generate grammar.txt
