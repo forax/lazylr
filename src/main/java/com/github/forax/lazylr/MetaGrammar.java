@@ -59,6 +59,39 @@ import java.util.stream.Stream;
 ///   from the productions, converted to an escaped regex, and registered as a terminal.
 ///   No explicit declaration in the `tokens` section is required.
 ///
+/// ## End-to-end Example
+///
+/// ```java
+/// MetaGrammar mg = MetaGrammar.load("""
+///     tokens {
+///       num: /[0-9]+/
+///       /[ ]+/           // ignorable token
+///     }
+///     precedence {
+///       left: '+'
+///       left: '*'        // '*' is higher than '+'
+///     }
+///     grammar {
+///       E : num
+///       E : E '+' E
+///       E : E '*' E
+///     }
+///     """);
+///
+/// mg.verify();   // Optional, check that the grammar is well-formed
+///
+/// int result = mg.parse("2 + 3 * 4", new Visitor<Integer>() {
+///   public int num(Terminal terminal) { return Integer.parseInt(terminal.value()); }
+///
+///   @ProductionName("E : E + E")
+///   public int add(int left, int right) { return left + right; }
+///
+///   @ProductionName("E : E * E")
+///   public int mul(int left, int right) { return left * right; }
+/// });
+/// // result == 14
+/// ```
+///
 /// This class is immutable, thus thread-safe.
 public final class MetaGrammar {
   private final List<Token> tokens;
