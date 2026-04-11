@@ -621,7 +621,7 @@ public final class MetaGrammar {
             (_, _) -> { throw new AssertionError(); },
             LinkedHashMap::new));
 
-    // Rules ordering: implicit quoted first, then named, then unnamed
+    // Rules ordering: quoted first, then named, then unnamed
     var rules = Stream.of(
         quotedTerminalMap.keySet().stream()
             .map(name -> new Token(name, Pattern.quote(name))),
