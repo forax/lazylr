@@ -107,7 +107,7 @@ public final class ParserFactoryTest {
           case "E : num"   -> args.get(0);
           case "E : E + E" -> args.get(0) + args.get(2);
           case "E : E * E" -> args.get(0) * args.get(2);
-          default -> throw new AssertionError("unknown production: " + production.name());
+          default -> throw new AssertionError("unknown production: " + production.name(), null);
         };
       }
     };
@@ -241,7 +241,7 @@ public final class ParserFactoryTest {
           for (var i = 0; i < parseCount; i++) {
             last = parser.parse(input.iterator(), arithmeticEvaluator());
             if (last != 14) {
-              throw new AssertionError("expected 14, got " + last);
+              throw new AssertionError("expected 14, got " + last, null);
             }
           }
           return last;
@@ -280,7 +280,7 @@ public final class ParserFactoryTest {
           for (var iter = 0; iter < 20; iter++) {
             var result = parser.parse(input.iterator(), arithmeticEvaluator());
             if (result != expected) {
-              throw new AssertionError("expected " + expected + ", got " + result);
+              throw new AssertionError("expected " + expected + ", got " + result, null);
             }
           }
           return expected;
@@ -362,7 +362,7 @@ public final class ParserFactoryTest {
         // "+" alone is not a valid expression
         var input = List.of(new Terminal("+", "+")).iterator();
         parser.parse(input, arithmeticEvaluator());
-        throw new AssertionError("expected ParsingException");
+        throw new AssertionError("expected ParsingException", null);
       } catch (ParsingException expected) {
         // correct — fall through to recovery parse
       }
@@ -475,7 +475,7 @@ public final class ParserFactoryTest {
           for (var i = 0; i < iterCount; i++) {
             var value = factory.createParser().parse(input.iterator(), arithmeticEvaluator());
             if (value != 32) {
-              throw new AssertionError("expected 32, got " + value);
+              throw new AssertionError("expected 32, got " + value, null);
             }
           }
           return 0;

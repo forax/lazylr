@@ -6,7 +6,6 @@ import com.github.forax.lazylr.Parser;
 import com.github.forax.lazylr.ParserListener;
 import com.github.forax.lazylr.Production;
 import com.github.forax.lazylr.Terminal;
-
 import org.openjdk.jmh.annotations.Benchmark;
 import org.openjdk.jmh.annotations.BenchmarkMode;
 import org.openjdk.jmh.annotations.Fork;
@@ -23,7 +22,6 @@ import org.openjdk.jmh.runner.Runner;
 import org.openjdk.jmh.runner.options.OptionsBuilder;
 
 import java.util.List;
-import java.util.Map;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 import java.util.stream.Gatherer;
@@ -54,7 +52,7 @@ public class ParserBenchmark {
               E : E '+' E
             }
             """);
-    mg.verify(err -> { throw new AssertionError(err); });
+    mg.verify(err -> { throw new AssertionError(err, null); });
 
     var lexer = Lexer.createLexer(mg.tokens());
     LEXER = lexer;

@@ -157,7 +157,7 @@ public final class JSONGrammarTest {
         case "Array : [ ]"          -> new JSONArray(new ArrayList<>());
         case "Array : [ Elements ]" -> new JSONArray((ArrayList<JSONValue>) args.get(1));
 
-        default -> throw new AssertionError("Unhandled production: " + production.name());
+        default -> throw new AssertionError("Unhandled production: " + production.name(), null);
       };
     }
 

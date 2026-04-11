@@ -32,12 +32,12 @@ public final class MetaGrammarParserTest {
     var set = new HashSet<>(testMethods);
     parserTestMethods.forEach(set::remove);
     if (!set.isEmpty()) {
-      throw new AssertionError("test absent in ParserTest: " + set);
+      throw new AssertionError("test absent in ParserTest: " + set, null);
     }
     var set2 = new HashSet<>(parserTestMethods);
     testMethods.forEach(set2::remove);
     if (set2.isEmpty()) {
-      throw new AssertionError("test absent in MetaGrammarParserTest: " + set2);
+      throw new AssertionError("test absent in MetaGrammarParserTest: " + set2, null);
     }
   }
 

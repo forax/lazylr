@@ -184,7 +184,7 @@ public final class ParserCTest {
         Map.entry(lParen,      new Precedence(80, Precedence.Associativity.LEFT)) // Function Calls
     );
 
-    //LALRVerifier.verify(grammar, precedence, error -> { throw new AssertionError(error); });
+    //LALRVerifier.verify(grammar, precedence, error -> { throw new AssertionError(error, null); });
 
     return Parser.createParser(grammar, precedence);
   }
@@ -350,7 +350,7 @@ public final class ParserCTest {
           yield new TranslationUnit(list);
         }
 
-        default -> throw new AssertionError("unknown production: " + production.name());
+        default -> throw new AssertionError("unknown production: " + production.name(), null);
       };
     }
   }
@@ -390,7 +390,7 @@ public final class ParserCTest {
       case Call(Expr callee, List<Expr> args) ->
           toText(callee) + args.stream().map(ParserCTest::toText).collect(joining(", ", "(", ")"));
       // parse-time accumulators — should never appear in a finished tree
-      case ArgList _, ParamList _ -> throw new AssertionError("unexpected parse-time node: " + node);
+      case ArgList _, ParamList _ -> throw new AssertionError("unexpected parse-time node: " + node, null);
     };
   }
 

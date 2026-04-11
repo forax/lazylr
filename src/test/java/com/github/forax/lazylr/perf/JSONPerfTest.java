@@ -5,13 +5,10 @@ import com.github.forax.lazylr.Lexer;
 import com.github.forax.lazylr.Parser;
 import com.github.forax.lazylr.ParserListener;
 import com.github.forax.lazylr.Production;
-import com.github.forax.lazylr.ProductionName;
 import com.github.forax.lazylr.Terminal;
-import com.github.forax.lazylr.Visitor;
 import org.jspecify.annotations.NonNull;
 import org.junit.jupiter.api.Test;
 
-import java.lang.invoke.MethodHandles;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
@@ -33,7 +30,7 @@ public final class JSONPerfTest {
     while (iterator.hasNext()) {
       var terminal = iterator.next();
       if (Terminal.ERROR.equals(terminal)) {
-        throw new AssertionError(terminal.value());
+        throw new AssertionError(terminal.value(), null);
       }
       result.add(terminal);
     }
