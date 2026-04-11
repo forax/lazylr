@@ -236,7 +236,7 @@ public final class MetaGrammar {
   /// @param <V> the type of the evaluation result.
   /// @return the result produced by the evaluator.
   /// @throws IllegalStateException if no grammar section is defined in this meta-grammar.
-  /// @throws ParsingException if a lexing or parsing error occurs.
+  /// @throws ParsingException if a lexing, parsing or a conflict error occurs.
   ///
   /// @see Lexer#createLexer(List)
   /// @see Parser#createParser(Grammar, Map)
@@ -278,7 +278,7 @@ public final class MetaGrammar {
   /// @param <V> the type of the visitor result.
   /// @return the result produced by the visitor.
   /// @throws IllegalStateException if no grammar section is defined in this meta-grammar.
-  /// @throws ParsingException if a lexing or parsing error occurs.
+  /// @throws ParsingException if a lexing, parsing or a conflict error occurs.
   ///
   /// @see #parse(CharSequence, Evaluator)
   /// @see Visitor#reflect(java.lang.invoke.MethodHandles.Lookup, Visitor)
@@ -333,7 +333,7 @@ public final class MetaGrammar {
   /// @param <V> the type of the visitor result.
   /// @return the result produced by the visitor.
   /// @throws IllegalStateException if no grammar section is defined in this meta-grammar.
-  /// @throws ParsingException if a lexing or parsing error occurs.
+  /// @throws ParsingException if a lexing, parsing or a conflict error occurs.
   ///
   /// @see #parse(CharSequence, Visitor)
   public <V extends @Nullable Object> V parse(CharSequence inputText,

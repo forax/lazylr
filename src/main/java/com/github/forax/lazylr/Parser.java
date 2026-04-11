@@ -157,7 +157,7 @@ public final class Parser {
   /// @param input     An iterator of tokens, typically provided by a [Lexer].
   /// @param evaluator The strategy for building results from tokens and rules.
   /// @return The final evaluated result of the start production.
-  /// @throws ParsingException if a syntax error occurs during parsing.
+  /// @throws ParsingException if a syntax error or a conflict occurs during parsing.
   /// @throws WrongThreadException if the method is called from a different thread
   ///         than the one the parser was created on.
   public <V extends @Nullable Object> V parse(Iterator<Terminal> input, Evaluator<V> evaluator) throws ParsingException {
@@ -237,7 +237,7 @@ public final class Parser {
   ///
   /// @param input    An iterator of tokens.
   /// @param listener The listener to receive parser events.
-  /// @throws ParsingException if a syntax error occurs during parsing
+  /// @throws ParsingException if a syntax error or a conflict occurs during parsing
   /// @throws WrongThreadException if the method is called from a different thread
   ///         than the one the parser was created on.
   public void parse(Iterator<Terminal> input, ParserListener listener) throws ParsingException {
