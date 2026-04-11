@@ -80,7 +80,7 @@ public interface Evaluator<V extends @Nullable Object> {
   /// by calling [Lexer#position(java.util.Iterator)].
   ///
   /// @param terminal The terminal token matched by the lexer.
-  /// @return A value representing the terminal or `null` if the terminal has no value.
+  /// @return A value representing the terminal.
   V evaluate(Terminal terminal);
 
   /// Reduces a [Production] into a single value using its previously evaluated
@@ -94,7 +94,6 @@ public interface Evaluator<V extends @Nullable Object> {
   ///
   /// @param production The derivation rule being reduced.
   /// @param arguments The evaluated results of each [Symbol] in the production's body.
-  /// @return The result of the reduction (the new value for the production non-terminal)
-  ///         or `null` if the production has no value.
+  /// @return The result of the reduction, the new value for the production non-terminal.
   V evaluate(Production production, List<V> arguments);
 }
