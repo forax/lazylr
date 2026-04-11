@@ -2,10 +2,14 @@ package com.github.forax.lazylr;
 
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.Method;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertThrows;
@@ -15,6 +19,28 @@ import static org.junit.jupiter.api.Assertions.fail;
 /// Those are the same tests as in [ParserTest] but using the meta grammar text,
 /// Please update both files accordingly
 public final class MetaGrammarParserTest {
+
+  static {
+    var testMethods = Arrays.stream(MetaGrammarParserTest.class.getMethods())
+        .filter(method -> method.isAnnotationPresent(Test.class))
+        .map(Method::getName)
+        .toList();
+    var parserTestMethods = Arrays.stream(ParserTest.class.getMethods())
+        .filter(method -> method.isAnnotationPresent(Test.class))
+        .map(Method::getName)
+        .toList();
+
+    var set = new HashSet<>(testMethods);
+    parserTestMethods.forEach(set::remove);
+    if (!set.isEmpty()) {
+      throw new AssertionError("test absent in ParserTest: " + set);
+    }
+    var set2 = new HashSet<>(parserTestMethods);
+    testMethods.forEach(set2::remove);
+    if (set2.isEmpty()) {
+      throw new AssertionError("test absent in MetaGrammarParserTest: " + set2);
+    }
+  }
 
   private static String parse(Grammar grammar,
                               Map<PrecedenceEntity, Precedence> precedence,
