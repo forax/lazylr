@@ -14,7 +14,9 @@ void main() {
       }
       """);
 
-  mg.verify();
+  //mg.verify();
+
+  mg.parse("42", new PrintEvaluator());
 
 
   // ── State 4 ─────────────────────────────────

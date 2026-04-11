@@ -489,12 +489,21 @@ void main() {
       }
       """);
 
-  mg.verify();
+  //mg.verify();
+
+  mg.parse("42", new PrintEvaluator());
 }
 ```
 
 After shifting `number`, the parser cannot decide whether to reduce to `A` or `B`.
-If `mg.verify()` fails, it prints the LR state automaton to the console.
+
+The parser fails and reports a reduce/reduce conflict exception
+```
+ParsingException: Parsing error: reduce/reduce conflict for terminal '$'
+```
+
+`mg.verify()` helps to diagnose the issue,
+if it fails, it prints the LR state automaton to the console.
 Look specifically for the 🔥 (fire) markers, these pinpoint exactly which **terminals**
 are causing the ambiguity and in which state they occur:
 
@@ -534,14 +543,23 @@ void main() {
         E : E '+' E
       }
       """);
-  mg.verify();
+  
+  //mg.verify();
+
+  mg.parse("40 + 2 + 3", new PrintEvaluator());
 }
 ```
 
 With `E + E` on its stack and another `+` as lookahead, the parser does not know whether
 to finish the current addition first (reduce) or wait (shift).
 For example, should it be `(2 + 3) + 4` (reduce first) or `2 + (3 + 4)` (shift first) ?
-The automaton shows the conflict:
+
+The parser fails with:
+```
+ParsingException: Parsing error: shift/reduce conflict for terminal '+'
+```
+
+Using `mg.verify()`, the automaton shows the conflict:
 
 ```
 ── State 6 ─────────────────────────────────

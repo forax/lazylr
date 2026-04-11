@@ -12,7 +12,10 @@ void main() {
         E : E '+' E
       }
       """);
-  mg.verify();
+
+  //mg.verify();
+
+  mg.parse("40 + 2 + 3", new PrintEvaluator());
 
 
   // ── State 6 ─────────────────────────────────

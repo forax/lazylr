@@ -750,46 +750,39 @@ public final class LALRVerifier {
       }
     }
 
-    if (theShift == null) {
-      if (reduces.size() == 1) {
-        return new Result(actions, reduces.getFirst());
-      }
-      return new Result(actions, null);  // reduce/reduce conflict
+    // Several reduces, it's a reduce/reduce conflict
+    if (reduces.size() > 1) {
+      return new Result(actions, null);
     }
+    var theReduce = reduces.isEmpty() ? null : reduces.getFirst();
 
-    if (reduces.isEmpty()) {
-      return new Result(actions, theShift);
-    }
-    var termPrec = precedenceMap.get(lookahead);
-    if (reduces.size() == 1) {
-      var reduce = reduces.getFirst();
-      var prodPrec = precedenceMap.get(reduce.production());
-      var action = resolveShiftReduceConflict(theShift, reduce, termPrec, prodPrec);
+    // Check if it's a shift/reduce conflict?
+    if (theShift != null && theReduce != null) {
+      var terminalPrec = precedenceMap.get(lookahead);
+      var productionPrec = precedenceMap.get(theReduce.production());
+      if (terminalPrec == null || productionPrec == null) {
+        return new Result(actions, null);  // shift/reduce conflict
+      }
+      var action = resolveShiftReduceConflict(theShift, theReduce, terminalPrec, productionPrec);
       return new Result(actions, action);
     }
-    for (var reduce : reduces) {
-      var prodPrec = precedenceMap.get(reduce.production());
-      var action = resolveShiftReduceConflict(theShift, reduce, termPrec, prodPrec);
-      if (!(action instanceof Shift)) {  // shift/reduce conflict
-        return new Result(actions, null);
-      }
+
+    if (theShift != null) {
+      return new Result(actions, theShift);
     }
-    return new Result(actions, theShift);
+    return new Result(actions, theReduce);
   }
 
-  private static @Nullable Action resolveShiftReduceConflict(
+  private static Action resolveShiftReduceConflict(
       Action shiftAction, Action reduceAction,
-      @Nullable Precedence termPrec, @Nullable Precedence prodPrec) {
-    if (termPrec == null || prodPrec == null) {
-      return null;  // shift/reduce conflict
-    }
-    if (termPrec.level() > prodPrec.level()) {
+      Precedence terminalPrec, Precedence productionPrec) {
+    if (terminalPrec.level() > productionPrec.level()) {
       return shiftAction;
     }
-    if (prodPrec.level() > termPrec.level()) {
+    if (productionPrec.level() > terminalPrec.level()) {
       return reduceAction;
     }
-    return termPrec.associativity() == Precedence.Associativity.LEFT
+    return terminalPrec.associativity() == Precedence.Associativity.LEFT
         ? reduceAction
         : shiftAction;
   }

@@ -4,7 +4,6 @@ import org.jspecify.annotations.Nullable;
 
 import java.util.HashMap;
 import java.util.HashSet;
-import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
@@ -147,6 +146,9 @@ final class LRTransitionEngine {
         Objects.requireNonNull(production);
       }
     }
+    /// Report an error
+    record Error(ErrorKind kind) implements Action {}
+    enum ErrorKind { REDUCE_REDUCE, SHIFT_REDUCE, PARSE }
   }
 
   private final LRAlgorithm algorithm;
@@ -171,7 +173,7 @@ final class LRTransitionEngine {
   ///
   /// If the action has not been encountered before, it is calculated via
   /// [#resolveAction] and cached in the [actionTable].
-  public @Nullable Action getAction(State currentState, Terminal lookahead) {
+  public Action getAction(State currentState, Terminal lookahead) {
     var stateActions = actionTable.get(currentState);
     if (stateActions != null) {
       var cached = stateActions.get(lookahead);
@@ -181,15 +183,13 @@ final class LRTransitionEngine {
     }
 
     var action = resolveAction(currentState, lookahead);
-    if (action != null) {
-      actionTable
-          .computeIfAbsent(currentState, _ -> new HashMap<>())
-          .put(lookahead, action);
-    }
+    actionTable
+        .computeIfAbsent(currentState, _ -> new HashMap<>())
+        .put(lookahead, action);
     return action;
   }
 
-  private @Nullable Action resolveAction(State currentState, Terminal lookahead) {
+  private Action resolveAction(State currentState, Terminal lookahead) {
     // Find a possible Reduction
     var reduceItem = (Item) null;
     for(var item : currentState.items()) {
@@ -198,7 +198,7 @@ final class LRTransitionEngine {
           reduceItem = item;
           continue;
         }
-        return null;  // reduce-reduce conflict
+        return new Action.Error(Action.ErrorKind.REDUCE_REDUCE);
       }
     }
 
@@ -208,14 +208,14 @@ final class LRTransitionEngine {
     if (reduceItem != null && shiftState != null) {
       // Shift/Reduce conflict resolution via precedence
       var production = reduceItem.production();
-      var tokenPrec = precedenceMap.get(lookahead);
+      var terminalPrec = precedenceMap.get(lookahead);
       var productionPrec = precedenceMap.get(production);
-      if (tokenPrec != null && productionPrec != null) {
-        return shouldReduce(tokenPrec, productionPrec)
+      if (terminalPrec != null && productionPrec != null) {
+        return shouldReduce(terminalPrec, productionPrec)
             ? new Action.Reduce(production)
             : new Action.Shift(shiftState);
       }
-      return null;  // shift/reduce conflict
+      return new Action.Error(Action.ErrorKind.SHIFT_REDUCE);
     }
     if (reduceItem != null) {
       return new Action.Reduce(reduceItem.production());
@@ -223,7 +223,7 @@ final class LRTransitionEngine {
     if (shiftState != null) {
       return new Action.Shift(shiftState);
     }
-    return null;  // parse error
+    return new Action.Error(Action.ErrorKind.PARSE);
   }
 
   /// Decides between a shift and a reduction based on precedence rules.
@@ -231,16 +231,15 @@ final class LRTransitionEngine {
   /// Logic:
   /// * Higher [Precedence#level()] wins.
   /// * If levels are equal, [Precedence.Associativity#LEFT] results in a reduction.
-  private boolean shouldReduce(Precedence tokenPrec, Precedence productionPrec) {
-    if (productionPrec.level() > tokenPrec.level()) {
-      return true;  // Reduce (Rule is stronger)
+  private boolean shouldReduce(Precedence terminalPrec, Precedence productionPrec) {
+    if (productionPrec.level() > terminalPrec.level()) {
+      return true;  // Reduce (Production is stronger)
     }
-    if (productionPrec.level() < tokenPrec.level()) {
-      return false; // Shift (Token is stronger)
+    if (productionPrec.level() < terminalPrec.level()) {
+      return false; // Shift (Terminal is stronger)
     }
-
     // Levels are equal? Use associativity
-    return tokenPrec.associativity() == Precedence.Associativity.LEFT; // Left-associativity means Reduce
+    return terminalPrec.associativity() == Precedence.Associativity.LEFT; // Left-associativity means Reduce
   }
 
   /// Implements the GOTO function of LR parsing.

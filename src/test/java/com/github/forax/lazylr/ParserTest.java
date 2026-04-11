@@ -1090,6 +1090,62 @@ public final class ParserTest {
   }
 
   @Test
+  public void reduceReduceConflictWithShiftThrows() {
+    var S  = new NonTerminal("S");
+    var A  = new NonTerminal("A");
+    var B  = new NonTerminal("B");
+    var id = new Terminal("id");
+
+    var grammar = new Grammar(S, List.of(
+        new Production(S, List.of(A, id)),
+        new Production(S, List.of(B, id)),
+        new Production(S, List.of(id, id)),
+        new Production(A, List.of(id)),
+        new Production(B, List.of(id))
+    ));
+
+    var parser = Parser.createParser(grammar, Map.of());
+
+    assertThrows(ParsingException.class, () ->
+        parser.parse(List.of(id, id).iterator(), new ParserListener() {
+          @Override public void onShift(Terminal token) {}
+          @Override public void onReduce(Production production) {}
+        }));
+  }
+
+  @Test
+  public void reduceReduceConflictWithAHigherShiftStillThrows() {
+    var S  = new NonTerminal("S");
+    var A  = new NonTerminal("A");
+    var B  = new NonTerminal("B");
+    var id = new Terminal("id");
+
+    Production aId, bId;
+
+    var grammar = new Grammar(S, List.of(
+              new Production(S, List.of(A, id)),
+              new Production(S, List.of(B, id)),
+              new Production(S, List.of(id, id)),
+        aId = new Production(A, List.of(id)),
+        bId = new Production(B, List.of(id))
+    ));
+
+    var precedenceMap = Map.of(
+        aId, new Precedence(1, Precedence.Associativity.LEFT),
+        bId, new Precedence(2, Precedence.Associativity.LEFT),
+        id, new Precedence(3, Precedence.Associativity.LEFT)
+    );
+
+    var parser = Parser.createParser(grammar, precedenceMap);
+
+    assertThrows(ParsingException.class, () ->
+        parser.parse(List.of(id, id).iterator(), new ParserListener() {
+          @Override public void onShift(Terminal token) {}
+          @Override public void onReduce(Production production) {}
+        }));
+  }
+
+  @Test
   public void shiftReduceConflictNoPrecedenceThrows() {
     var E    = new NonTerminal("E");
     var plus = new Terminal("+");

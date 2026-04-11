@@ -327,5 +327,14 @@ final class Tokenizer implements Iterator<Terminal> {
     public static String parsingErrorMessage(Terminal terminal, Set<String> expected) {
       return "Parsing error: unexpected terminal '" + terminal.name() + "', expected " + expectedTerminals(expected);
     }
+
+    /// Generates a parsing error message without expected terminals
+    ///
+    /// @param conflictMessage a shift/reduce conflict or reduce/reduce conflict
+    /// @param terminal The current terminal.
+    /// @return A formatted error message.
+    public static String parsingConflictErrorMessage(String conflictMessage, Terminal terminal) {
+      return "Parsing error: " + conflictMessage + " for terminal '" + terminal.name() + "'";
+    }
   }
 }

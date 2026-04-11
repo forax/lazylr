@@ -257,11 +257,9 @@ public final class Parser {
       var currentState = stack[stackSize - 1];
 
       var action = engine.getAction(currentState, currentToken);
-      if (action == null) {
-        throw new ParsingException(errorMessage(currentToken, currentState, input));
-      }
-
       switch (action) {
+        case LRTransitionEngine.Action.Error(LRTransitionEngine.Action.ErrorKind kind) ->
+          throw new ParsingException(errorMessage(kind, currentToken, currentState, input));
         case LRTransitionEngine.Action.Shift(var nextState) -> {
           listener.onShift(currentToken);
           if (stackSize == stack.length) {
@@ -303,7 +301,12 @@ public final class Parser {
   }
 
   /// Generate an error message for parsing exceptions
-  private static String errorMessage(Terminal terminal, State state, Iterator<Terminal> input) {
+  private static String errorMessage(LRTransitionEngine.Action.ErrorKind kind, Terminal terminal, State state, Iterator<Terminal> input) {
+    if (kind != LRTransitionEngine.Action.ErrorKind.PARSE) {
+      var message = kind == LRTransitionEngine.Action.ErrorKind.REDUCE_REDUCE ?
+          "reduce/reduce conflict" : "shift/reduce conflict";
+      return Tokenizer.ErrorHandler.parsingConflictErrorMessage(message, terminal);
+    }
     if (input instanceof Tokenizer tokenizer) {
       if (terminal.equals(Terminal.ERROR)) {
         // lexical error
