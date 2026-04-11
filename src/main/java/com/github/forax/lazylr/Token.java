@@ -46,7 +46,7 @@ public final class Token {
 
   private static void checkEmptyInput(Pattern pattern) {
     var matcher = pattern.matcher("");
-    if (matcher.lookingAt()) {
+    if (matcher.matches()) {
       throw new IllegalArgumentException("regex '" + pattern.pattern() + "' matches empty input");
     }
   }
