@@ -212,7 +212,7 @@ public final class Parser {
             return copy[index];
           }
         });
-        // not really needed, there is no way to stop the parser and access the stack
+        // not really needed, the stack is short-lived, everything is GCable at the end of parse()
         //Arrays.fill(stack, from, size, null);
         size = from;
         add(result);
