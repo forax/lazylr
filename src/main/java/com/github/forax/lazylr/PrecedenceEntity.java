@@ -5,18 +5,16 @@ package com.github.forax.lazylr;
 ///
 /// This interface allows the [Parser] to resolve ambiguities when multiple
 /// grammatical actions are possible for a single lookahead token. It is primarily
-/// used to handle two types of conflicts:
+/// used to handle **shift/reduce** conflicts:
 ///
-/// ### 1. Reduce/Reduce Conflicts
-/// When multiple [Production]s could be reduced, the [Parser] uses this interface
-/// to select the "best candidate." It compares the [Precedence#level()]s of the
-/// competing productions and selects the one with the highest priority.
-///
-/// ### 2. Shift/Reduce Conflicts
+/// ### Shift/Reduce Conflicts
 /// When the parser can either shift a [Terminal] or reduce a [Production],
 /// it compares the precedence of the production against the precedence of the
 /// lookahead terminal. The [associativity][Precedence.Associativity] then
 /// determines whether to favor the shift (right) or the reduction (left).
+///
+/// Reduce/reduce conflicts are **not** resolved by precedence.
+/// They remain unresolved conflicts and must be removed by rewriting the grammar.
 ///
 /// ### Resolution Hierarchy
 /// If a [Production] does not have an explicit [Precedence] assigned in the

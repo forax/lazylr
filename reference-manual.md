@@ -469,6 +469,8 @@ Resolution:
 - If equal precedence and `right` associativity -> shift.
 - If either side has no declared precedence -> unresolved conflict (parse error at runtime).
 
+Reduce/reduce conflicts are not resolved by precedence; rewrite the grammar to remove them.
+
 #### Example
 
 ```text
