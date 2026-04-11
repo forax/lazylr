@@ -8,15 +8,23 @@ import java.util.regex.PatternSyntaxException;
 
 /// Defines a lexical rule for the [com.github.forax.lazylr.Lexer].
 ///
-/// A rule consists of a regular expression and an optional name.
-/// The [regex()] must follow standard Java [Pattern] syntax.
+/// A token can be
+/// - a named token, with a name and a regular expression,
+/// - an unnamed token, with a regular expression.
+///
+/// The [regex()] must follow standard Java [java.util.regex.Pattern] syntax
+/// and must not recognize the empty string (to avoid infinite loop
+/// in the [com.github.forax.lazylr.Lexer]).
+///
+/// A named token is created using the 2-arguments constructor `Token(name, regex)`.
+/// An unnamed token is created using the 1-argument constructor `Token(regex)`.
 ///
 /// During tokenization, the lexer attempts to match the input string against
 /// these patterns to produce [Terminal] tokens.
 ///
-/// When a match is found and the rule has a [#name()],
+/// When a match is found and the token has a [#name()],
 /// a new [Terminal] is created using that name and the matched text as 'value'.
-/// If a rule has no name, it is considered an "ignorable token".
+/// If a token has no name, it is considered an "ignorable token".
 ///
 /// Example:
 /// ```java
@@ -44,7 +52,7 @@ public final class Token {
    private final @Nullable String name;
    final Pattern pattern;
 
-   private Token(@Nullable String name, Pattern pattern, boolean unused) {
+   private Token(@Nullable String name, Pattern pattern) {
      this.name = name;
      this.pattern = pattern;
      super();
@@ -62,7 +70,7 @@ public final class Token {
     Objects.requireNonNull(regex);
     var pattern = asPattern(regex);
     checkEmptyInput(pattern);
-    this(name, pattern, false);
+    this(name, pattern);
   }
 
   /// Creates an ignorable rule, with no name.
@@ -76,7 +84,7 @@ public final class Token {
     Objects.requireNonNull(regex);
     var pattern = asPattern(regex);
     checkEmptyInput(pattern);
-    this(null, pattern, false);
+    this(null, pattern);
   }
 
   /// Returns The identifier for the token type or `null` if the rule
