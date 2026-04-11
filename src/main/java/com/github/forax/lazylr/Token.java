@@ -6,25 +6,27 @@ import java.util.Objects;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
-/// Defines a lexical rule for the [com.github.forax.lazylr.Lexer].
+/// Defines a lexical rule for the [Lexer].
 ///
-/// A token can be
-/// - a named token, with a name and a regular expression,
-/// - an unnamed token, with a regular expression.
+/// A token can be:
+/// - A **named token**, which has a name and a regular expression.
+/// - An **unnamed token**, which has only a regular expression.
 ///
 /// The [regex()] must follow standard Java [java.util.regex.Pattern] syntax
-/// and must not recognize the empty string (to avoid infinite loop
-/// in the [com.github.forax.lazylr.Lexer]).
+/// and must not match the empty string. This constraint prevents infinite loops
+/// during [Lexer] tokenization.
 ///
-/// A named token is created using the 2-arguments constructor `Token(name, regex)`.
+/// A named token is created using the 2-argument constructor `Token(name, regex)`.
 /// An unnamed token is created using the 1-argument constructor `Token(regex)`.
 ///
 /// During tokenization, the lexer attempts to match the input string against
 /// these patterns to produce [Terminal] tokens.
 ///
-/// When a match is found and the token has a [#name()],
-/// a new [Terminal] is created using that name and the matched text as 'value'.
-/// If a token has no name, it is considered an "ignorable token".
+/// When a token matches:
+/// - If it has a [#name()], a new [Terminal] is created using that name and
+///   the matched text as its value.
+/// - If it has no name, it is considered **ignorable** (e.g., whitespace or
+///   comments) and is skipped.
 ///
 /// Example:
 /// ```java
@@ -32,7 +34,7 @@ import java.util.regex.PatternSyntaxException;
 ///   var whitespace = new Token("[ \\t\\n]+");        // ignorable token
 /// ```
 ///
-/// This class is immutable, thus thread-safe.
+/// This class is immutable and thread-safe.
 public final class Token {
   private static Pattern asPattern(String regex) {
     try {
