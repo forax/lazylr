@@ -56,8 +56,8 @@
 /// mg.verify();
 ///
 /// // 3. Parse and evaluate
-/// String input = ...
-/// var result = mg.parse(input, new MyVisitor());
+/// String inputText = ...
+/// var result = mg.parse(inputText, new MyVisitor());
 /// ```
 ///
 /// ## Key Classes
