@@ -1217,6 +1217,63 @@ public final class MetaGrammarParserTest {
   }
 
   @Test
+  public void reduceReduceConflictWithShiftThrows() {
+    var metaGrammar = MetaGrammar.load("""
+      grammar {
+        S: A 'id'
+        S: B 'id'
+        S: 'id' 'id'
+        A: id
+        B: id
+      }
+      """);
+
+    var grammar = metaGrammar.grammar();
+
+    var id = new Terminal("id");
+
+    var parser = Parser.createParser(grammar, Map.of());
+
+    assertThrows(ParsingException.class, () ->
+        parser.parse(List.of(id, id).iterator(), new ParserListener() {
+          @Override public void onShift(Terminal token) {}
+          @Override public void onReduce(Production production) {}
+        }));
+  }
+
+  @Test
+  public void reduceReduceConflictWithAHigherShiftStillThrows() {
+    var metaGrammar = MetaGrammar.load("""
+      precedence {
+        left: aId
+        left: bId
+        left: 'id'
+      }
+      grammar {
+        S: A 'id'
+        S: B 'id'
+        S: 'id' 'id'
+        A: id         %prec aId
+        B: id         %prec bId
+      }
+      """);
+
+    var grammar = metaGrammar.grammar();
+    var precedence = metaGrammar.precedenceMap();
+
+    var id = new Terminal("id");
+
+    var parser = Parser.createParser(grammar, precedence);
+
+    assertThrows(ParsingException.class, () ->
+        parser.parse(List.of(id, id).iterator(), new ParserListener() {
+          @Override public void onShift(Terminal token) {}
+          @Override public void onReduce(Production production) {}
+        }));
+  }
+
+
+  @Test
   public void shiftReduceConflictNoPrecedenceThrows() {
     var metaGrammar = MetaGrammar.load("""
       grammar {
