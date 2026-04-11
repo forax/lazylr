@@ -101,7 +101,7 @@ void main() {
   var mg = MetaGrammar.load("""
       tokens {
         number: /[0-9]+/
-        /[ \t]+/            // ignorable
+        /[ \\t]+/            // ignorable
       }
       grammar {
         E : number
@@ -146,7 +146,7 @@ void main() {
   var mg = MetaGrammar.load("""
       tokens {
         number: /[0-9]+/
-        /[ \t]+/
+        /[ \\t]+/
       }
       grammar {
         E : number
@@ -189,7 +189,7 @@ void main() {
   var mg = MetaGrammar.load("""
       tokens {
         number: /[0-9]+/
-        /[ \t]+/
+        /[ \\t]+/
       }
       grammar {
         E : number
@@ -223,7 +223,7 @@ void main() {
   var mg = MetaGrammar.load("""
       tokens {
         number: /[0-9]+/
-        /[ \t]+/
+        /[ \\t]+/
       }
       grammar {
         E : number
@@ -262,7 +262,7 @@ void main() {
   var mg = MetaGrammar.load("""
       tokens {
         number: /[0-9]+/
-        /[ \t]+/
+        /[ \\t]+/
       }
       grammar {
         E : number
@@ -334,7 +334,7 @@ void main() {
   var mg = MetaGrammar.load("""
       tokens {
         number: /[0-9]+/
-        /[ \t]+/
+        /[ \\t]+/
       }
       grammar {
         E : number
@@ -392,7 +392,7 @@ void main() {
   var mg = MetaGrammar.load("""
       tokens {
         number: /[0-9]+/
-        /[ \t]+/
+        /[ \\t]+/
       }
       grammar {
         E : number
@@ -441,7 +441,7 @@ void main() {
   var mg = MetaGrammar.load("""
       tokens {
         number: /[0-9]+/
-        /[ \t]+/
+        /[ \\t]+/
       }
       grammar {
         E : number
@@ -479,7 +479,7 @@ void main() {
   var mg = MetaGrammar.load("""
       tokens {
         number: /[0-9]+/
-        /[ \t]+/
+        /[ \\t]+/
       }
       grammar {
         E : A
@@ -535,7 +535,7 @@ void main() {
   var mg = MetaGrammar.load("""
       tokens {
         number: /[0-9]+/
-        /[ \t]+/
+        /[ \\t]+/
       }
       grammar {
         E : number
@@ -607,7 +607,7 @@ void main() {
   var mg = MetaGrammar.load("""
       tokens {
         number: /[0-9]+/
-        /[ \t]+/
+        /[ \\t]+/
       }
       precedence {
         left : '+'
@@ -674,7 +674,7 @@ void main() {
   var mg = MetaGrammar.load("""
       tokens {
         number: /[0-9]+/
-        /[ \t]+/
+        /[ \\t]+/
       }
       precedence {
         left : '+'
@@ -747,7 +747,7 @@ void main() {
   var mg = MetaGrammar.load("""
       tokens {
         number: /[0-9]+/
-        /[ \t]+/
+        /[ \\t]+/
       }
       precedence {
         left : '+'
@@ -828,7 +828,7 @@ void main() {
   var mg = MetaGrammar.load("""
       tokens {
         number: /[0-9]+/
-        /[ \t]+/
+        /[ \\t]+/
       }
       precedence {
         left : '+', '-'
@@ -907,7 +907,7 @@ void main() {
   var mg = MetaGrammar.load("""
       tokens {
         number: /[0-9]+/
-        /[ \t]+/
+        /[ \\t]+/
       }
       precedence {
         left : '+', '-'

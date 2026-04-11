@@ -4,7 +4,7 @@ void main() {
   var mg = MetaGrammar.load("""
       tokens {
         number: /[0-9]+/
-        /[ \t]+/            // ignorable
+        /[ \\t]+/            // ignorable
       }
       grammar {
         E : number

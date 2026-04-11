@@ -48,7 +48,7 @@ void main() {
       tokens {
         minus: /\\-/
         number: /[0-9]+/
-        /[ \t]+/
+        /[ \\t]+/
       }
       precedence {
         left : '+', minus
