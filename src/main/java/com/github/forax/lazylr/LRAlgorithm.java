@@ -153,11 +153,10 @@ final class LRAlgorithm {
             // Terminals are never nullable; nothing to their right can reach FIRST(head).
             break loop;
           }
-          case NonTerminal dependency -> {
+          case NonTerminal dependency ->
             // head depends on this non-terminal (it may be nullable, so we keep going).
             dependents.computeIfAbsent(dependency, _ -> new HashSet<>())
                 .add(production.head());
-          }
         }
       }
     }
