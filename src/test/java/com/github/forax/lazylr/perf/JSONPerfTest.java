@@ -30,7 +30,7 @@ public final class JSONPerfTest {
     while (iterator.hasNext()) {
       var terminal = iterator.next();
       if (Terminal.ERROR.equals(terminal)) {
-        throw new AssertionError(terminal.value(), null);
+        throw new AssertionError(terminal.value());
       }
       result.add(terminal);
     }

@@ -52,7 +52,7 @@ public class ParserBenchmark {
               E : E '+' E
             }
             """);
-    mg.verify(err -> { throw new AssertionError(err, null); });
+    mg.verify(err -> { throw new AssertionError(err); });
 
     var lexer = Lexer.createLexer(mg.tokens());
     LEXER = lexer;
