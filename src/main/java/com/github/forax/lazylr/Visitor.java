@@ -120,7 +120,7 @@ public interface Visitor<V extends @Nullable Object> {
   /// terminal methods, production methods, and validation.
   ///
   /// The lookup must be obtained by the caller with [MethodHandles#lookup()] so
-  /// that it has sufficient access rights to reach the visitor's methods.
+  /// that it has enough access rights to reach the visitor's methods.
   ///
   /// @param <V> the type of the visitor result
   /// @param lookup the lookup to use when creating method handles; its access
@@ -136,40 +136,64 @@ public interface Visitor<V extends @Nullable Object> {
   static <V extends @Nullable Object> Evaluator<V> reflect(MethodHandles.Lookup lookup, Visitor<V> visitor) {
     Objects.requireNonNull(lookup);
     Objects.requireNonNull(visitor);
-    var methods = visitor.getClass().getMethods();
-    var productionMap = new HashMap<String, MethodHandle>();
-    var terminalMap = new HashMap<String, MethodHandle>();
-    for(var method : methods) {
-      if (method.getDeclaringClass() == Object.class || Modifier.isStatic(method.getModifiers())) {
-        continue;
-      }
-      if (method.getReturnType() == void.class) {
-        throw new IllegalStateException("method " + method + " has no return type");
-      }
-      MethodHandle mh;
-      try {
-        mh = lookup.unreflect(method);
-      } catch (IllegalAccessException e) {
-        throw new IllegalStateException(e);
-      }
-      var productionNames = productionNames(method);
-      if (!productionNames.isEmpty()) {
-        var target = mh.asSpreader(Object[].class, method.getParameterCount())
-            .asType(MethodType.methodType(Object.class, Object.class, Object[].class));
-        for(var productionName : productionNames) {
-          var duplicate = productionMap.putIfAbsent(productionName.value(), target);
-          if (duplicate != null) {
-            throw new IllegalStateException("duplicate production name: " + productionName.value());
+
+    record VisitorCache(HashMap<String, MethodHandle> terminalMap, HashMap<String, MethodHandle> productionMap) {
+      private static final ScopedValue<MethodHandles.Lookup> SCOPED_LOOKUP = ScopedValue.newInstance();
+      private static final ClassValue<VisitorCache> CACHE = new ClassValue<>() {
+        @Override
+        protected VisitorCache computeValue(Class<?> type) {
+          var lookup = SCOPED_LOOKUP.get();
+
+          var methods = type.getMethods();
+          var productionMap = new HashMap<String, MethodHandle>();
+          var terminalMap = new HashMap<String, MethodHandle>();
+          for(var method : methods) {
+            if (method.getDeclaringClass() == Object.class || Modifier.isStatic(method.getModifiers())) {
+              continue;
+            }
+            if (method.getReturnType() == void.class) {
+              throw new IllegalStateException("method " + method + " has no return type");
+            }
+            MethodHandle mh;
+            try {
+              mh = lookup.unreflect(method);
+            } catch (IllegalAccessException e) {
+              throw new AssertionError(e);  // Access rights have been checked before
+            }
+            var productionNames = productionNames(method);
+            if (!productionNames.isEmpty()) {
+              var target = mh.asSpreader(Object[].class, method.getParameterCount())
+                  .asType(MethodType.methodType(Object.class, Object.class, Object[].class));
+              for(var productionName : productionNames) {
+                var duplicate = productionMap.putIfAbsent(productionName.value(), target);
+                if (duplicate != null) {
+                  throw new IllegalStateException("duplicate production name: " + productionName.value());
+                }
+              }
+              continue;
+            }
+            if (method.getParameterCount() != 1 || method.getParameterTypes()[0] != Terminal.class) {
+              throw new IllegalStateException("terminal method " + method + " should take a single Terminal argument");
+            }
+            var target = mh.asType(MethodType.methodType(Object.class, Object.class, Terminal.class));
+            terminalMap.put(method.getName(), target);
           }
+          return new VisitorCache(terminalMap, productionMap);
         }
-        continue;
-      }
-      if (method.getParameterCount() != 1 || method.getParameterTypes()[0] != Terminal.class) {
-        throw new IllegalStateException("terminal method " + method + " should take a single Terminal argument");
-      }
-      var target = mh.asType(MethodType.methodType(Object.class, Object.class, Terminal.class));
-      terminalMap.put(method.getName(), target);
+      };
     }
+
+    var visitorClass = visitor.getClass();
+    try {
+      lookup.accessClass(visitorClass);
+    } catch (IllegalAccessException e) {
+      throw new IllegalStateException(e);
+    }
+
+    var cache = ScopedValue.where(VisitorCache.SCOPED_LOOKUP, lookup)
+        .call(() -> VisitorCache.CACHE.get(visitorClass));
+    var terminalMap = cache.terminalMap;
+    var productionMap = cache.productionMap;
     return new Evaluator<>() {
       @Override
       @SuppressWarnings("unchecked")
