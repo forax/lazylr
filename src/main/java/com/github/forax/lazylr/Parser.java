@@ -165,12 +165,14 @@ public final class Parser {
     Objects.requireNonNull(evaluator);
 
     final class EvaluatorListener implements ParserListener {
+      private static final int INITIAL_STACK_SIZE = 32;  // big enough for most small grammars
+
       private V[] stack;   // null is allowed as a value
       private int size;
 
       private EvaluatorListener() {
         @SuppressWarnings("unchecked")
-        var stack = (V[]) new Object[32];   // big enough for most small grammars
+        var stack = (V[]) new Object[INITIAL_STACK_SIZE];
         this.stack = stack;
         super();
       }
