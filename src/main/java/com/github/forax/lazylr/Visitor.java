@@ -137,7 +137,7 @@ public interface Visitor<V extends @Nullable Object> {
     Objects.requireNonNull(lookup);
     Objects.requireNonNull(visitor);
 
-    record VisitorCache(HashMap<String, MethodHandle> terminalMap, HashMap<String, MethodHandle> productionMap) {
+    record VisitorCache(Map<String, MethodHandle> terminalMap, Map<String, MethodHandle> productionMap) {
       private static final ScopedValue<MethodHandles.Lookup> SCOPED_LOOKUP = ScopedValue.newInstance();
       private static final ClassValue<VisitorCache> CACHE = new ClassValue<>() {
         @Override
@@ -178,7 +178,7 @@ public interface Visitor<V extends @Nullable Object> {
             var target = mh.asType(MethodType.methodType(Object.class, Object.class, Terminal.class));
             terminalMap.put(method.getName(), target);
           }
-          return new VisitorCache(terminalMap, productionMap);
+          return new VisitorCache(Map.copyOf(terminalMap), Map.copyOf(productionMap));
         }
       };
     }
