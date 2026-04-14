@@ -1067,6 +1067,25 @@ public final class ParserTest {
   }
 
   @Test
+  public void reduceReduceConflictDuplicateProductionThrows() {
+    var E    = new NonTerminal("E");
+    var id   = new Terminal("id");
+
+    var grammar = new Grammar(E, List.of(
+        new Production(E, List.of(id)),
+        new Production(E, List.of(id))
+    ));
+
+    var parser = Parser.createParser(grammar, Map.of());
+
+    assertThrows(ParsingException.class, () ->
+        parser.parse(List.of(id).iterator(), new ParserListener() {
+          @Override public void onShift(Terminal token) {}
+          @Override public void onReduce(Production production) {}
+        }));
+  }
+
+  @Test
   public void reduceReduceConflictThrows() {
     var S  = new NonTerminal("S");
     var A  = new NonTerminal("A");

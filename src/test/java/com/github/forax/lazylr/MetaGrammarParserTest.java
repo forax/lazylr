@@ -1217,6 +1217,28 @@ public final class MetaGrammarParserTest {
   }
 
   @Test
+  public void reduceReduceConflictDuplicateProductionThrows() {
+    var metaGrammar = MetaGrammar.load("""
+      grammar {
+        E : 'id'
+        E : 'id'
+      }
+      """);
+
+    var grammar = metaGrammar.grammar();
+
+    var id = new Terminal("id");
+
+    var parser = Parser.createParser(grammar, Map.of());
+
+    assertThrows(ParsingException.class, () ->
+        parser.parse(List.of(id).iterator(), new ParserListener() {
+          @Override public void onShift(Terminal token) {}
+          @Override public void onReduce(Production production) {}
+        }));
+  }
+
+  @Test
   public void reduceReduceConflictThrows() {
     var metaGrammar = MetaGrammar.load("""
       grammar {
