@@ -62,13 +62,16 @@ public final class Token {
 
   /// Creates a new Rule with a name.
   ///
-  /// @param name  The symbolic name of the token. If `null`, the rule is
-  ///              treated as ignorable and its matches will be skipped by the lexer.
+  /// @param name  The symbolic name of the token.
   /// @param regex The regular expression pattern to match.
-  /// @throws NullPointerException if name or regex is null.
-  /// @throws IllegalArgumentException if the pattern is malformed or matches the empty input.
+  /// @throws NullPointerException if the name or the regex is null.
+  /// @throws IllegalArgumentException if the name is empty, or if the pattern is malformed
+  ///         or matches the empty input.
   public Token(String name, String regex) {
     Objects.requireNonNull(name);
+    if (name.isEmpty()) {
+      throw new IllegalArgumentException("name must not be empty");
+    }
     Objects.requireNonNull(regex);
     var pattern = asPattern(regex);
     checkEmptyInput(pattern);
