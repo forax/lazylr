@@ -21,7 +21,7 @@ public final class Grammar {
   private final List<Production> productions;
   private final Map<NonTerminal, List<Production>> productionMap;
 
-  /// Also used by MetaGrammar which does not allow orphan non-terminals
+  /// Also used by [MetaGrammar] which does not allow orphan non-terminals
   /// and guarantee that the start symbol has a production by construction.
   Grammar(NonTerminal startSymbol, List<Production> productions, Map<NonTerminal, List<Production>> productionMap) {
     this.startSymbol = startSymbol;
