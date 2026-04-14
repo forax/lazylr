@@ -63,17 +63,12 @@ final class LRTransitionEngine {
     /// Two items are equal if they represent the same rule at the same position with the same lookahead.
     ///
     /// Production equality uses reference identity (`==`) rather than structural equality.
-    /// This is a performance optimization, structural equality on productions
-    /// is expensive.
-    ///
-    /// The code of [Grammar] deduplicates productions at construction time,
-    /// see [Grammar].checkDuplicationOrOrphanNonTerminals(LinkedHashMap).
-    /// Items must never be constructed with productions from outside
-    /// a [Grammar] instance.
+    /// So we can detect duplicate productions as reduce/reduce conflicts.
+    /// This is also a performance optimization.
     @Override
     public boolean equals(Object o) {
       return o instanceof Item item &&
-          production == item.production &&    // productions are unique
+          production == item.production &&
           dot == item.dot &&
           lookahead.equals(item.lookahead);
     }
