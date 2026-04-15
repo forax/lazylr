@@ -12,9 +12,9 @@ public final class LRAlgorithmClosureTest {
 
   // -- helpers
 
-  private static LRAlgorithm algorithm(Grammar grammar) {
-    var firstSets = LRAlgorithm.computeFirstSets(grammar);
-    return new LRAlgorithm(grammar, firstSets);
+  private static Set<Item> computeClosure(Grammar grammar, Set<Item> seed) {
+    var firstsSets = LRAlgorithm.computeFirstSets(grammar);
+    return LRAlgorithm.computeClosure(grammar, firstsSets, seed);
   }
 
   private static Item item(Production p, int dot, Terminal lookahead) {
@@ -39,7 +39,7 @@ public final class LRAlgorithmClosureTest {
         Set.of(
             item(prod, 1, $)
         ),
-        algorithm(grammar).computeClosure(seed));
+        computeClosure(grammar, seed));
   }
 
   // -- Dot before a terminal: no new items added
@@ -60,7 +60,7 @@ public final class LRAlgorithmClosureTest {
         Set.of(
             item(prod, 0, $)
         ),
-        algorithm(grammar).computeClosure(seed));
+        computeClosure(grammar, seed));
   }
 
   // -- Simple expansion: dot before a non-terminal
@@ -86,7 +86,7 @@ public final class LRAlgorithmClosureTest {
             item(prodEA,  0, $),
             item(prodAid, 0, $)
         ),
-        algorithm(grammar).computeClosure(seed));
+        computeClosure(grammar, seed));
   }
 
   // -- Lookahead is FIRST of the β suffix
@@ -113,7 +113,7 @@ public final class LRAlgorithmClosureTest {
             item(prodEAid, 0, $),
             item(prodAnum, 0, id)   // lookahead is id, not $
         ),
-        algorithm(grammar).computeClosure(seed));
+        computeClosure(grammar, seed));
   }
 
   // -- Nullable suffix: lookahead includes parent lookahead
@@ -142,7 +142,7 @@ public final class LRAlgorithmClosureTest {
             item(prodEAB, 0, $),
             item(prodAid, 0, $)    // $ flows through nullable B
         ),
-        algorithm(grammar).computeClosure(seed));
+        computeClosure(grammar, seed));
   }
 
   // -- Multiple productions for the same non-terminal
@@ -171,7 +171,7 @@ public final class LRAlgorithmClosureTest {
             item(prodAid,  0, $),
             item(prodAnum, 0, $)
         ),
-        algorithm(grammar).computeClosure(seed));
+        computeClosure(grammar, seed));
   }
 
   // -- Transitive expansion
@@ -200,7 +200,7 @@ public final class LRAlgorithmClosureTest {
             item(prodAB,  0, $),
             item(prodBid, 0, $)
         ),
-        algorithm(grammar).computeClosure(seed));
+        computeClosure(grammar, seed));
   }
 
   // -- Left-recursive grammar does not loop
@@ -227,7 +227,7 @@ public final class LRAlgorithmClosureTest {
             item(prodEEid, 0, $),
             item(prodEid,  0, plus)
         ),
-        algorithm(grammar).computeClosure(seed));
+        computeClosure(grammar, seed));
   }
 
   // -- Lookaheads union-ed across multiple seed items
@@ -270,7 +270,7 @@ public final class LRAlgorithmClosureTest {
             item(prodBid, 0, x),
             item(prodBid, 0, y)
         ),
-        algorithm(grammar).computeClosure(seed));
+        computeClosure(grammar, seed));
   }
 
   // -- Seed with dot in the middle
@@ -298,7 +298,7 @@ public final class LRAlgorithmClosureTest {
             item(prodEidA, 2, $),
             item(prodAnum, 0, $)
         ),
-        algorithm(grammar).computeClosure(seed));
+        computeClosure(grammar, seed));
   }
 
   // -- Classic arithmetic grammar: initial closure
@@ -355,6 +355,6 @@ public final class LRAlgorithmClosureTest {
             item(prodFid,    0, plus),
             item(prodFid,    0, $)
         ),
-        algorithm(grammar).computeClosure(seed));
+        computeClosure(grammar, seed));
   }
 }

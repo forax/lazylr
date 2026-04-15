@@ -17,25 +17,21 @@ import java.util.Set;
 /// These are the building blocks used by the [Parser] to construct the state machine.
 ///
 /// ### FIRST Set Computation
-/// The [computeFirstSets(Grammar)] method implements a fixed-point iteration algorithm.
+/// The [#computeFirstSets(Grammar)] method implements a fixed-point iteration algorithm.
 /// For each [Symbol], it determines the set of [Terminal]s that can appear at the
 /// beginning of a string derived from that symbol. It correctly handles
 /// [Terminal#EPSILON] derivations to propagate lookaheads.
 ///
 /// ### LR(1) Closure
-/// The [computeClosure(Set)] method expands a "seed" set of [Item]s into a full
-/// state. It follows the rule:
-/// If an item `[A -> α . B β, a]` is in the closure, then for every production
-/// `B -> γ`, the item `[B -> . γ, b]` is added for every `b` in `FIRST(βa)`.
+/// The [#computeClosure(Grammar, Map, Set)] method expands a "seed" set of [Item]s
+/// into a full state.
+/// It follows the rule: If an item `[A -> α . B β, a]` is in the closure,
+/// then for every production `B -> γ`, the item `[B -> . γ, b]` is added
+/// for every `b` in `FIRST(βa)`.
 ///
 final class LRAlgorithm {
-  private final Grammar grammar;
-  private final Map<Symbol, Set<Terminal>> firstSets;
-
-  LRAlgorithm(Grammar grammar, Map<Symbol, Set<Terminal>> firstSets) {
-    this.grammar = grammar;
-    this.firstSets = firstSets;
-    super();
+  private LRAlgorithm() {
+    throw new AssertionError();
   }
 
   /// Computes the LR(1) closure of a set of items.
@@ -45,7 +41,7 @@ final class LRAlgorithm {
   ///
   /// @param seedItems The kernel or initial items of a state.
   /// @return A complete set of items representing a full LR(1) state.
-  public Set<Item> computeClosure(Set<Item> seedItems) {
+  public static Set<Item> computeClosure(Grammar grammar, Map<Symbol, Set<Terminal>> firstSets, Set<Item> seedItems) {
     var closure = new HashSet<>(seedItems);
     var workList = new ArrayList<>(seedItems);
 
@@ -57,7 +53,7 @@ final class LRAlgorithm {
       // If the symbol after the dot is a NonTerminal, we expand it
       if (next instanceof NonTerminal nonTerminal) {
         // Calculate FIRST(βa)
-        var nextLookaheads = calculateNextLookaheads(item);
+        var nextLookaheads = calculateNextLookaheads(firstSets, item);
 
         for (var production : grammar.productionsFor(nonTerminal)) {
           // Create the new Items.
@@ -83,7 +79,7 @@ final class LRAlgorithm {
   ///
   /// @param item The item being expanded.
   /// @return The set of terminals that can follow the expanded non-terminal.
-  private Set<Terminal> calculateNextLookaheads(Item item) {
+  private static Set<Terminal> calculateNextLookaheads(Map<Symbol, Set<Terminal>> firstSets, Item item) {
     var result = new HashSet<Terminal>();
     var beta = item.getSymbolsAfterNext(); // Symbols following the NonTerminal
 

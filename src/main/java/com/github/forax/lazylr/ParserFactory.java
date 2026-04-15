@@ -87,11 +87,10 @@ public final class ParserFactory {
     var startItem = new LRTransitionEngine.Item(startProd, 0, Terminal.EOF);
 
     // Initialize the LALR Builder and Transition Engine
-    var algorithm = new LRAlgorithm(grammar, firstSets);
-    var engine = new LRTransitionEngine(algorithm, fullPrecedenceMap);
+    var engine = new LRTransitionEngine(grammar, fullPrecedenceMap, firstSets);
 
     // Compute the Closure of the initial item to create State 0
-    var initialItems = algorithm.computeClosure(Set.of(startItem));
+    var initialItems = LRAlgorithm.computeClosure(grammar, firstSets, Set.of(startItem));
     var initialState = new LRTransitionEngine.State(initialItems);
 
     // Create the Parser

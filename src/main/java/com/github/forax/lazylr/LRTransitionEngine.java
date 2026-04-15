@@ -146,8 +146,9 @@ final class LRTransitionEngine {
     enum ErrorKind { REDUCE_REDUCE, SHIFT_REDUCE, PARSE }
   }
 
-  private final LRAlgorithm algorithm;
+  private final Grammar grammar;
   private final Map<PrecedenceEntity, Precedence> precedenceMap;
+  private final Map<Symbol, Set<Terminal>> firstSets;
 
   // The "Canonical Map": Maps a set of Items (including lookaheads) to a unique State
   private final HashMap<Set<Item>, State> stateCache = new HashMap<>();
@@ -158,9 +159,10 @@ final class LRTransitionEngine {
   // The Action Table: (CurrentState -> Terminal) -> Action
   private final HashMap<State, Map<Terminal, Action>> actionTable = new HashMap<>();
 
-  LRTransitionEngine(LRAlgorithm algorithm, Map<PrecedenceEntity, Precedence> precedenceMap) {
-    this.algorithm = algorithm;
+  LRTransitionEngine(Grammar grammar, Map<PrecedenceEntity, Precedence> precedenceMap, Map<Symbol, Set<Terminal>> firstSets) {
+    this.grammar = grammar;
     this.precedenceMap = precedenceMap;
+    this.firstSets = firstSets;
     super();
   }
 
@@ -268,7 +270,7 @@ final class LRTransitionEngine {
 
     // 3. Compute the Closure
     // This expands the kernel to include all rules reachable via non-terminals.
-    var closureItems = algorithm.computeClosure(kernels);
+    var closureItems = LRAlgorithm.computeClosure(grammar, firstSets, kernels);
 
     // 4. State Identity (LR(1) Logic)
     // We use the full set of items (rules + dots + lookaheads) as the key.
