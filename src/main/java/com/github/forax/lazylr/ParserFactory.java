@@ -26,13 +26,19 @@ public final class ParserFactory {
   private final Grammar grammar;
   private final Map<PrecedenceEntity, Precedence> fullPrecedenceMap;
   private final Map<Symbol, Set<Terminal>> firstSets;
+  private final LRTransitionEngine.State initialState;
+  private final Production startProduction;
 
   private ParserFactory(Grammar grammar,
                         Map<PrecedenceEntity, Precedence> fullPrecedenceMap,
-                        Map<Symbol, Set<Terminal>> firstSets) {
+                        Map<Symbol, Set<Terminal>> firstSets,
+                        LRTransitionEngine.State initialState,
+                        Production startProduction) {
     this.grammar = grammar;
     this.fullPrecedenceMap = fullPrecedenceMap;
     this.firstSets = firstSets;
+    this.initialState = initialState;
+    this.startProduction = startProduction;
     super();
   }
 
@@ -53,7 +59,19 @@ public final class ParserFactory {
     // Compute FIRST sets
     var firstSets = LRAlgorithm.computeFirstSets(grammar);
 
-    return new ParserFactory(grammar, fullPrecedenceMap, firstSets);
+    // Prepare the Initial State (S' -> . S $)
+    // We create an "Augmented" production to represent the entry point
+    var augmentedStart = new NonTerminal(grammar.startSymbol().name() + "'");
+    var startProduction = new Production(augmentedStart, List.of(grammar.startSymbol()));
+
+    // Initial Item: [S' -> . S, { $ }]
+    var startItem = new LRTransitionEngine.Item(startProduction, 0, Terminal.EOF);
+
+    // Compute the Closure of the initial item to create State 0
+    var initialItems = LRAlgorithm.computeClosure(grammar, firstSets, Set.of(startItem));
+    var initialState = new LRTransitionEngine.State(initialItems);
+
+    return new ParserFactory(grammar, fullPrecedenceMap, firstSets, initialState, startProduction);
   }
 
   /// Creates a lazy LR(1) parser for the given grammar.
@@ -78,22 +96,10 @@ public final class ParserFactory {
   ///
   /// @return a new parser instance bound to the calling thread.
   public Parser createParser() {
-    // Prepare the Initial State (S' -> . S $)
-    // We create an "Augmented" production to represent the entry point
-    var augmentedStart = new NonTerminal(grammar.startSymbol().name() + "'");
-    var startProd = new Production(augmentedStart, List.of(grammar.startSymbol()));
-
-    // Initial Item: [S' -> . S, { $ }]
-    var startItem = new LRTransitionEngine.Item(startProd, 0, Terminal.EOF);
-
-    // Initialize the LALR Builder and Transition Engine
+    // Initialize the LALR Transition Engine
     var engine = new LRTransitionEngine(grammar, fullPrecedenceMap, firstSets);
 
-    // Compute the Closure of the initial item to create State 0
-    var initialItems = LRAlgorithm.computeClosure(grammar, firstSets, Set.of(startItem));
-    var initialState = new LRTransitionEngine.State(initialItems);
-
     // Create the Parser
-    return new Parser(Thread.currentThread(), engine, initialState, startProd);
+    return new Parser(Thread.currentThread(), engine, initialState, startProduction);
   }
 }
