@@ -260,7 +260,7 @@ public final class Parser {
 
       var action = engine.getAction(currentState, currentToken);
       switch (action) {
-        case LRTransitionEngine.Action.Error(LRTransitionEngine.Action.ErrorKind kind) ->
+        case LRTransitionEngine.Action.Error(var kind) ->
           throw new ParsingException(errorMessage(kind, currentToken, currentState, input));
         case LRTransitionEngine.Action.Shift(var nextState) -> {
           listener.onShift(currentToken);
@@ -298,7 +298,7 @@ public final class Parser {
     }
   }
 
-  private State[] resize(State[] stack) {
+  private static State[] resize(State[] stack) {
     return Arrays.copyOf(stack, stack.length << 1);
   }
 
