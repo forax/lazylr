@@ -461,6 +461,31 @@ public class MainTest {
                       └── [num=4]
           """, result.stdout);
     }
+
+    @Test
+    public void epsilonProductionCanParseEmptyInput(@TempDir Path tempDir) throws Exception {
+      var grammar = tempDir.resolve("grammar.txt");
+      var input = tempDir.resolve("input.txt");
+      Files.writeString(grammar, """
+          tokens {
+            a: /a/
+          }
+          grammar {
+            S: A
+            A: a
+            A:
+          }
+          """);
+      Files.writeString(input, "");
+
+      var result = runProcess(tempDir, grammar, input);
+      assertEquals(0, result.exitCode());
+      assertTrue(result.stderr.isEmpty());
+      assertEquals("""
+          └── <S>
+              └── <A>
+          """, result.stdout);
+    }
   }
 
 
