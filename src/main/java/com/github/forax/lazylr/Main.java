@@ -98,20 +98,24 @@ final class Main {
     var grammarPath = (Path) null;
     var inputPath  = (Path) null;
     for (var arg : args) {
-      switch (arg) {
-        case "--generate" -> generate = true;
-        case "--print" -> print = true;
-        default -> {
-          if (grammarPath == null) {
-            grammarPath = Path.of(arg);
-            continue;
+      if (arg.startsWith("-")) {
+        switch (arg) {
+          case "--generate" -> generate = true;
+          case "--print" -> print = true;
+          default -> {
+            return null;  // invalid option
           }
-          if (inputPath == null) {
-            inputPath = Path.of(arg);
-            continue;
-          }
-          return null;  // too many arguments
         }
+      } else {
+        if (grammarPath == null) {
+          grammarPath = Path.of(arg);
+          continue;
+        }
+        if (inputPath == null) {
+          inputPath = Path.of(arg);
+          continue;
+        }
+        return null;  // too many arguments
       }
     }
     if (grammarPath == null ||                         // grammarPath is mandatory

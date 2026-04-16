@@ -78,6 +78,13 @@ public class MainTest {
       assertEquals(1, result.exitCode());
       assertTrue(result.stderr.contains("lazylr"));
     }
+
+    @Test
+    public void invalidOptionShouldPrintUsageAndExit1(@TempDir Path tempDir) throws Exception {
+      var result = runProcess(tempDir, "-unknown");
+      assertEquals(1, result.exitCode());
+      assertTrue(result.stderr.contains("lazylr"));
+    }
   }
 
 
