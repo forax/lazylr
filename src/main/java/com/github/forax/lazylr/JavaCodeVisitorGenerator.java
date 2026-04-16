@@ -617,6 +617,9 @@ final class JavaCodeVisitorGenerator {
         case NonTerminal nt -> sb.append(capitalize(nt.name()));
       }
     }
+    if (production.body().isEmpty()) {
+      sb.append("Empty");
+    }
     sb.append(capitalize(production.head().name()));
     return sb.toString();
   }

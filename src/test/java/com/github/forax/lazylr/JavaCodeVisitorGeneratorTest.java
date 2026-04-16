@@ -2,11 +2,87 @@ package com.github.forax.lazylr;
 
 import org.junit.jupiter.api.Test;
 
+import javax.tools.DiagnosticCollector;
+import javax.tools.FileObject;
+import javax.tools.ForwardingJavaFileManager;
+import javax.tools.JavaFileObject;
+import javax.tools.SimpleJavaFileObject;
+import javax.tools.ToolProvider;
+import java.io.IOException;
+import java.io.OutputStream;
+import java.net.URI;
+import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.IntStream;
+
 import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public class JavaCodeVisitorGeneratorTest {
+
+  /// Asserts that the given generated code snippet compiles without errors.
+  /// @param className simple class name used for the in-memory compilation unit.
+  /// @param code      the raw output of [JavaCodeVisitorGenerator#generateVisitor(Grammar) ].
+  private static void assertCompilesSuccessfully(String className, String code) throws IOException {
+    var compiler = ToolProvider.getSystemJavaCompiler();
+    assertNotNull(compiler);
+
+    var sourceCode = """
+        import com.github.forax.lazylr.*;
+        import java.util.*;
+
+        public class %s {
+        %s
+        }
+        """.formatted(className, code.indent(2));
+
+    var classpath = System.getProperty("java.class.path");
+    var diagnosticCollector = new DiagnosticCollector<JavaFileObject>();
+
+    var delegate = compiler.getStandardFileManager(diagnosticCollector, null, null);
+    try (var fileManager = new ForwardingJavaFileManager<>(delegate) {
+      @Override
+      public JavaFileObject getJavaFileForOutput(Location location,
+                                                 String className,
+                                                 JavaFileObject.Kind kind,
+                                                 FileObject sibling) {
+        var uri = URI.create("mem:///" + className + ".class");
+        return new SimpleJavaFileObject(uri, JavaFileObject.Kind.CLASS) {
+          @Override
+          public OutputStream openOutputStream() {
+            return OutputStream.nullOutputStream();
+          }
+        };
+      }
+    }) {
+      var uri = URI.create("mem:///" + className + ".java");
+      var source = new SimpleJavaFileObject(uri, JavaFileObject.Kind.SOURCE) {
+        @Override
+        public CharSequence getCharContent(boolean ignoreEncodingErrors) {
+          return sourceCode;
+        }
+      };
+
+      var ok = compiler
+          .getTask(null, fileManager, diagnosticCollector, List.of("-cp", classpath), null, List.of(source))
+          .call();
+      if (!ok) {
+        var diagnostics = List.copyOf(diagnosticCollector.getDiagnostics());
+        var errors = diagnostics.stream()
+            .map(d -> "  line " + d.getLineNumber() + ": " + d.getMessage(null))
+            .collect(Collectors.joining("\n"));
+        var codeLines = sourceCode.lines().toList();
+        var listing = IntStream.range(0, codeLines.size())
+            .mapToObj(i -> String.format("%4d | %s", i + 1, codeLines.get(i)))
+            .collect(Collectors.joining("\n"));
+        fail("Generated visitor code for '" + className + "' did not compile:\n" + errors
+            + "\n\n--- code ---\n" + listing);
+      }
+    }
+  }
+
 
   private static String generateVisitor(String inputText) {
     var grammar = MetaGrammar.load(inputText).grammar();
@@ -14,7 +90,7 @@ public class JavaCodeVisitorGeneratorTest {
   }
 
   @Test
-  public void testIdentifierTerminalsGetTerminalMethods() {
+  public void testIdentifierTerminalsGetTerminalMethods() throws IOException {
     // 'num' is an identifier terminal → gets a terminal method
     // '(' and ')' are not → filtered out
     var inputText = """
@@ -25,6 +101,7 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var actual = generateVisitor(inputText);
+    assertCompilesSuccessfully("ClassVisitor", actual);
     assertEquals("""
         public sealed interface Factor permits NumFactor, LParenFactorRParenFactor {}
         public record NumFactor(String num) implements Factor {}
@@ -51,7 +128,7 @@ public class JavaCodeVisitorGeneratorTest {
   }
 
   @Test
-  public void testNonIdentifierTerminalsDoNotGetTerminalMethods() {
+  public void testNonIdentifierTerminalsDoNotGetTerminalMethods() throws IOException {
     var inputText = """
         grammar {
           E : E '+' E
@@ -60,6 +137,7 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var actual = generateVisitor(inputText);
+    assertCompilesSuccessfully("ClassVisitor", actual);
     assertEquals("""
         public sealed interface E permits EPlusEE, NumE {}
         public record EPlusEE(E e, E e2) implements E {}
@@ -86,7 +164,7 @@ public class JavaCodeVisitorGeneratorTest {
   }
 
   @Test
-  public void testSingleProductionGeneratesRecord() {
+  public void testSingleProductionGeneratesRecord() throws IOException {
     var inputText = """
         grammar {
           Point : x y
@@ -94,7 +172,7 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var actual = generateVisitor(inputText);
-
+    assertCompilesSuccessfully("ClassVisitor", actual);
     assertEquals("""
         public record Point(String x, String y) {}
         
@@ -118,7 +196,7 @@ public class JavaCodeVisitorGeneratorTest {
   }
 
   @Test
-  public void testArithmeticExpressionGeneratesSealedInterface() {
+  public void testArithmeticExpressionGeneratesSealedInterface() throws IOException {
     var inputText = """
         grammar {
           Exp : Exp '+' Term
@@ -206,11 +284,12 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var actual = generateVisitor(inputText);
+    assertCompilesSuccessfully("ClassVisitor", actual);
     assertEquals(expected, actual);
   }
 
   @Test
-  public void testOptionalTerminalProducesOptionalString() {
+  public void testOptionalTerminalProducesOptionalString() throws IOException {
     var inputText = """
         grammar {
           Stmt : name opt_label
@@ -220,7 +299,7 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var actual = generateVisitor(inputText);
-
+    assertCompilesSuccessfully("ClassVisitor", actual);
     assertEquals("""
         public record Stmt(String name, Optional<String> opt_label) {}
         
@@ -254,7 +333,7 @@ public class JavaCodeVisitorGeneratorTest {
   }
 
   @Test
-  public void testOptionalNonTerminalProducesOptionalOfNtType() {
+  public void testOptionalNonTerminalProducesOptionalOfNtType() throws IOException {
     var inputText = """
         grammar {
           Decl : name opt_init
@@ -265,6 +344,7 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var actual = generateVisitor(inputText);
+    assertCompilesSuccessfully("ClassVisitor", actual);
     assertEquals("""
         public record Decl(String name, Optional<Expr> opt_init) {}
         public record Expr(String num) {}
@@ -304,7 +384,7 @@ public class JavaCodeVisitorGeneratorTest {
   }
 
   @Test
-  public void testListOfTerminalProducesListString() {
+  public void testListOfTerminalProducesListString() throws IOException {
     var inputText = """
         grammar {
           Names : name
@@ -313,6 +393,7 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var actual = generateVisitor(inputText);
+    assertCompilesSuccessfully("ClassVisitor", actual);
     assertEquals("""
         
         class MyVisitor implements Visitor<List<String>> {
@@ -339,7 +420,7 @@ public class JavaCodeVisitorGeneratorTest {
   }
 
   @Test
-  public void testListOfNonTerminalProducesListOfNtType() {
+  public void testListOfNonTerminalProducesListOfNtType() throws IOException {
     var inputText = """
         grammar {
           Stmts : Stmt
@@ -349,13 +430,13 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var actual = generateVisitor(inputText);
-
+    assertCompilesSuccessfully("ClassVisitor", actual);
     assertTrue(actual.contains("List<Stmt>"));
     assertTrue(actual.contains("new ArrayList<Stmt>()"));
   }
 
   @Test
-  public void testListOfListProducesNestedListType() {
+  public void testListOfListProducesNestedListType() throws IOException {
     // Inner list of terminals, outer list of inner lists
     var inputText = """
         grammar {
@@ -367,16 +448,14 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var actual = generateVisitor(inputText);
-
+    assertCompilesSuccessfully("ClassVisitor", actual);
     // Row is List<String>, Matrix is List<List<String>>
     assertTrue(actual.contains("List<String>"));           // Row
     assertTrue(actual.contains("List<List<String>>"));     // Matrix
   }
 
-  // ── Operator name mapping in record names ────────────────────────────────────
-
   @Test
-  public void testOperatorSymbolsMapToNamesInRecords() {
+  public void testOperatorSymbolsMapToNamesInRecords() throws IOException {
     var inputText = """
         grammar {
           Expr : Expr '+' Expr
@@ -388,7 +467,7 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var actual = generateVisitor(inputText);
-
+    assertCompilesSuccessfully("ClassVisitor", actual);
     assertTrue(actual.contains("ExprPlusExpr"));
     assertTrue(actual.contains("ExprMinusExpr"));
     assertTrue(actual.contains("ExprMulExpr"));
@@ -396,7 +475,7 @@ public class JavaCodeVisitorGeneratorTest {
   }
 
   @Test
-  public void testArrowAndFatArrowSymbolNames() {
+  public void testArrowAndFatArrowSymbolNames() throws IOException {
     var inputText = """
         grammar {
           Expr : Expr '->' Expr
@@ -406,15 +485,13 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var actual = generateVisitor(inputText);
-
+    assertCompilesSuccessfully("ClassVisitor", actual);
     assertTrue(actual.contains("ExprArrowExpr"));
     assertTrue(actual.contains("ExprFatArrowExpr"));
   }
 
-  // ── Visitor type is start symbol type ─────────────────────────────────────────
-
   @Test
-  public void testVisitorTypeIsStartSymbol() {
+  public void testVisitorTypeIsStartSymbol() throws IOException {
     var inputText = """
         grammar {
           Program : stmts
@@ -425,13 +502,13 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var actual = generateVisitor(inputText);
-
+    assertCompilesSuccessfully("ProgramVisitor", actual);
     // Program is the start symbol and is a Normal single-production → record Program
     assertTrue(actual.contains("implements Visitor<Program>"));
   }
 
   @Test
-  public void testVisitorTypeIsListWhenStartSymbolIsListPattern() {
+  public void testVisitorTypeIsListWhenStartSymbolIsListPattern() throws IOException {
     var inputText = """
         grammar {
           Stmts : stmt
@@ -441,14 +518,12 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var actual = generateVisitor(inputText);
-
+    assertCompilesSuccessfully("ClassVisitor", actual);
     assertTrue(actual.contains("implements Visitor<List<Stmt>>"));
   }
 
-  // ── Duplicate symbol names in record parameters ───────────────────────────────
-
   @Test
-  public void testDuplicateNonTerminalsInBodyGetNumberedParams() {
+  public void testDuplicateNonTerminalsInBodyGetNumberedParams() throws IOException {
     var inputText = """
         grammar {
           Expr : Expr '+' Expr
@@ -457,7 +532,7 @@ public class JavaCodeVisitorGeneratorTest {
         """;
 
     var actual = generateVisitor(inputText);
-
+    assertCompilesSuccessfully("ClassVisitor", actual);
     // Two Expr params should be disambiguated
     assertTrue(actual.contains("Expr expr,") || actual.contains("Expr expr2"));
   }
