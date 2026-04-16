@@ -200,7 +200,7 @@ public interface Visitor<V extends @Nullable Object> {
       public V evaluate(Terminal terminal) {
         var mh = terminalMap.get(terminal.name());
         if (mh == null) {
-          return null;  // The Terminal has no value
+          return null;  // No terminal method, ignore the terminal
         }
         try {
           return (V) mh.invokeExact((Object) visitor, terminal);
@@ -289,8 +289,8 @@ public interface Visitor<V extends @Nullable Object> {
   }
 
   private static Class<?> inferFromVisitorDeclaration(Class<?> visitorClass) {
-    for (var interfaces : visitorClass.getGenericInterfaces()) {
-      if (interfaces instanceof ParameterizedType parameterizedType) {
+    for (var interfaze : visitorClass.getGenericInterfaces()) {
+      if (interfaze instanceof ParameterizedType parameterizedType) {
         var rawClass = (Class<?>) parameterizedType.getRawType();
         if (Visitor.class.isAssignableFrom(rawClass)) {
           var argument = parameterizedType.getActualTypeArguments()[0];
