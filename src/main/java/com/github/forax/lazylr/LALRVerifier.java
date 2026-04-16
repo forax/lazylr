@@ -15,6 +15,7 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
@@ -161,32 +162,32 @@ public final class LALRVerifier {
   /// A non-terminal `A` is productive if there exists a derivation
   /// `A ->* w` where `w ∈ Σ*` (a string of terminals only).
   ///
-  ///
   /// @param grammar the grammar to analyse
   /// @return a set of generating non-terminals
   static Set<NonTerminal> productiveNonTerminals(Grammar grammar) {
-    // Count how many non-terminal body symbols are still unproductive, per production.
+    // Count how many distinct non-terminal body symbols are still unproductive, per production.
     // When the count hits 0, the head becomes productive.
-    var pendingCount = new HashMap<Production, Integer>();
-    // Reverse index: non-terminal -> productions that have non-terminal in their body
+    var remainingDepsCount = new HashMap<Production, Integer>();
+    // Reverse index: non-terminal -> productions that have that non-terminal in their body
     var dependents = new HashMap<NonTerminal, List<Production>>();
 
-    var productive = new HashSet<NonTerminal>();
+    var productives = new HashSet<NonTerminal>();
     var worklist = new ArrayDeque<NonTerminal>();
 
-    // Compute the dependent map and count the number of non-terminals per production
     for (var production : grammar.productions()) {
-      var count = 0;
-      for (var symbol : production.body()) {
-        if (symbol instanceof NonTerminal nonTerminal) {
-          dependents.computeIfAbsent(nonTerminal, _ -> new ArrayList<>()).add(production);
-          count++;
-        }
+      // Collect distinct non-terminals in the body
+      var bodyNonTerminals = production.body().stream()
+          .filter(s -> s instanceof NonTerminal)
+          .map(s -> (NonTerminal) s)
+          .collect(Collectors.toSet());
+
+      for (var nonTerminal : bodyNonTerminals) {
+        dependents.computeIfAbsent(nonTerminal, _ -> new ArrayList<>()).add(production);
       }
-      pendingCount.put(production, count);
+      remainingDepsCount.put(production, bodyNonTerminals.size());
 
       // Seed: if no non-terminals in body, head is immediately productive
-      if (count == 0 && productive.add(production.head())) {
+      if (bodyNonTerminals.isEmpty() && productives.add(production.head())) {
         worklist.add(production.head());
       }
     }
@@ -195,14 +196,14 @@ public final class LALRVerifier {
     while (!worklist.isEmpty()) {
       var nonTerminal = worklist.poll();
       for (var production : dependents.getOrDefault(nonTerminal, List.of())) {
-        var remaining = (int) pendingCount.merge(production, -1, Integer::sum);
-        if (remaining == 0 && productive.add(production.head())) {
+        var remaining = (int) remainingDepsCount.merge(production, -1, Integer::sum);
+        if (remaining == 0 && productives.add(production.head())) {
           worklist.add(production.head());
         }
       }
     }
 
-    return productive;
+    return productives;
   }
 
   /// Computes the set of reachable non-terminals.
@@ -213,11 +214,12 @@ public final class LALRVerifier {
   /// @param grammar the grammar to analyse
   /// @return a set of reachable non-terminals
   static Set<NonTerminal> reachableNonTerminals(Grammar grammar) {
+    var startSymbol = grammar.startSymbol();
     var reachable = new HashSet<NonTerminal>();
-    reachable.add(grammar.startSymbol());
+    reachable.add(startSymbol);
 
     var stack = new ArrayDeque<NonTerminal>();
-    stack.add(grammar.startSymbol());
+    stack.add(startSymbol);
 
     while (!stack.isEmpty()) {
       var current = stack.pop();

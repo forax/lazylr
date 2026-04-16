@@ -11,7 +11,10 @@ import java.util.Map;
 import java.util.Set;
 import java.util.function.Consumer;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class LALRVerifierTest {
 
@@ -827,6 +830,55 @@ public final class LALRVerifierTest {
 
       var productive = LALRVerifier.productiveNonTerminals(grammar);
       assertTrue(productive.isEmpty());
+    }
+
+    @Test
+    public void productiveWithRepeatedNonTerminalInBody() {
+      var s = new NonTerminal("S");
+      var a = new NonTerminal("A");
+      var terminal = new Terminal("a");
+
+      // S -> A A, A -> "a"
+      // A appears twice in the body of S's production; S should still be productive.
+      var grammar = new Grammar(s, List.of(
+          new Production(s, List.of(a, a)),
+          new Production(a, List.of(terminal))
+      ));
+
+      var productive = LALRVerifier.productiveNonTerminals(grammar);
+      assertEquals(Set.of(s, a), productive);
+    }
+
+    @Test
+    public void unproductiveWithRepeatedNonTerminalInBody() {
+      var s = new NonTerminal("S");
+      var a = new NonTerminal("A");
+
+      // S -> A A, A -> A
+      // A appears twice in S's body but A is unproductive, so S is too.
+      var grammar = new Grammar(s, List.of(
+          new Production(s, List.of(a, a)),
+          new Production(a, List.of(a))
+      ));
+
+      var productive = LALRVerifier.productiveNonTerminals(grammar);
+      assertTrue(productive.isEmpty());
+    }
+
+    @Test
+    public void productiveThroughEpsilonPropagation() {
+      var s = new NonTerminal("S");
+      var a = new NonTerminal("A");
+
+      // S -> A, A -> ε
+      // Productivity must propagate through an epsilon production.
+      var grammar = new Grammar(s, List.of(
+          new Production(s, List.of(a)),
+          new Production(a, List.of())
+      ));
+
+      var productive = LALRVerifier.productiveNonTerminals(grammar);
+      assertEquals(Set.of(s, a), productive);
     }
 
 
