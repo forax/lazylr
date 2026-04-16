@@ -15,13 +15,16 @@ import java.util.List;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.fail;
 
 public final class JavaCodeGeneratorTest {
 
   /// Asserts that the given generated code snippet compiles without errors.
   /// @param className simple class name used for the in-memory compilation unit.
-  /// @param code      the raw output of {@link JavaCodeGenerator#generate}.
+  /// @param code      the raw output of [JavaCodeGenerator#generate(MetaGrammar, boolean)].
   private static void assertCompilesSuccessfully(String className, String code) throws IOException {
     var compiler = ToolProvider.getSystemJavaCompiler();
     assertNotNull(compiler);
