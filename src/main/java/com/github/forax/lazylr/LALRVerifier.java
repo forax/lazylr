@@ -15,7 +15,6 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.Set;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 import static java.util.stream.Collectors.joining;
 import static java.util.stream.Collectors.toMap;
@@ -176,14 +175,15 @@ public final class LALRVerifier {
 
     for (var production : grammar.productions()) {
       // Collect distinct non-terminals in the body
-      var bodyNonTerminals = production.body().stream()
-          .filter(s -> s instanceof NonTerminal)
-          .map(s -> (NonTerminal) s)
-          .collect(Collectors.toSet());
-
-      for (var nonTerminal : bodyNonTerminals) {
-        dependents.computeIfAbsent(nonTerminal, _ -> new ArrayList<>()).add(production);
+      var bodyNonTerminals = new HashSet<NonTerminal>();
+      for (var symbol : production.body()) {
+        if (symbol instanceof NonTerminal nonTerminal && bodyNonTerminals.add(nonTerminal)) {
+          dependents
+              .computeIfAbsent(nonTerminal, _ -> new ArrayList<>())
+              .add(production);
+        }
       }
+
       remainingDepsCount.put(production, bodyNonTerminals.size());
 
       // Seed: if no non-terminals in body, head is immediately productive
