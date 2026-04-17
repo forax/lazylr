@@ -124,6 +124,12 @@ public class JavascriptGrammarTest {
           //  Precedence (lowest → highest, matching JS operator table)
           // ============================================================
           precedence {
+            // Prefer shifting after keywords in ambiguous contexts (async/yield/import/etc.)
+            right: Break, Case, Catch, Class, Const, Continue, Debugger, Default, Delete, Do, Else, Enum, Export, Extends, Finally, For, Function_, If, Import, In, Instanceof, New, Return, Super, Switch, This, Throw, Try, Typeof, Var, Void, While, With, Yield, YieldStar, Async, Await, StrictLet, NonStrictLet, From, As, Of, Static, Implements, Private, Public, Interface, Package, Protected
+            // Dangling-else handling: prefer shifting Else over reducing bare If-statement.
+            right: IF_NO_ELSE
+            right: Else
+          
             right: '='
             right: op_muleq, op_diveq, op_modeq, op_addeq, op_subeq
             right: op_shleq, op_shreq, op_ushreq, op_andeq, op_xoreq, op_oreq, op_poweq, op_nullisheq
@@ -285,7 +291,7 @@ public class JavascriptGrammarTest {
             ExpressionStatement : ExpressionSequence Eos
           
             IfStatement : If '(' ExpressionSequence ')' Statement Else Statement
-            IfStatement : If '(' ExpressionSequence ')' Statement
+            IfStatement : If '(' ExpressionSequence ')' Statement          %prec IF_NO_ELSE
           
             // -------------------------------------------------------
             //  Iteration
@@ -344,7 +350,7 @@ public class JavascriptGrammarTest {
             CaseClauses : CaseClause
             CaseClauses : CaseClauses CaseClause
           
-            CaseClause : Case ExpressionSequence ':' StatementList
+            CaseClause : Case ExpressionSequence ':' StatementList         %prec Case
             CaseClause : Case ExpressionSequence ':'
           
             DefaultClause : Default ':' StatementList
