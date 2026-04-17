@@ -868,8 +868,8 @@ The start position of the current terminal during `onShift` is available via
 
 ### `Evaluator<V>`
 
-`Evaluator` is a functional interface that builds a result of type `V` while parsing.
-It has two methods:
+`Evaluator` is a two-method interface that builds a result of type `V` while parsing.
+It defines:
 
 ```java
 V evaluate(Terminal terminal);                         // called on each shift
@@ -1376,8 +1376,9 @@ lazylr grammar.txt
 ```
 
 Parses and validates the grammar (find invalid rules and conflicts).
-On conflict, prints the LALR(1) automaton to `stderr` and exits with code 2.
 On success, exits silently with code 0.
+On failure, prints the error messages to `stderr` and exits with code 2.
+On conflict, prints the LALR(1) automaton to `stderr` and exits with code 2.
 
 Mode **Unconditional automaton printing:**
 
@@ -1387,7 +1388,8 @@ lazylr --print grammar.txt
 
 Validates the grammar and always prints the full LALR(1) automaton to `stdout`.
 Invalid rules and conflicts are additionally reported to `stderr`.
-Exit code 0 if the grammar is well-formed, 2 if problems remain.
+
+Exit code 0 on success, 2 if grammar validation fails.
 
 Mode **Java source generation:**:
 
@@ -1399,10 +1401,9 @@ Validates the grammar, then emits to `stdout` a Java source snippet containing
 - a Visitor creating an abstract syntax tree and
 - a static `createGrammar()` method.
 
-The `createGrammar()` method reconstructs the exact same `MetaGrammar`
-programmatically.
+The `createGrammar()` method reconstructs the exact same `MetaGrammar` programmatically.
 
-Exit code 0 on success, 2 on conflicts.
+Exit code 0 on success, 2 if grammar validation fails.
 
 Mode **Parse and print derivation tree:**
 
