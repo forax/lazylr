@@ -14,7 +14,7 @@ with the agility of a modern library.
 * **Developer Velocity:**
   Built for a fast feedback loop with no code-gen steps.
 * **Developer Comfort:**
-  Remove grammar ambiguities with a simple precedence map (no complex restructuring),
+  Resolve grammar ambiguities with a simple precedence map (no complex restructuring),
   contextual lexing (the lexer uses the parser’s current state to decide which token regexes are allowed to match),
   and type-checked visitors for specifying evaluation.
 * **Built for Modern Java:**
@@ -114,8 +114,9 @@ so `- 3 * 4` correctly parses as `(-3) * 4`.
 
 ### Check if your Grammar is Correct
 
-Call `verify()` to check whether the grammar is LALR(1). If there are unresolved conflicts,
-they are described on stderr along with the full LALR automaton to help you diagnose them.
+Call `verify()` to check whether the grammar is well-formed and LALR(1).
+If there are unresolved conflicts, they are reported to stderr along with the full LALR automaton
+to help you diagnose them.
 ```java
 mg.verify();
 ```
@@ -229,8 +230,8 @@ java -jar lazylr.jar [--generate|--print] <grammar> [input]
 java -jar lazylr.jar grammar.txt
 ```
 
-Validates the grammar for LALR(1) conflicts. If conflicts are found, the LALR(1) automaton
-is printed to stderr to help diagnose them.
+Validates the grammar for unproductive, unreachable non-terminals and LALR(1) conflicts.
+If conflicts are found, the LALR(1) automaton is printed to stderr to help diagnose them.
 
 **Print LALR automaton unconditionally**
 ```bash
@@ -238,7 +239,7 @@ java -jar lazylr.jar --print grammar.txt
 ```
 
 Validates the grammar and always prints the full LALR(1) automaton to stdout,
-whether or not conflicts are present.
+whether conflicts are present.
 
 **Parse an input file and show the derivation tree**
 ```bash
