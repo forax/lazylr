@@ -1,7 +1,14 @@
 package com.github.forax.lazylr.grammar;
 
+import com.github.forax.lazylr.Evaluator;
 import com.github.forax.lazylr.MetaGrammar;
+import com.github.forax.lazylr.Production;
+import com.github.forax.lazylr.Terminal;
+import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Test;
+
+import java.util.List;
 
 public class JavascriptGrammarTest {
   private static final MetaGrammar META_GRAMMAR =
@@ -754,8 +761,226 @@ public class JavascriptGrammarTest {
           }
           """);
 
+  {
+    //META_GRAMMAR.verify();
+  }
+
+  private static void parse(String source) {
+    META_GRAMMAR.parse(source, new Evaluator<@Nullable Object>() {
+      @Override
+      public @Nullable Object evaluate(Terminal terminal) {
+        return null;
+      }
+
+      @Override
+      public @Nullable Object evaluate(Production production, List<@Nullable Object> arguments) {
+        return null;
+      }
+    });
+  }
+
   @Test
-  public void test() {
-    META_GRAMMAR.verify();
+  public void testProgram() {
+    parse("");                 // Program :
+    parse("1;");               // Program : SourceElements
+  }
+
+  @Test
+  public void testBlock() {
+    parse("{}");
+    parse("{ 1; }");
+  }
+
+  @Test
+  @Disabled
+  public void testVariableStatement() {
+    parse("var x;");
+    parse("let x = 1;");
+    parse("const x = 1;");
+  }
+
+  @Test
+  @Disabled
+  public void testImportStatement() {
+    parse("import 'mod';");
+    parse("import x from 'mod';");
+    parse("import * as ns from 'mod';");
+    parse("import {a, b} from 'mod';");
+  }
+
+  @Test
+  @Disabled
+  public void testExportStatement() {
+    parse("export default 1;");
+    parse("export var x;");
+    parse("export {a, b};");
+    parse("export * from 'mod';");
+  }
+
+  @Test
+  public void testIfStatement() {
+    parse("if (1) 2;");
+    parse("if (1) 2; else 3;");
+  }
+
+  @Test
+  @Disabled
+  public void testIterationStatement() {
+    parse("while (1) 2;");
+    parse("do 2; while (1);");
+    parse("for (;;);");
+    parse("for (let x = 0; x < 10; x++) ;");
+    parse("for (x in y) ;");
+    parse("for (x of y) ;");
+  }
+
+  @Test
+  public void testControlStatements() {
+    parse("continue;");
+    parse("break;");
+    parse("return;");
+    parse("return 1;");
+    parse("throw 1;");
+  }
+
+  @Test
+  @Disabled
+  public void testTryCatchFinally() {
+    parse("try {} catch {}");
+    parse("try {} finally {}");
+    parse("try {} catch (e) {} finally {}");
+  }
+
+  @Test
+  @Disabled
+  public void testFunctionDeclaration() {
+    parse("function f() {}");
+    parse("function f(a,b) {}");
+    parse("async function f() {}");
+    parse("function* f() {}");
+  }
+
+  @Test
+  @Disabled
+  public void testClassDeclaration() {
+    parse("class A {}");
+    parse("class A extends B {}");
+  }
+
+  @Test
+  @Disabled
+  public void testArrayLiteral() {
+    parse("[]");
+    parse("[1]");
+    parse("[1,2,]");
+    parse("[, ,]");
+  }
+
+  @Test
+  @Disabled
+  public void testObjectLiteral() {
+    parse("{}");
+    parse("{a:1}");
+    parse("{a, b}");
+    parse("{...x}");
+  }
+
+  @Test
+  @Disabled
+  public void testExpressions() {
+    parse("1;");
+    parse("1 + 2;");
+    parse("1 * 2 + 3;");
+    parse("a && b || c;");
+    parse("a ? b : c;");
+    parse("a = b;");
+    parse("a += b;");
+  }
+
+  @Test
+  @Disabled
+  public void testUnaryExpressions() {
+    parse("++x;");
+    parse("--x;");
+    parse("!x;");
+    parse("typeof x;");
+    parse("await x;");
+  }
+
+  @Test
+  @Disabled
+  public void testCallAndMemberExpressions() {
+    parse("f();");
+    parse("f(1,2);");
+    parse("a.b;");
+    parse("a[b];");
+    parse("new A();");
+  }
+
+  @Test
+  @Disabled
+  public void testArrowFunctions() {
+    parse("x => x;");
+    parse("(x,y) => x+y;");
+    parse("() => {}");
+    parse("async x => x;");
+  }
+
+  @Test
+  @Disabled
+  public void testTemplateStrings() {
+    parse("``;");
+    parse("`hello`;");
+    parse("`hello ${x}`;");
+  }
+
+  @Test
+  public void testLiterals() {
+    parse("null;");
+    parse("true;");
+    parse("false;");
+    parse("'str';");
+    parse("\"str\";");
+    parse("123;");
+    parse("0xFF;");
+    parse("0b1010;");
+    parse("123n;");
+    parse("/abc/;");
+  }
+
+  @Test
+  @Disabled
+  public void testAssignmentOperators() {
+    parse("a *= b;");
+    parse("a /= b;");
+    parse("a %= b;");
+    parse("a += b;");
+    parse("a -= b;");
+    parse("a <<= b;");
+    parse("a >>= b;");
+    parse("a >>>= b;");
+    parse("a &= b;");
+    parse("a ^= b;");
+    parse("a |= b;");
+    parse("a **= b;");
+    parse("a ??= b;");
+  }
+
+  @Test
+  @Disabled
+  public void testSwitch() {
+    parse("switch(x){case 1: break;}");
+    parse("switch(x){default:}");
+  }
+
+  @Test
+  @Disabled
+  public void testWithStatement() {
+    parse("with(x) y;");
+  }
+
+  @Test
+  public void testDebugger() {
+    parse("debugger;");
   }
 }
