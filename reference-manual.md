@@ -1428,11 +1428,11 @@ Terminal nodes are shown as `[name=value]` when name ≠ value, or `[name]` when
 
 ### Exit codes
 
-| Code | Meaning                                                       |
-|------|---------------------------------------------------------------|
-| 0    | Success                                                       |
-| 1    | CLI error, missing/unreadable file, or parse failure on input |
-| 2    | Grammar has unresolved LALR(1) conflicts                      |
+| Code | Meaning                                                             |
+|------|---------------------------------------------------------------------|
+| 0    | Success                                                             |
+| 1    | CLI error, missing/unreadable file, or parse failure on input       |
+| 2    | Grammar validation failed (invalid grammar or unresolved conflicts) |
 
 ### Constraints
 
