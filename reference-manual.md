@@ -278,8 +278,7 @@ construction for the productions it exercises, while productions for rarely used
 clauses never generate states at all unless the parser actually encounters them.
 
 The practical consequence is that a call to `Parser.createParser(grammar, precedenceMap)`
-is not expensive regardless of grammar size.
-The startup cost is proportional to what the inputs actually need, not to the total grammar.
+is not expensive (but the cost is still linear to the number of productions in the grammar).
 
 ### How the parser decides: the action table
 
