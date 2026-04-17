@@ -1424,15 +1424,16 @@ Validates the grammar, lexes and parses the input file, then prints the parse tr
 
 Terminal nodes are shown as `[name=value]` when name ≠ value, or `[name]` when name == value
 (e.g., operator literals). Non-terminal nodes are shown as `<Name>`. Exit code 0 on success,
-1 on parse failure.
+3 on parse failure.
 
 ### Exit codes
 
 | Code | Meaning                                                             |
 |------|---------------------------------------------------------------------|
 | 0    | Success                                                             |
-| 1    | CLI error, missing/unreadable file, or parse failure on input       |
+| 1    | CLI error, missing/unreadable file                                  |
 | 2    | Grammar validation failed (invalid grammar or unresolved conflicts) |
+| 3    | Parse failure on input                                              |
 
 ### Constraints
 

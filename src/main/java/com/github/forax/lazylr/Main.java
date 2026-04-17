@@ -200,7 +200,7 @@ final class Main {
       node = parser.parse(lexer.tokenize(inputText), evaluator);
     } catch (ParsingException e) {
       System.err.println("Error while parsing the input file\n" + e.getMessage());
-      System.exit(1);
+      System.exit(3);
       return;
     }
 
