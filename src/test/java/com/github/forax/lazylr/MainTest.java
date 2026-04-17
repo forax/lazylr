@@ -285,7 +285,7 @@ public class MainTest {
   public class InputParsingErrors {
 
     @Test
-    public void inputThatFailsToParseGrammarShouldExit1(@TempDir Path tempDir) throws Exception {
+    public void inputThatFailsToParseGrammarShouldExit3(@TempDir Path tempDir) throws Exception {
       var grammar = tempDir.resolve("grammar.txt");
       var input = tempDir.resolve("input.txt");
       Files.writeString(grammar, """
@@ -304,12 +304,12 @@ public class MainTest {
       Files.writeString(input, "1++2");
 
       var result = runProcess(tempDir, grammar, input);
-      assertEquals(1, result.exitCode());
+      assertEquals(3, result.exitCode());
       assertTrue(result.stderr.contains("input"));
     }
 
     @Test
-    public void inputWithUnrecognizedTokenShouldExit1(@TempDir Path tempDir) throws Exception {
+    public void inputWithUnrecognizedTokenShouldExit3(@TempDir Path tempDir) throws Exception {
       var grammar = tempDir.resolve("grammar.txt");
       var input = tempDir.resolve("input.txt");
       Files.writeString(grammar, """
@@ -328,7 +328,7 @@ public class MainTest {
       Files.writeString(input, "1+$2");
 
       var result = runProcess(tempDir, grammar, input);
-      assertEquals(1, result.exitCode());
+      assertEquals(3, result.exitCode());
       assertTrue(result.stderr.contains("input"));
     }
   }
