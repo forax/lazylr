@@ -13,7 +13,7 @@ import org.junit.jupiter.api.Test;
 
 import static org.junit.jupiter.api.Assertions.assertThrows;
 
-public final class PosgreSQLGrammarTest {
+public final class PostgreSQLGrammarTest {
 
   // -------------------------------------------------------
   //  Grammar construction — package-visible so additional
