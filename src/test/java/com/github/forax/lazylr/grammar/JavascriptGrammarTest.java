@@ -158,6 +158,7 @@ public class JavascriptGrammarTest {
             left:  op_inc, op_dec
             left:  '.', op_optchain, '['
             left:  New
+            left: '('
           }
           
           // ============================================================
@@ -292,7 +293,7 @@ public class JavascriptGrammarTest {
             // -------------------------------------------------------
             //  Simple statements
             // -------------------------------------------------------
-            EmptyStatement : ';'
+            EmptyStatement : Eos
           
             // Note: ANTLR's {this.notOpenBraceAndNotFunction()}? predicate must be
             // enforced in the evaluator; grammar cannot express it.
@@ -530,7 +531,6 @@ public class JavascriptGrammarTest {
             SingleExpression : SingleExpression '.' '#' IdentifierName
             SingleExpression : SingleExpression '.' IdentifierName
             // new
-            SingleExpression : New Identifier Arguments
             SingleExpression : New SingleExpression Arguments
             SingleExpression : New SingleExpression
             SingleExpression : New '.' Identifier
