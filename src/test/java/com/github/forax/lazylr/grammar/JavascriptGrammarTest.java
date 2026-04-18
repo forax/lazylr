@@ -85,7 +85,7 @@ public class JavascriptGrammarTest {
             Protected:   /protected/
           
             // ----- Identifiers -----
-            Identifier: /[A-Za-z_$][A-Za-z0-9_$]*/
+            Ident: /[A-Za-z_$][A-Za-z0-9_$]*/
           
             // ----- Multi-character operators (must precede single-char) -----
             op_stricteq:    /===/
@@ -363,7 +363,7 @@ public class JavascriptGrammarTest {
             DefaultClause : Default ':' StatementList
             DefaultClause : Default ':'
           
-            LabelledStatement : Identifier ':' Statement
+            LabelledStatement : Ident ':' Statement
           
             // Note: {this.notLineTerminator()}? must be enforced in evaluator
             ThrowStatement : Throw ExpressionSequence Eos
@@ -429,7 +429,7 @@ public class JavascriptGrammarTest {
             ClassElementName : PropertyName
             ClassElementName : PrivateIdentifier
           
-            PrivateIdentifier : '#' IdentifierName
+            PrivateIdentifier : '#' Ident
           
             FormalParameterList : FormalParameterArgs LastFormalParameterArg
             FormalParameterList : FormalParameterArgs ','
@@ -658,11 +658,11 @@ public class JavascriptGrammarTest {
             TemplateStringLiteral : BackTick TemplateStringAtoms BackTick
             TemplateStringLiteral : BackTick BackTick
           
-            TemplateStringAtoms : TemplateStringAtom
-            TemplateStringAtoms : TemplateStringAtoms TemplateStringAtom
+            TemplateStringAtoms : TemplateStringPart
+            TemplateStringAtoms : TemplateStringAtoms TemplateStringPart
           
-            TemplateStringAtom : TemplateStringAtom
-            TemplateStringAtom : TemplateStringStartExpression SingleExpression TemplateCloseBrace
+            TemplateStringPart : TemplateStringAtom
+            TemplateStringPart : TemplateStringStartExpression SingleExpression TemplateCloseBrace
           
             NumericLiteral : DecimalLiteral
             NumericLiteral : HexIntegerLiteral
@@ -689,7 +689,7 @@ public class JavascriptGrammarTest {
             IdentifierName : Identifier
             IdentifierName : ReservedWord
           
-            Identifier : Identifier
+            Identifier : Ident
             Identifier : NonStrictLet
             Identifier : Async
             Identifier : As
@@ -800,7 +800,6 @@ public class JavascriptGrammarTest {
   }
 
   @Test
-  @Disabled
   public void testImportStatement() {
     parse("import 'mod';");
     parse("import x from 'mod';");
@@ -824,7 +823,6 @@ public class JavascriptGrammarTest {
   }
 
   @Test
-  @Disabled
   public void testIterationStatement() {
     parse("while (1) 2;");
     parse("do 2; while (1);");
@@ -844,7 +842,6 @@ public class JavascriptGrammarTest {
   }
 
   @Test
-  @Disabled
   public void testTryCatchFinally() {
     parse("try {} catch {}");
     parse("try {} finally {}");
@@ -852,7 +849,6 @@ public class JavascriptGrammarTest {
   }
 
   @Test
-  @Disabled
   public void testFunctionDeclaration() {
     parse("function f() {}");
     parse("function f(a,b) {}");
@@ -861,7 +857,6 @@ public class JavascriptGrammarTest {
   }
 
   @Test
-  @Disabled
   public void testClassDeclaration() {
     parse("class A {}");
     parse("class A extends B {}");
@@ -886,7 +881,6 @@ public class JavascriptGrammarTest {
   }
 
   @Test
-  @Disabled
   public void testExpressions() {
     parse("1;");
     parse("1 + 2;");
@@ -898,7 +892,6 @@ public class JavascriptGrammarTest {
   }
 
   @Test
-  @Disabled
   public void testUnaryExpressions() {
     parse("++x;");
     parse("--x;");
@@ -927,7 +920,6 @@ public class JavascriptGrammarTest {
   }
 
   @Test
-  @Disabled
   public void testTemplateStrings() {
     parse("``;");
     parse("`hello`;");
@@ -949,7 +941,6 @@ public class JavascriptGrammarTest {
   }
 
   @Test
-  @Disabled
   public void testAssignmentOperators() {
     parse("a *= b;");
     parse("a /= b;");
@@ -967,14 +958,12 @@ public class JavascriptGrammarTest {
   }
 
   @Test
-  @Disabled
   public void testSwitch() {
     parse("switch(x){case 1: break;}");
     parse("switch(x){default:}");
   }
 
   @Test
-  @Disabled
   public void testWithStatement() {
     parse("with(x) y;");
   }
