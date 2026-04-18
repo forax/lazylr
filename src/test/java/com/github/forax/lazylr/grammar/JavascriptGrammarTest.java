@@ -253,10 +253,10 @@ public class JavascriptGrammarTest {
             // -------------------------------------------------------
             //  Export
             // -------------------------------------------------------
-            ExportStatement : Export Default ExportFromBlock Eos
-            ExportStatement : Export ExportFromBlock Eos
-            ExportStatement : Export Default Declaration Eos
-            ExportStatement : Export Declaration Eos
+            ExportStatement : Export Default ExportFromBlock
+            ExportStatement : Export ExportFromBlock
+            ExportStatement : Export Default Declaration
+            ExportStatement : Export Declaration
             ExportStatement : Export Default SingleExpression Eos
           
             ExportFromBlock : ImportNamespace ImportFrom Eos
@@ -801,7 +801,6 @@ public class JavascriptGrammarTest {
   }
 
   @Test
-  @Disabled
   public void testExportStatement() {
     parse("export default 1;");
     parse("export var x;");
