@@ -142,8 +142,8 @@ final class LRTransitionEngine {
       }
     }
     /// Report an error
-    record Error(ErrorKind kind) implements Action {}
-    enum ErrorKind { REDUCE_REDUCE, SHIFT_REDUCE, PARSE }
+    record Error(ErrorKind kind, String message) implements Action {}
+    enum ErrorKind { CONFLICT, PARSE }
   }
 
   private final Grammar grammar;
@@ -195,7 +195,7 @@ final class LRTransitionEngine {
           reduceItem = item;
           continue;
         }
-        return new Action.Error(Action.ErrorKind.REDUCE_REDUCE);
+        return new Action.Error(Action.ErrorKind.CONFLICT, "reduce/reduce conflict");
       }
     }
 
@@ -212,7 +212,8 @@ final class LRTransitionEngine {
             ? new Action.Reduce(production)
             : new Action.Shift(shiftState);
       }
-      return new Action.Error(Action.ErrorKind.SHIFT_REDUCE);
+      return new Action.Error(Action.ErrorKind.CONFLICT,
+          "shift/reduce " + production.name() + " conflict");
     }
     if (reduceItem != null) {
       return new Action.Reduce(reduceItem.production());
@@ -220,7 +221,7 @@ final class LRTransitionEngine {
     if (shiftState != null) {
       return new Action.Shift(shiftState);
     }
-    return new Action.Error(Action.ErrorKind.PARSE);
+    return new Action.Error(Action.ErrorKind.PARSE, "");
   }
 
   /// Decides between a shift and a reduction based on precedence rules.
