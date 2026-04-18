@@ -140,6 +140,7 @@ public class JavascriptGrammarTest {
             right: '='
             right: op_muleq, op_diveq, op_modeq, op_addeq, op_subeq
             right: op_shleq, op_shreq, op_ushreq, op_andeq, op_xoreq, op_oreq, op_poweq, op_nullisheq
+            right: ARROW_BODY
             right: '?'
             left:  op_logor
             left:  op_logand
@@ -623,10 +624,10 @@ public class JavascriptGrammarTest {
             AnonymousFunction : ArrowFunctionParameters '=>' ArrowFunctionBody
           
             ArrowFunctionParameters : PropertyName
-            ArrowFunctionParameters : '(' FormalParameterList ')'
+            ArrowFunctionParameters : '(' ExpressionSequence ')'
             ArrowFunctionParameters : '(' ')'
           
-            ArrowFunctionBody : SingleExpression
+            ArrowFunctionBody : SingleExpression   %prec ARROW_BODY
             ArrowFunctionBody : FunctionBody
           
             AssignmentOperator : op_muleq
@@ -678,8 +679,8 @@ public class JavascriptGrammarTest {
             //  Getter / Setter
             //  The identifier terminals should be named "get"/"set".
             // -------------------------------------------------------
-            Getter : Identifier ClassElementName
-            Setter : Identifier ClassElementName
+            Getter : 'get' ClassElementName
+            Setter : 'set' ClassElementName
           
             // -------------------------------------------------------
             //  Identifier names (terminals + keywords)
@@ -755,7 +756,7 @@ public class JavascriptGrammarTest {
           """);
 
   {
-    //META_GRAMMAR.verify();
+    // META_GRAMMAR.verify();
   }
 
   private static void parse(String source) {
@@ -906,7 +907,7 @@ public class JavascriptGrammarTest {
   public void testArrowFunctions() {
     parse("x => x;");
     parse("(x,y) => x+y;");
-    parse("() => {}");
+    parse("() => {};");
     parse("async x => x;");
   }
 
