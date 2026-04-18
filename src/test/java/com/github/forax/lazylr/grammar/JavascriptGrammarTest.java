@@ -450,24 +450,23 @@ public class JavascriptGrammarTest {
             // -------------------------------------------------------
             //  Array & Object Literals
             // -------------------------------------------------------
+            ArrayLiteral : '[' ']'
+            ArrayLiteral : '[' Elision ']'
             ArrayLiteral : '[' ElementList ']'
+            ArrayLiteral : '[' ElementList ',' ']'
+            ArrayLiteral : '[' ElementList Elision ']'
           
-            // ElementList allows leading/trailing/consecutive commas
-            ElementList : CommaList
-            ElementList : CommaList ArrayElement CommaAndElementList
-            ElementList : ArrayElement CommaAndElementList
-            ElementList : ArrayElement
-            ElementList :
+            Elision : ','
+            Elision : Elision ','
           
-            CommaList : ','
-            CommaList : CommaList ','
-          
-            CommaAndElementList : CommaList ArrayElement CommaAndElementList
-            CommaAndElementList : CommaList ArrayElement
-            CommaAndElementList : CommaList
-          
-            ArrayElement : op_ellipsis SingleExpression
-            ArrayElement : SingleExpression
+            ElementList : SingleExpression
+            ElementList : op_ellipsis SingleExpression
+            ElementList : Elision SingleExpression
+            ElementList : Elision op_ellipsis SingleExpression
+            ElementList : ElementList ',' SingleExpression
+            ElementList : ElementList ',' op_ellipsis SingleExpression
+            ElementList : ElementList Elision SingleExpression
+            ElementList : ElementList Elision op_ellipsis SingleExpression
           
             ObjectLiteral : '{' '}'
             ObjectLiteral : '{' PropertyAssignmentList '}'
@@ -677,8 +676,7 @@ public class JavascriptGrammarTest {
           
             // -------------------------------------------------------
             //  Getter / Setter
-            //  Note: ANTLR uses {this.n("get")}? / {this.n("set")}? semantic predicates.
-            //  In LazyLR these are just identifier terminals named "get"/"set".
+            //  The identifier terminals should be named "get"/"set".
             // -------------------------------------------------------
             Getter : Identifier ClassElementName
             Setter : Identifier ClassElementName
@@ -751,12 +749,7 @@ public class JavascriptGrammarTest {
             Keyword : As
             Keyword : Of
           
-            // -------------------------------------------------------
-            //  End of statement (simplified — semantic cases not expressible)
-            //  The original eos rule uses {this.lineTerminatorAhead()}? and
-            //  {this.closeBrace()}? which require lookahead outside the grammar.
-            //  Only the syntactic cases are expressed here.
-            // -------------------------------------------------------
+            //  End of statement (no implicit semicolon, should be managed by the lexer)
             Eos : ';'
           }
           """);
@@ -792,7 +785,6 @@ public class JavascriptGrammarTest {
   }
 
   @Test
-  @Disabled
   public void testVariableStatement() {
     parse("var x;");
     parse("let x = 1;");
@@ -865,19 +857,18 @@ public class JavascriptGrammarTest {
   @Test
   @Disabled
   public void testArrayLiteral() {
-    parse("[]");
-    parse("[1]");
-    parse("[1,2,]");
-    parse("[, ,]");
+    parse("var a = [];");
+    parse("var a = [1];");
+    parse("var a = [1,2,];");
+    parse("var a = [, ,];");
   }
 
   @Test
-  @Disabled
   public void testObjectLiteral() {
-    parse("{}");
-    parse("{a:1}");
-    parse("{a, b}");
-    parse("{...x}");
+    parse("var a = {};");
+    parse("var a = {a:1};");
+    parse("var a = {a, b};");
+    parse("var a = {...x};");
   }
 
   @Test
