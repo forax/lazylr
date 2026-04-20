@@ -1289,7 +1289,7 @@ public final class MetaGrammarParserTest {
   }
 
   @Test
-  public void reduceReduceConflictWithAHigherShiftStillThrows() {
+  public void reduceReduceConflictWithAHigherLevelWins() {
     var metaGrammar = MetaGrammar.load("""
       precedence {
         left: aId
@@ -1299,7 +1299,6 @@ public final class MetaGrammarParserTest {
       grammar {
         S: A 'id'
         S: B 'id'
-        S: 'id' 'id'
         A: id         %prec aId
         B: id         %prec bId
       }
@@ -1312,11 +1311,25 @@ public final class MetaGrammarParserTest {
 
     var parser = Parser.createParser(grammar, precedence);
 
-    assertThrows(ParsingException.class, () ->
-        parser.parse(List.of(id, id).iterator(), new ParserListener() {
-          @Override public void onShift(Terminal token) {}
-          @Override public void onReduce(Production production) {}
-        }));
+    var result = new StringBuilder();
+    parser.parse(List.of(id, id).iterator(), new ParserListener() {
+      @Override
+      public void onShift(Terminal token) {
+        result.append("shift ").append(token.name()).append('\n');
+      }
+
+      @Override
+      public void onReduce(Production production) {
+        result.append("reduce " + production.name()).append('\n');
+      }
+    });
+    assertEquals("""
+        shift id
+        reduce B : id
+        shift id
+        reduce S : B id
+        reduce S' : S
+        """, result.toString());
   }
 
 

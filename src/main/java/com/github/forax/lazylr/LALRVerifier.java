@@ -752,11 +752,31 @@ public final class LALRVerifier {
       }
     }
 
-    // Several reduces, it's a reduce/reduce conflict
-    if (reduces.size() > 1) {
-      return new Result(actions, null);
+    // Several reduces
+    Reduce theReduce;
+    switch (reduces.size()) {
+      case 0 -> theReduce = null;
+      case 1 -> theReduce = reduces.getFirst();
+      default -> {
+        theReduce = reduces.getFirst();
+        var theReducePrec = precedenceMap.get(theReduce.production);
+        for (int i = 1; i < reduces.size(); i++) {
+          var reduce = reduces.get(i);
+          var reducePrec = precedenceMap.get(reduce.production);
+          if (theReducePrec != null && reducePrec != null) {
+            if (theReducePrec.level() > reducePrec.level()) {
+              continue;
+            }
+            if (theReducePrec.level() < reducePrec.level()) {
+              theReduce = reduce;
+              theReducePrec = reducePrec;
+              continue;
+            }
+          }
+          return new Result(actions, null);  // reduce/reduce conflict
+        }
+      }
     }
-    var theReduce = reduces.isEmpty() ? null : reduces.getFirst();
 
     // Check if it's a shift/reduce conflict?
     if (theShift != null && theReduce != null) {
@@ -775,9 +795,19 @@ public final class LALRVerifier {
     return new Result(actions, theReduce);
   }
 
-  private static Action resolveShiftReduceConflict(
-      Action shiftAction, Action reduceAction,
-      Precedence terminalPrec, Precedence productionPrec) {
+  private static @Nullable Action resolveReduceReduceConflict(Reduce reduce1, Reduce reduce2,
+                                                    Precedence reduce1Prec, Precedence reduce2Prec) {
+    if (reduce1Prec.level() > reduce2Prec.level()) {
+      return reduce1;
+    }
+    if (reduce1Prec.level() < reduce2Prec.level()) {
+      return reduce2;
+    }
+    return null;
+  }
+
+  private static Action resolveShiftReduceConflict(Action shiftAction, Action reduceAction,
+                                                   Precedence terminalPrec, Precedence productionPrec) {
     if (terminalPrec.level() > productionPrec.level()) {
       return shiftAction;
     }

@@ -195,7 +195,19 @@ final class LRTransitionEngine {
           reduceItem = item;
           continue;
         }
-        return new Action.Error(Action.ErrorKind.CONFLICT, "reduce/reduce conflict");
+        var itemPrec = precedenceMap.get(item.production);
+        var reduceItemPrec = precedenceMap.get(reduceItem.production);
+        if (itemPrec != null && reduceItemPrec != null) {
+          if (itemPrec.level() < reduceItemPrec.level()) {
+            continue;
+          }
+          if (itemPrec.level() > reduceItemPrec.level()) {
+            reduceItem = item;
+            continue;
+          }
+        }
+        return new Action.Error(Action.ErrorKind.CONFLICT, "reduce/reduce conflict " +
+            reduceItem.production.name() + " vs " + item.production.name());
       }
     }
 
@@ -213,7 +225,7 @@ final class LRTransitionEngine {
             : new Action.Shift(shiftState);
       }
       return new Action.Error(Action.ErrorKind.CONFLICT,
-          "shift/reduce " + production.name() + " conflict");
+          "shift/reduce conflict " + production.name());
     }
     if (reduceItem != null) {
       return new Action.Reduce(reduceItem.production());

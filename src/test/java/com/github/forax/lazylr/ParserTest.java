@@ -1133,7 +1133,7 @@ public final class ParserTest {
   }
 
   @Test
-  public void reduceReduceConflictWithAHigherShiftStillThrows() {
+  public void reduceReduceConflictWithAHigherLevelWins() {
     var S  = new NonTerminal("S");
     var A  = new NonTerminal("A");
     var B  = new NonTerminal("B");
@@ -1144,7 +1144,6 @@ public final class ParserTest {
     var grammar = new Grammar(S, List.of(
               new Production(S, List.of(A, id)),
               new Production(S, List.of(B, id)),
-              new Production(S, List.of(id, id)),
         aId = new Production(A, List.of(id)),
         bId = new Production(B, List.of(id))
     ));
@@ -1157,11 +1156,25 @@ public final class ParserTest {
 
     var parser = Parser.createParser(grammar, precedenceMap);
 
-    assertThrows(ParsingException.class, () ->
-        parser.parse(List.of(id, id).iterator(), new ParserListener() {
-          @Override public void onShift(Terminal token) {}
-          @Override public void onReduce(Production production) {}
-        }));
+    var result = new StringBuilder();
+    parser.parse(List.of(id, id).iterator(), new ParserListener() {
+      @Override
+      public void onShift(Terminal token) {
+        result.append("shift ").append(token.name()).append('\n');
+      }
+
+      @Override
+      public void onReduce(Production production) {
+        result.append("reduce " + production.name()).append('\n');
+      }
+    });
+    assertEquals("""
+        shift id
+        reduce B : id
+        shift id
+        reduce S : B id
+        reduce S' : S
+        """, result.toString());
   }
 
   @Test
