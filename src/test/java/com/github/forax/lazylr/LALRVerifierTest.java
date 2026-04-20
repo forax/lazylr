@@ -178,6 +178,32 @@ public final class LALRVerifierTest {
   }
 
   @Test
+  public void verifyReduceReduceHigherLevel() {
+    // S -> A id, S -> B id, A -> id, B -> id
+    var S  = new NonTerminal("S");
+    var A  = new NonTerminal("A");
+    var B  = new NonTerminal("B");
+    var id = new Terminal("id");
+
+    Production aId, bId;
+
+    var grammar = new Grammar(S, List.of(
+        new Production(S, List.of(A, id)),
+        new Production(S, List.of(B, id)),
+        aId = new Production(A, List.of(id)),
+        bId = new Production(B, List.of(id))
+    ));
+
+    var precedenceMap = Map.of(
+        aId, new Precedence(1, Precedence.Associativity.LEFT),
+        bId, new Precedence(2, Precedence.Associativity.LEFT),
+        id, new Precedence(3, Precedence.Associativity.LEFT)
+    );
+
+    LALRVerifier.verify(grammar, precedenceMap, ERROR_REPORTER);
+  }
+
+  @Test
   public void verifyEmptyProduction() {
     // S -> A num
     // A -> ε | "+"
@@ -645,6 +671,79 @@ public final class LALRVerifierTest {
            reduce( E : E * E          ) on [$, *, +]
         
         """, output);
+  }
+
+  @Test
+  public void verifyAndDumpReduceReduceHigherLevel() {
+    // S -> A id, S -> B id, A -> id, B -> id
+    var S  = new NonTerminal("S");
+    var A  = new NonTerminal("A");
+    var B  = new NonTerminal("B");
+    var id = new Terminal("id");
+
+    Production aId, bId;
+
+    var grammar = new Grammar(S, List.of(
+        new Production(S, List.of(A, id)),
+        new Production(S, List.of(B, id)),
+        aId = new Production(A, List.of(id)),
+        bId = new Production(B, List.of(id))
+    ));
+
+    var precedenceMap = Map.of(
+        aId, new Precedence(1, Precedence.Associativity.LEFT),
+        bId, new Precedence(2, Precedence.Associativity.LEFT),
+        id, new Precedence(3, Precedence.Associativity.LEFT)
+    );
+
+    var output = verifyAndDump(grammar, precedenceMap);
+
+    assertEquals("""
+       ── State 0 ─────────────────────────────────
+          S' :  • S
+          S :   • A id
+          S :   • B id
+          A :   • id
+          B :   • id
+         ······································
+          goto( id                   ) → 4
+          goto( A                    ) → 2
+          goto( B                    ) → 3
+          goto( S                    ) → 1
+       
+       ── State 1 ─────────────────────────────────
+          S' :  S •
+         ······································
+          accept()                     on [$]
+       
+       ── State 2 ─────────────────────────────────
+          S :  A • id
+         ······································
+          goto( id                   ) → 5
+       
+       ── State 3 ─────────────────────────────────
+          S :  B • id
+         ······································
+          goto( id                   ) → 6
+       
+       ── State 4 ─────────────────────────────────
+          A :  id •
+          B :  id •
+         ······································
+          reduce( A : id             ) on [id 🚫]
+          reduce( B : id             ) on [id]
+       
+       ── State 5 ─────────────────────────────────
+          S :  A id •
+         ······································
+          reduce( S : A id           ) on [$]
+       
+       ── State 6 ─────────────────────────────────
+          S :  B id •
+         ······································
+          reduce( S : B id           ) on [$]
+      
+       """, output);
   }
 
 
