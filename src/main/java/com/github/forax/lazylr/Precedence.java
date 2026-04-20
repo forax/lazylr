@@ -8,14 +8,14 @@ import java.util.Objects;
 
 /// Defines the priority and grouping rules for a [com.github.forax.lazylr.PrecedenceEntity].
 ///
-/// Precedence is used by the [Parser] to resolve shift/reduce conflicts in
-/// ambiguous grammars, such as mathematical expressions.
+/// Precedence is used by the [Parser] to resolve shift/reduce and reduce/reduce conflicts
+/// in ambiguous grammars.
 ///
 /// ### Conflict Resolution Rules
 /// * **Level**: Higher [level()] values indicate stronger binding (e.g., `*` has
 ///    a higher level than `+`).
-/// * **Associativity**: When levels are equal, the [Associativity] determines
-///    grouping:
+/// * **Associativity**: When levels are equal, for shift/reduce conflict,
+///   the [Associativity] determines grouping:
 ///    * `LEFT`: `a + b + c` is parsed as `(a + b) + c`.
 ///    * `RIGHT`: `a ^ b ^ c` is parsed as `a ^ (b ^ c)`.
 ///

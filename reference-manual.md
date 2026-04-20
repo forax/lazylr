@@ -451,7 +451,7 @@ Names can be:
 - Arbitrary identifiers used only as targets for `%prec` in the `grammar` section
   (virtual tokens, they are never emitted by the lexer).
 
-#### How precedence is applied
+#### Precedence and shift/reduce conflicts
 
 When a shift/reduce conflict is encountered, the parser compares:
 
@@ -467,8 +467,6 @@ Resolution:
 - If equal precedence and `left` associativity -> reduce.
 - If equal precedence and `right` associativity -> shift.
 - If either side has no declared precedence -> unresolved conflict (parse error at runtime).
-
-Reduce/reduce conflicts are not resolved by precedence; rewrite the grammar to remove them.
 
 #### Example
 
@@ -494,6 +492,15 @@ grammar {
 - `2 + 3 + 4` → `(2 + 3) + 4` because `+` is `LEFT`.
 - `2 ^ 3 ^ 4` → `2 ^ (3 ^ 4)` because `^` is `RIGHT`.
 - `-3 * 4` → `(-3) * 4` because `UMINUS` (level 4) outranks `*` (level 2).
+
+#### Precedence and reduce/reduce conflicts
+
+Usually, it's better to resolve reduce/reduce conflicts by rewriting the grammar.
+This makes the grammar more readable and easier to understand.
+
+Nevertheless, reduce/reduce conflicts can also be resolved using precedence:
+- The production with higher precedence is chosen.
+- If both productions have equal precedence, the conflict remains unresolved.
 
 ### `grammar` section
 
