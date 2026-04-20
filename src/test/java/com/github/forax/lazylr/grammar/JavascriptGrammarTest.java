@@ -136,9 +136,12 @@ public class JavascriptGrammarTest {
             // Dangling-else handling: prefer shifting Else over reducing bare If-statement.
             right: IF_NO_ELSE
             right: Else
-            // Empty Block is preferred to empty object in () => {} 
+            // Empty Block is preferred to empty object in () => {}
             right: EMPTY_OBJECT
             right: EMPTY_BLOCK
+            // New (args) is prefferred to Call (args) in new A()
+            left: CALL_ARGS
+            left: NEW_ARGS
           
             right: '='
             right: op_muleq, op_diveq, op_modeq, op_addeq, op_subeq
@@ -531,11 +534,11 @@ public class JavascriptGrammarTest {
             SingleExpression : SingleExpression '.' '#' IdentifierName
             SingleExpression : SingleExpression '.' IdentifierName
             // new
-            SingleExpression : New SingleExpression Arguments
+            SingleExpression : New SingleExpression Arguments    %prec NEW_ARGS
             SingleExpression : New SingleExpression
             SingleExpression : New '.' Identifier
             // Call
-            SingleExpression : SingleExpression Arguments
+            SingleExpression : SingleExpression Arguments    %prec CALL_ARGS
             // Post-increment / post-decrement (note: notLineTerminator enforced externally)
             SingleExpression : SingleExpression op_inc
             SingleExpression : SingleExpression op_dec
@@ -895,7 +898,6 @@ public class JavascriptGrammarTest {
   }
 
   @Test
-  @Disabled
   public void testCallAndMemberExpressions() {
     parse("f();");
     parse("f(1,2);");
