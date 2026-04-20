@@ -136,11 +136,13 @@ public class JavascriptGrammarTest {
             // Dangling-else handling: prefer shifting Else over reducing bare If-statement.
             right: IF_NO_ELSE
             right: Else
+            // Empty Block is preferred to empty object in () => {} 
+            right: EMPTY_OBJECT
+            right: EMPTY_BLOCK
           
             right: '='
             right: op_muleq, op_diveq, op_modeq, op_addeq, op_subeq
             right: op_shleq, op_shreq, op_ushreq, op_andeq, op_xoreq, op_oreq, op_poweq, op_nullisheq
-            right: ARROW_BODY
             right: '?'
             left:  op_logor
             left:  op_logand
@@ -155,6 +157,7 @@ public class JavascriptGrammarTest {
             left:  '*', '/', '%'
             right: op_pow
             right: UNARY
+            right: ARROW_BODY
             left:  op_inc, op_dec
             left:  '.', op_optchain, '['
             left:  New
@@ -205,7 +208,7 @@ public class JavascriptGrammarTest {
             //  Block
             // -------------------------------------------------------
             Block : '{' StatementList '}'
-            Block : '{' '}'
+            Block : '{' '}'                 %prec EMPTY_BLOCK
           
             StatementList : Statement
             StatementList : StatementList Statement
@@ -341,9 +344,7 @@ public class JavascriptGrammarTest {
             ReturnStatement : Return ExpressionSequence Eos
             ReturnStatement : Return Eos
           
-            YieldStatement : Yield ExpressionSequence Eos
             YieldStatement : Yield Eos
-            YieldStatement : YieldStar ExpressionSequence Eos
             YieldStatement : YieldStar Eos
           
             WithStatement : With '(' ExpressionSequence ')' Statement
@@ -446,8 +447,7 @@ public class JavascriptGrammarTest {
           
             LastFormalParameterArg : op_ellipsis SingleExpression
           
-            FunctionBody : '{' SourceElements '}'
-            FunctionBody : '{' '}'
+            FunctionBody : Block
           
             // -------------------------------------------------------
             //  Array & Object Literals
@@ -470,7 +470,7 @@ public class JavascriptGrammarTest {
             ElementList : ElementList Elision SingleExpression
             ElementList : ElementList Elision op_ellipsis SingleExpression
           
-            ObjectLiteral : '{' '}'
+            ObjectLiteral : '{' '}'       %prec EMPTY_OBJECT
             ObjectLiteral : '{' PropertyAssignmentList '}'
             ObjectLiteral : '{' PropertyAssignmentList ',' '}'
           
@@ -594,7 +594,7 @@ public class JavascriptGrammarTest {
             // Tagged template
             SingleExpression : SingleExpression TemplateStringLiteral
             // Yield as expression
-            SingleExpression : YieldStatement
+            SingleExpression : YieldExpression
             // Primaries
             SingleExpression : This
             SingleExpression : Identifier
@@ -603,6 +603,9 @@ public class JavascriptGrammarTest {
             SingleExpression : ArrayLiteral
             SingleExpression : ObjectLiteral
             SingleExpression : '(' ExpressionSequence ')'
+          
+            YieldExpression : Yield ExpressionSequence
+            YieldExpression : YieldStar ExpressionSequence
           
             Initializer : '=' SingleExpression
           
@@ -627,8 +630,8 @@ public class JavascriptGrammarTest {
             ArrowFunctionParameters : '(' ExpressionSequence ')'
             ArrowFunctionParameters : '(' ')'
           
-            ArrowFunctionBody : SingleExpression   %prec ARROW_BODY
-            ArrowFunctionBody : FunctionBody
+            ArrowFunctionBody : SingleExpression    %prec ARROW_BODY
+            ArrowFunctionBody : Block
           
             AssignmentOperator : op_muleq
             AssignmentOperator : op_diveq
@@ -902,7 +905,6 @@ public class JavascriptGrammarTest {
   }
 
   @Test
-  @Disabled
   public void testArrowFunctions() {
     parse("x => x;");
     parse("(x,y) => x+y;");
