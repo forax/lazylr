@@ -212,7 +212,7 @@ and requires reading several tokens in advance to choose between alternatives ea
 **Bottom-up** parsers (like LR) work in the opposite direction. They read the input
 left-to-right and, as they accumulate tokens, they look for an opportunity to *recognize*
 a production's right-hand side in what they've already seen and fold it up into a non-terminal.
-They never need to predict which production to expand; they only need to *decide* what
+They never need to predict which production to expand; they only need to decide what
 to do with what is already on the stack.
 Left-recursive grammars are handled naturally because the recursion is resolved as input arrives.
 
@@ -228,7 +228,7 @@ At each step the parser consults a state (built from the grammar) and makes one 
 **Shift**, consume the lookahead token, push it onto the stack, and advance to the next
 input token.
 
-**Reduce**, when the top of the stack matches the entire right-hand side of some production,
+**Reduce**, when the top of the stack matches the entire right-hand side of a production,
 pop those symbols off the stack and replace them with the production's head non-terminal.
 This is the step that recognizes a phrase has been fully parsed.
 
@@ -275,8 +275,8 @@ LazyLR instead computes states on demand: the first time the parser visits a
 States are cached per `Parser` instance; a new `Parser` starts with an empty cache.
 States built in one `parse()` call are reused in later calls on the same `Parser` instance.
 
-For a grammar like the PostgreSQL grammar included in the test suite;
-with hundreds of productions and tokens; this means the first parse may trigger state
+For a grammar like the PostgreSQL grammar included in the test suite,
+with hundreds of productions and tokens, this means the first parse may trigger state
 construction for the productions it exercises, while productions for rarely used SQL
 clauses never generate states at all unless the parser actually encounters them.
 
@@ -386,8 +386,9 @@ tokens {
 }
 ```
 
-Regex syntax follows Java's `java.util.regex.Pattern`. Each regex must match at least one
-character; patterns that can match the empty string are rejected at construction time.
+Regex syntax follows Java's `java.util.regex.Pattern` syntax.
+Each regex must match at least one character; patterns that
+can match the empty string are rejected at construction time.
 
 Quoted literals are collected from all `grammar` section rules across the
 entire input (in first-encounter order), then named tokens from `tokens`
