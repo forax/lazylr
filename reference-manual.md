@@ -129,6 +129,9 @@ System.out.println(ast);
 - `mg.verify(...)` checks for invalid grammar rules and unresolved LALR(1) conflicts.
 - `mg.parse(input, visitor)` performs lexing then parsing in one call.
 
+> Note: The `add` and `mul` methods above have no parameter for the '+' and '*' terminals.
+> When using a `Visitor`, any terminal that has no corresponding handler method is automatically filtered out.
+
 ---
 
 ## Conceptual Overview
@@ -307,10 +310,12 @@ that the full LR(1) automaton would not have.
 
 Some grammars that are LR(1) but not LALR(1) will show reduce/reduce conflicts
 in the verifier output, yet parse correctly at runtime.
-In production, you should still resolve all reported conflicts from the LALR(1) analysis for safety.
-The reason to use LALR(1) for verification rather than full LR(1) analysis is that,
-on large grammars, a full LR(1) analysis can produce an exponentially larger state machine and
-takes much longer to compute.
+In production, you should resolve all reported conflicts from the LALR(1) analysis for safety.
+
+LALR(1) is used for verification rather than full LR(1) analysis for practical reasons,
+merging states keeps the automaton the same size as the LR(0) automaton.
+A full LR(1) analysis can produce a huge automaton on grammars with many distinct lookahead contexts,
+making it slower to compute and more difficult to inspect.
 
 ### Bottom-up events: why reductions fire from the inside out
 
@@ -892,6 +897,9 @@ Terminals for which `evaluate(Terminal)` returned `null` still occupy their posi
 
 #### Example 1: direct integer evaluation
 
+In an `Evaluator`, all body symbols occupy a slot; null is returned for punctuation.
+Contrast with a `Visitor`, where terminals with no handler method are filtered out entirely.
+
 ```java
 class IntEvaluator implements Evaluator<Integer> {
   @Override
@@ -902,7 +910,7 @@ class IntEvaluator implements Evaluator<Integer> {
   public Integer evaluate(Production p, List<Integer> a) {
     return switch (p.name()) {
       case "E : num"   -> a.get(0);
-      case "E : E + E" -> a.get(0) + a.get(2);  // a.get(1) is null (the '+')
+      case "E : E + E" -> a.get(0) + a.get(2);  // a.get(1) is null, evaluate(Terminal) returned null for '+'
       case "E : E * E" -> a.get(0) * a.get(2);
       default -> throw new IllegalStateException(p.name());
     };
@@ -1244,8 +1252,8 @@ grammar {
 
 ### Exception types
 
-All lexing and parsing failures surface as `ParsingException`. This is a
-`RuntimeException`, so callers are not forced to declare it.
+All lexing and parsing failures surface as `ParsingException`.
+This is a `RuntimeException`, so callers are not required to declare or catch it.
 
 ### Error message format
 
@@ -1831,8 +1839,9 @@ public final class CoverageTest {
 ### Reduce/reduce conflicts ("My grammar is on 🔥")
 
 - The preferred fix is to **rewrite the grammar** to remove the ambiguity.
-- As an alternative, assign different precedence levels to the conflicting productions
-  using `%prec` in the `grammar` section and a virtual token in the `precedence` section.
+- If rewriting the grammar makes it unecesssary complex, you can assign
+  different precedence levels to the conflicting productions using `%prec`
+  in the `grammar` section and a virtual token in the `precedence` section.
   The production with the higher level wins:
   ```text
   precedence {
@@ -1879,8 +1888,7 @@ public final class CoverageTest {
 `LALRVerifier` uses LALR(1); the runtime parser uses LR(1). A small set of grammars
 are LR(1) but not LALR(1). If the verifier reports a conflict but actual parsing
 succeeds, the grammar is in this category.
-It is not recommended to have a grammar that is not LALR(1) in a production
-environment, but for toy examples, this is usually acceptable.
+It is not recommended to have a grammar that is not LALR(1) in a production environment.
 
 ---
 
