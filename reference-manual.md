@@ -1359,7 +1359,8 @@ Symbols:
 - `🔥` marks an **unresolved conflict** (neither side wins; runtime will throw `ParsingException`).
 - `🚫` marks a **resolved conflict** where that action was **not** selected
   (the winning action is shown without annotation).
-  For example, a shift `🚫` means the reduce won via precedence.
+  Examples: a shift `🚫` means the reduce won via precedence; a reduce `🚫` means
+  it lost either to the shift or a reduce.
 
 ---
 
@@ -1815,17 +1816,40 @@ public final class CoverageTest {
   If a token is never expected at the position where it appears, it will not match
   even if the regex otherwise succeeds.
 
-### Shift/reduce conflicts ("My grammar is on fire")
+### Shift/reduce conflicts ("My grammar is on 🔥")
 
 - Add a `precedence` section with `left:` or `right:` lines for ambiguous operators.
   Later lines = higher precedence.
 - Use `%prec TOKEN` on the production if its rightmost terminal has the wrong precedence
   (classic case: unary operators sharing a terminal with a binary operator).
 - Run `mg.verify(true)` or `lazylr --print grammar.txt` to see the full automaton with
-  conflict markers (`🔥`).
-- A `🔥` on a `goto(...)` line means the shift side of a conflict; a `🔥` on a
+  conflict markers (`🔥`); resolved-but-suppressed actions with `🚫`. 
+  A `🔥` on a `goto(...)` line means the shift side of a conflict; a `🔥` on a
   `reduce(...) on [...]` line means the reduce side. Both sides of the same conflict
   carry the `🔥` mark.
+
+### Reduce/reduce conflicts ("My grammar is on 🔥")
+
+- The preferred fix is to **rewrite the grammar** to remove the ambiguity.
+- As an alternative, assign different precedence levels to the conflicting productions
+  using `%prec` in the `grammar` section and a virtual token in the `precedence` section.
+  The production with the higher level wins:
+  ```text
+  precedence {
+    left: chooseA   // level 1
+    left: chooseB   // level 2, wins over chooseA
+  }
+  grammar {
+    S : A id
+    S : B id
+    A : id     %prec chooseA
+    B : id     %prec chooseB   // B wins on reduce/reduce
+  }
+  ```
+- If both conflicting productions have equal precedence (or no precedence),
+  the conflict remains unresolved and causes a `ParsingException` at runtime.
+- Run `mg.verify(true)` or `lazylr --print grammar.txt` to see the automaton.
+  Unresolved conflicts are marked with `🔥`; resolved-but-suppressed actions with `🚫`.
 
 ### Visitor method isn't called
 
