@@ -483,7 +483,7 @@ public final class MetaGrammar {
 
     var lexer = Lexer.createLexer(TOKENS);
     var parser = Parser.createParser(GRAMMAR, Map.of());
-    parser.parse(lexer.tokenize(input), new Evaluator<>() {
+    parser.parse(lexer.tokenize(input), new Evaluator<@Nullable Object>() {
 
       @Override
       public Object evaluate(Terminal t) {
@@ -491,7 +491,7 @@ public final class MetaGrammar {
       }
 
       @Override
-      public @Nullable Object evaluate(Production p, @SuppressWarnings("NullableProblems") List<Object> args) {
+      public @Nullable Object evaluate(Production p, List<@Nullable Object> args) {
         return switch (p.name()) {
 
           // -- Name
@@ -504,45 +504,55 @@ public final class MetaGrammar {
               args.getFirst();
 
           // -- Symbol
-          case "Symbol : Name" ->
-              new RawSymbol((String) args.getFirst(), false);
+          case "Symbol : Name" -> {
+            var name = Objects.requireNonNull((String) args.getFirst());
+            yield new RawSymbol(name, false);
+          }
 
-          case "Symbol : quoted" ->
-              new RawSymbol(stripFirstAndLastCharacters((String) args.get(0)), true);
+          case "Symbol : quoted" -> {
+            var raw = Objects.requireNonNull((String) args.getFirst());
+            yield new RawSymbol(stripFirstAndLastCharacters(raw), true);
+          }
 
           // -- Symbols
           case "Symbols : Symbol" -> {
             var list = new ArrayList<RawSymbol>();
-            list.add((RawSymbol) args.getFirst());
+            var rawSymbol = Objects.requireNonNull((RawSymbol) args.getFirst());
+            list.add(rawSymbol);
             yield list;
           }
           case "Symbols : Symbols Symbol" -> {
             @SuppressWarnings("unchecked")
-            var list = (ArrayList<RawSymbol>) args.get(0);
-            list.add((RawSymbol) args.get(1));
+            var list = Objects.requireNonNull((ArrayList<RawSymbol>) args.get(0));
+            var rawSymbol = Objects.requireNonNull((RawSymbol) args.get(1));
+            list.add(rawSymbol);
             yield list;
           }
 
           // -- Literals
           case "Literals : Symbol" -> {
             var list = new ArrayList<RawSymbol>();
-            list.add((RawSymbol) args.getFirst());
+            var rawSymbol = Objects.requireNonNull((RawSymbol) args.getFirst());
+            list.add(rawSymbol);
             yield list;
           }
           case "Literals : Literals , Symbol" -> {
             @SuppressWarnings("unchecked")
-            var list = (ArrayList<RawSymbol>) args.get(0);
-            list.add((RawSymbol) args.get(2));
+            var list = Objects.requireNonNull((ArrayList<RawSymbol>) args.get(0));
+            var rawSymbol = Objects.requireNonNull((RawSymbol) args.get(2));
+            list.add(rawSymbol);
             yield list;
           }
 
           // -- TokenRule
           case "TokenRule : regex eol" -> {
-            rawTokens.add(new RawToken(null, stripFirstAndLastCharacters((String) args.getFirst())));
+            var raw = Objects.requireNonNull((String) args.getFirst());
+            rawTokens.add(new RawToken(null, stripFirstAndLastCharacters(raw)));
             yield null;
           }
           case "TokenRule : ident : regex eol" -> {
-            rawTokens.add(new RawToken((String) args.get(0), stripFirstAndLastCharacters((String) args.get(2))));
+            var raw = Objects.requireNonNull((String) args.get(2));
+            rawTokens.add(new RawToken((String) args.get(0), stripFirstAndLastCharacters(raw)));
             yield null;
           }
 
@@ -552,28 +562,28 @@ public final class MetaGrammar {
             var associativity = "left".equals(args.get(0)) ?
                 Precedence.Associativity.LEFT : Precedence.Associativity.RIGHT;
             @SuppressWarnings("unchecked")
-            var symbols = (ArrayList<RawSymbol>) args.get(2);
+            var symbols = Objects.requireNonNull((ArrayList<RawSymbol>) args.get(2));
             rawPrecedences.add(new RawPrecedence(associativity, symbols));
             yield null;
           }
 
           // -- PrecSymbol
           case "PrecSymbol : prec Symbol" ->
-              args.get(1);
+              Objects.requireNonNull(args.get(1));
           case "PrecSymbol : ε" ->
               null;
 
           // -- GrammarRule
           case "GrammarRule : Name : PrecSymbol eol" -> {
-            var head = (String) args.getFirst();
+            var head = Objects.requireNonNull((String) args.getFirst());
             var precSymbol = (RawSymbol) args.get(2);
             rawProductions.add(new RawProduction(head, List.of(), precSymbol));
             yield null;
           }
           case "GrammarRule : Name : Symbols PrecSymbol eol" -> {
-            String head = (String) args.get(0);
+            var head = Objects.requireNonNull((String) args.get(0));
             @SuppressWarnings("unchecked")
-            var symbols = (ArrayList<RawSymbol>) args.get(2);
+            var symbols = Objects.requireNonNull((ArrayList<RawSymbol>) args.get(2));
             var precSymbol = (RawSymbol) args.get(3);
             rawProductions.add(new RawProduction(head, symbols, precSymbol));
             yield null;
