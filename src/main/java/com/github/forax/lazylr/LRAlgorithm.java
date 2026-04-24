@@ -89,7 +89,7 @@ final class LRAlgorithm {
       // Add all terminals from FIRST but ε
       var firstSet = firstSets.get(symbol);
       for (var terminal : firstSet) {
-        if (!terminal.equals(Terminal.EPSILON)) {
+        if (terminal != Terminal.EPSILON) {
           result.add(terminal);
         }
       }
@@ -183,7 +183,7 @@ final class LRAlgorithm {
 
           // Add all non-epsilon symbols from FIRST(symbol) to FIRST(head)
           for (var terminal : firstSet) {
-            if (!terminal.equals(Terminal.EPSILON)) {
+            if (terminal != Terminal.EPSILON) {
               targetSet.add(terminal);
             }
           }

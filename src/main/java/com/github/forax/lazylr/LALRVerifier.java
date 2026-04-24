@@ -388,7 +388,7 @@ public final class LALRVerifier {
             case NonTerminal nonTerminal -> {
               var firstSet = firstSets.get(nonTerminal);
               for (var terminal : firstSet) {
-                if (!terminal.equals(Terminal.EPSILON)) {
+                if (terminal != Terminal.EPSILON) {
                   headFirst.add(terminal);
                 }
               }
