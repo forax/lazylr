@@ -29,17 +29,17 @@ public final class Terminal implements Symbol, PrecedenceEntity {
 
   /// Represents the empty string symbol (epsilon) used in grammar rules.
   /// The parser uses this terminal internally.
-  public static final Terminal EPSILON = new Terminal("ε");
+  static final Terminal EPSILON = new Terminal("ε", null, false);
 
   /// Represents the end-of-stream marker ($), indicating no more terminals are available.
   /// The parser uses this terminal internally.
-  public static final Terminal EOF = new Terminal("$");
+  static final Terminal EOF = new Terminal("$", null, false);
 
   /// Represents a lexical error encountered during tokenization.
   ///
   /// This terminal is returned by the [Lexer] when the input character sequence
   /// at the current position does not match any provided [Token].
-  public static final Terminal ERROR = new Terminal("error");
+  public static final Terminal ERROR = new Terminal("error", null, false);
 
   private final String name;
   private final @Nullable String value;
@@ -50,6 +50,15 @@ public final class Terminal implements Symbol, PrecedenceEntity {
     super();
   }
 
+  private static void checkName(String name) {
+    if (name.isEmpty()) {
+      throw new IllegalArgumentException("name must not be empty");
+    }
+    if (name.equals("ε") || name.equals("$") || name.equals("error")) {
+      throw new IllegalArgumentException("reserved name");
+    }
+  }
+
   /// Create an immutable terminal with a unique name and a value.
   ///
   /// @param name The unique identifier for the terminal.
@@ -58,9 +67,7 @@ public final class Terminal implements Symbol, PrecedenceEntity {
   /// @throws IllegalArgumentException if the name is empty.
   public Terminal(String name, String value) {
     Objects.requireNonNull(name);
-    if (name.isEmpty()) {
-      throw new IllegalArgumentException("name must not be empty");
-    }
+    checkName(name);
     Objects.requireNonNull(value);
     this(name, value, false);
   }
@@ -79,9 +86,7 @@ public final class Terminal implements Symbol, PrecedenceEntity {
   /// @throws IllegalArgumentException if the name is empty.
   public Terminal(String name) {
     Objects.requireNonNull(name);
-    if (name.isEmpty()) {
-      throw new IllegalArgumentException("name must not be empty");
-    }
+    checkName(name);
     this(name, null, false);
   }
 

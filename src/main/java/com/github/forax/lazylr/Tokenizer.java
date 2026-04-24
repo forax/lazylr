@@ -83,7 +83,7 @@ final class Tokenizer implements Iterator<Terminal> {
         }
         if (tokenIndex == -1) {
           matchIndex = index;  // for next match
-          return error(index, input);
+          return Terminal.ERROR;
         }
       }
       var name = tokens.get(tokenIndex).name();
@@ -97,11 +97,6 @@ final class Tokenizer implements Iterator<Terminal> {
       matchIndex = index;  // for next match
       return new Terminal(name, value);
     }
-  }
-
-  private static Terminal error(int index, CharSequence input) {
-    var errorMessage = ErrorHandler.lexingErrorMessage(index, input);
-    return new Terminal(Terminal.ERROR.name(), errorMessage);
   }
 
   /// Returns the original input character sequence.

@@ -7,7 +7,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.NoSuchElementException;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertThrows;
 
 public final class LexerTest {
 
@@ -172,16 +174,48 @@ public final class LexerTest {
     terminals.next(); // Skip "abc"
 
     var error = terminals.next();
-    assertEquals(Terminal.ERROR.name(), error.name());
-    assertTrue(error.value().contains("#"));
-    assertTrue(error.value().contains("line 1"));
-    assertTrue(error.value().contains("column 4"));
+    assertEquals(Terminal.ERROR, error);
 
     assertFalse(terminals.hasNext());
   }
 
   @Test
-  public void errorWithLineAndColumn() {
+  public void errorHandlingWithSpaceCharacter() {
+    var tokens = List.of(
+        new Token("ID", "[a-z]+"),
+        new Token("\\s+")
+    );
+    var lexer = Lexer.createLexer(tokens);
+
+    var terminals = lexer.tokenize("hello  123");
+    terminals.next(); // hello
+    var error = terminals.next();
+    assertEquals(Terminal.ERROR, error);
+  }
+
+  @Test
+  public void errorPositionWithSpace() {
+    var tokens = List.of(
+        new Token("ID", "[a-z]+"),
+        new Token("\\s+")
+    );
+    var lexer = Lexer.createLexer(tokens);
+    var terminals = lexer.tokenize("abc def@ghi");
+
+    terminals.next(); // abc
+    terminals.next(); // def
+
+    var error = terminals.next();
+    assertEquals(Terminal.ERROR, error);
+
+    var position = Lexer.position(terminals);
+    assertEquals(7, position);
+
+    assertFalse(terminals.hasNext());
+  }
+
+  @Test
+  public void errorPositionWithEndOfLine() {
     var tokens = List.of(
         new Token("ID", "[a-z]+"),
         new Token("\\s+")
@@ -194,46 +228,16 @@ public final class LexerTest {
     terminals.next(); // good
 
     var error = terminals.next();
-    assertEquals(Terminal.ERROR.name(), error.name());
-    assertTrue(error.value().contains("line 2"));
-    assertTrue(error.value().contains("column 6"));
-    assertTrue(error.value().contains("'$'"));
-    assertTrue(error.value().contains("good $bad"));
+    assertEquals(Terminal.ERROR, error);
+
+    var position = Lexer.position(terminals);
+    assertEquals(17, position);
 
     assertFalse(terminals.hasNext());
   }
 
   @Test
-  public void errorWithCaretPointer() {
-    var tokens = List.of(
-        new Token("ID", "[a-z]+"),
-        new Token("\\s+")
-    );
-    var lexer = Lexer.createLexer(tokens);
-    var terminals = lexer.tokenize("abc def@ghi");
-
-    terminals.next(); // abc
-    terminals.next(); // def
-
-    var error = terminals.next();
-    assertEquals(Terminal.ERROR.name(), error.name());
-    var errorMsg = error.value();
-
-    // Check that the error message contains the caret pointing to the error
-    assertTrue(errorMsg.contains("abc def@ghi"));
-    assertTrue(errorMsg.contains("^"));
-
-    // The caret should be at position 7 (after "abc def")
-    var lines = errorMsg.split("\n");
-    assertTrue(lines.length >= 3);
-    var caretLine = lines[2];
-    assertEquals(7, caretLine.indexOf('^'));
-
-    assertFalse(terminals.hasNext());
-  }
-
-  @Test
-  public void errorWithMultipleLines() {
+  public void errorPositionWithMultipleLines() {
     var tokens = List.of(
         new Token("ID", "[a-z0-9]+"),
         new Token("eol", "\\n"),
@@ -252,26 +256,12 @@ public final class LexerTest {
     assertEquals("ID", terminals.next().name());   // line2
 
     var error = terminals.next();
-    assertEquals(Terminal.ERROR.name(), error.name());
-    assertTrue(error.value().contains("line 2"));
-    assertTrue(error.value().contains("column 7"));
-    assertTrue(error.value().contains("line2 #error"));
+    assertEquals(Terminal.ERROR, error);
+
+    var position = Lexer.position(terminals);
+    assertEquals(12, position);
 
     assertFalse(terminals.hasNext());
-  }
-
-  @Test
-  public void errorWithSpaceCharacter() {
-    var tokens = List.of(
-        new Token("ID", "[a-z]+"),
-        new Token("\\s+")
-    );
-    var lexer = Lexer.createLexer(tokens);
-
-    var terminals = lexer.tokenize("hello  123");
-    terminals.next(); // hello
-    var error = terminals.next();
-    assertTrue(error.value().contains("'1'"));
   }
 
   @Test
@@ -285,7 +275,12 @@ public final class LexerTest {
     var terminals = lexer.tokenize("hello\t\u0007world");
     terminals.next(); // hello
     var error = terminals.next();
-    assertTrue(error.value().contains("\\u0007"));
+    assertEquals(Terminal.ERROR, error);
+
+    var position = Lexer.position(terminals);
+    assertEquals(6, position);
+
+    assertFalse(terminals.hasNext());
   }
 
   @Test
@@ -297,10 +292,10 @@ public final class LexerTest {
     var terminals = lexer.tokenize("#invalid");
 
     var error = terminals.next();
-    assertEquals(Terminal.ERROR.name(), error.name());
-    assertTrue(error.value().contains("line 1"));
-    assertTrue(error.value().contains("column 1"));
-    assertTrue(error.value().contains("'#'"));
+    assertEquals(Terminal.ERROR, error);
+
+    var position = Lexer.position(terminals);
+    assertEquals(0, position);
 
     assertFalse(terminals.hasNext());
   }
@@ -320,8 +315,10 @@ public final class LexerTest {
     var terminals = lexer.tokenize("!!");
 
     var error = terminals.next();
-    assertEquals(Terminal.ERROR.name(), error.name());
-    assertTrue(error.value().contains("!"));
+    assertEquals(Terminal.ERROR, error);
+
+    var position = Lexer.position(terminals);
+    assertEquals(0, position);
     
     assertFalse(terminals.hasNext());
   }

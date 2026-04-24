@@ -2,7 +2,11 @@ package com.github.forax.lazylr;
 
 import org.junit.jupiter.api.Test;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotEquals;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class TerminalTest {
 
@@ -173,17 +177,17 @@ public final class TerminalTest {
   }
 
   @Test
-  public void epsilonMatchesTerminalWithSameName() {
-    assertEquals(Terminal.EPSILON, new Terminal("ε"));
+  public void epsilonIsReservedName() {
+    assertThrows(IllegalArgumentException.class, () -> new Terminal("ε"));
   }
 
   @Test
-  public void eofMatchesTerminalWithSameName() {
-    assertEquals(Terminal.EOF, new Terminal("$"));
+  public void eofIsReservedName() {
+    assertThrows(IllegalArgumentException.class, () -> new Terminal("$"));
   }
 
   @Test
-  public void errorMatchesTerminalWithSameName() {
-    assertEquals(Terminal.ERROR, new Terminal("error"));
+  public void errorIsReservedName() {
+    assertThrows(IllegalArgumentException.class, () -> new Terminal("error"));
   }
 }
