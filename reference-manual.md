@@ -644,7 +644,8 @@ At each position the lexer:
 4. If the winning pattern is named, a `Terminal(name, matchedText)` is returned.
 5. If no pattern matches and the input position is not at the end, a `Terminal.ERROR`
    terminal is returned and iteration halts.
-   `Lexer.position(iterator)` can be used to find the location of the unexpected character.
+   `Lexer.position(iterator)` can be used to find the start position of
+   the unexpected character.
 
 #### Position tracking
 
