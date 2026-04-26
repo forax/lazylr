@@ -795,17 +795,6 @@ public final class LALRVerifier {
     return new Result(actions, theReduce);
   }
 
-  private static @Nullable Action resolveReduceReduceConflict(Reduce reduce1, Reduce reduce2,
-                                                    Precedence reduce1Prec, Precedence reduce2Prec) {
-    if (reduce1Prec.level() > reduce2Prec.level()) {
-      return reduce1;
-    }
-    if (reduce1Prec.level() < reduce2Prec.level()) {
-      return reduce2;
-    }
-    return null;
-  }
-
   private static Action resolveShiftReduceConflict(Action shiftAction, Action reduceAction,
                                                    Precedence terminalPrec, Precedence productionPrec) {
     if (terminalPrec.level() > productionPrec.level()) {
