@@ -239,14 +239,14 @@ public final class LALRVerifier {
   static boolean preAnalysis(Grammar grammar, Consumer<? super String> errorReporter) {
     var allNonTerminals = grammar.nonTerminals();
 
-    // check un-productive non-terminals
+    // check unproductive non-terminals
     var unproductive = new LinkedHashSet<>(allNonTerminals);
     unproductive.removeAll(productiveNonTerminals(grammar));
     for (var nonTerminal : unproductive) {
       errorReporter.accept("unproductive non-terminal: " + nonTerminal);
     }
 
-    // check un-reachable non-terminals
+    // check unreachable non-terminals
     var unreachable = new LinkedHashSet<>(allNonTerminals);
     unreachable.removeAll(reachableNonTerminals(grammar));
     for (var nonTerminal : unreachable) {
