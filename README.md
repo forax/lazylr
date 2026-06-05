@@ -41,7 +41,7 @@ This is especially useful when:
 * **Iterating on a grammar:**
   Experimenting with new syntax without context switching.
 * **Teaching:**
-  Perfect for classrooms where students need to see the impact of grammar changes instantly.
+  Students can see the impact of grammar changes instantly.
 * **Partial Parsing:**
   Efficient handling of large grammars (like SQL) where only a specific subset
   of productions is needed for a given task.
