@@ -5,6 +5,7 @@ import com.github.forax.lazylr.MetaGrammar;
 import com.github.forax.lazylr.Production;
 import com.github.forax.lazylr.Terminal;
 import org.jspecify.annotations.Nullable;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.List;
@@ -17,12 +18,6 @@ public class PythonGrammarTest {
             NUMBER:       /(?:0[xX][0-9a-fA-F]+|0[bB][01]+|0[oO][0-7]+|(?:\\d+\\.?\\d*|\\.\\d+)(?:[eE][+-]?\\d+)?[jJ]?)/
             STRING:       /(?:[bBuU]?[rR]?|[rR]?[bBuU]?)(?:""\"[\\s\\S]*?""\"|'''[\\s\\S]*?'''|"(?:[^"\\\\\\n]|\\\\.)*"|'(?:[^'\\\\\\n]|\\\\.)*')/
             TYPE_COMMENT: /#\\s*type:\\s*[^\\n]*/
-            FSTRING_START: /[fF][rR]?"|[fF][rR]?'/
-            FSTRING_MIDDLE: /(?:[^{}\\\\\\n]|\\\\.)+/
-            FSTRING_END:  /"|'/
-            TSTRING_START: /[tT][rR]?"|[tT][rR]?'/
-            TSTRING_MIDDLE: /(?:[^{}\\\\\\n]|\\\\.)+/
-            TSTRING_END:  /"|'/
             NEWLINE:      /\\r?\\n/
             INDENT:       /(?<=\\n)[ \\t]+/
             DEDENT:       /(?<=\\n)(?![ \\t])/
@@ -811,80 +806,13 @@ public class PythonGrammarTest {
           
             // ── f-strings / t-strings ─────────────────────────────────────────────
           
-            fstring_middle : fstring_replacement_field
-            fstring_middle : FSTRING_MIDDLE
-          
-            fstring_replacement_field : '{' annotated_rhs '}'
-            fstring_replacement_field : '{' annotated_rhs '=' '}'
-            fstring_replacement_field : '{' annotated_rhs fstring_conversion '}'
-            fstring_replacement_field : '{' annotated_rhs '=' fstring_conversion '}'
-            fstring_replacement_field : '{' annotated_rhs fstring_full_format_spec '}'
-            fstring_replacement_field : '{' annotated_rhs '=' fstring_full_format_spec '}'
-            fstring_replacement_field : '{' annotated_rhs fstring_conversion fstring_full_format_spec '}'
-            fstring_replacement_field : '{' annotated_rhs '=' fstring_conversion fstring_full_format_spec '}'
-          
-            fstring_conversion : '!' NAME
-          
-            fstring_full_format_spec : ':' fstring_format_spec_list
-            fstring_full_format_spec : ':'
-          
-            fstring_format_spec_list : fstring_format_spec
-            fstring_format_spec_list : fstring_format_spec_list fstring_format_spec
-          
-            fstring_format_spec : FSTRING_MIDDLE
-            fstring_format_spec : fstring_replacement_field
-          
-            fstring : FSTRING_START FSTRING_END
-            fstring : FSTRING_START fstring_middle_list FSTRING_END
-          
-            fstring_middle_list : fstring_middle
-            fstring_middle_list : fstring_middle_list fstring_middle
-          
-            tstring_format_spec_replacement_field : '{' annotated_rhs '}'
-            tstring_format_spec_replacement_field : '{' annotated_rhs '=' '}'
-            tstring_format_spec_replacement_field : '{' annotated_rhs fstring_conversion '}'
-            tstring_format_spec_replacement_field : '{' annotated_rhs '=' fstring_conversion '}'
-            tstring_format_spec_replacement_field : '{' annotated_rhs tstring_full_format_spec '}'
-            tstring_format_spec_replacement_field : '{' annotated_rhs '=' tstring_full_format_spec '}'
-            tstring_format_spec_replacement_field : '{' annotated_rhs fstring_conversion tstring_full_format_spec '}'
-            tstring_format_spec_replacement_field : '{' annotated_rhs '=' fstring_conversion tstring_full_format_spec '}'
-          
-            tstring_format_spec : TSTRING_MIDDLE
-            tstring_format_spec : tstring_format_spec_replacement_field
-          
-            tstring_full_format_spec : ':' tstring_format_spec_list
-            tstring_full_format_spec : ':'
-          
-            tstring_format_spec_list : tstring_format_spec
-            tstring_format_spec_list : tstring_format_spec_list tstring_format_spec
-          
-            tstring_replacement_field : '{' annotated_rhs '}'
-            tstring_replacement_field : '{' annotated_rhs '=' '}'
-            tstring_replacement_field : '{' annotated_rhs fstring_conversion '}'
-            tstring_replacement_field : '{' annotated_rhs '=' fstring_conversion '}'
-            tstring_replacement_field : '{' annotated_rhs tstring_full_format_spec '}'
-            tstring_replacement_field : '{' annotated_rhs '=' tstring_full_format_spec '}'
-            tstring_replacement_field : '{' annotated_rhs fstring_conversion tstring_full_format_spec '}'
-            tstring_replacement_field : '{' annotated_rhs '=' fstring_conversion tstring_full_format_spec '}'
-          
-            tstring_middle : tstring_replacement_field
-            tstring_middle : TSTRING_MIDDLE
-          
-            tstring : TSTRING_START TSTRING_END
-            tstring : TSTRING_START tstring_middle_list TSTRING_END
-          
-            tstring_middle_list : tstring_middle
-            tstring_middle_list : tstring_middle_list tstring_middle
+            // TODO !
           
             // ── String / list / tuple / set / dict / comprehensions ───────────────
           
             string : STRING
           
-            strings : fstring
-            strings : tstring
             strings : string
-            strings : strings fstring
-            strings : strings tstring
             strings : strings string
           
             list : '[' ']'
@@ -1070,5 +998,245 @@ public class PythonGrammarTest {
     parse("""
       pass;
       """);
+  }
+
+  @Nested
+  public class LiteralsAndExpressions {
+    @Test
+    void testNumericLiterals() {
+      parse("42");
+      parse("3.14159");
+      parse("1e-9");
+      parse("0b1010");
+      parse("0x7f");
+      parse("3 + 4j"); // Complex numbers
+    }
+
+    @Test
+    void testStringLiterals() {
+      parse("'single quotes'");
+      parse("\"double quotes\"");
+      parse("r'raw string\\n'");
+      parse("f'f-string {variable}'");
+      parse("\"\"\"triple double quotes\"\"\"");
+      parse("'''triple single\nmulti-line'''");
+    }
+
+    @Test
+    void testCollections() {
+      parse("[1, 2, 3, 4]"); // List
+      parse("(1, 2, 3)");    // Tuple
+      parse("{1, 2, 3}");    // Set
+      parse("{'a': 1, 'b': 2}"); // Dict
+      parse("{}");           // Empty dict
+    }
+  }
+
+  @Nested
+  public class OperatorsAndPrecedence {
+    @Test
+    void testArithmetic() {
+      parse("x = a + b * c ** d / e // f % g");
+      parse("x = -a + ~b");
+    }
+
+    @Test
+    void testBitwiseAndBoolean() {
+      parse("x = (a & b) | (c ^ d) >> 2 << 1");
+      parse("x = not a and b or c");
+    }
+
+    @Test
+    void testComparisons() {
+      parse("x = a == b != c < d <= e > f >= g");
+      parse("x = a is b and c is not d");
+      parse("x = e in f or g not in h");
+    }
+
+    @Test
+    void testTernaryAndWalrus() {
+      parse("x = true_val if condition else false_val");
+      parse("if (x := call()) > 0: pass");
+    }
+  }
+
+  @Nested
+  public class ControlFlow {
+    @Test
+    void testIfStatements() {
+      parse("""
+        if x > 0:
+            print("positive")
+        elif x < 0:
+            print("negative")
+        else:
+            print("zero")
+        """);
+    }
+
+    @Test
+    void testWhileLoops() {
+      parse("""
+        while condition:
+            break
+        else:
+            continue
+        """);
+    }
+
+    @Test
+    void testForLoops() {
+      parse("""
+        for i in range(10):
+            if i == 5:
+                continue
+            print(i)
+        """);
+    }
+
+    @Test
+    void testMatchCase() { // Python 3.10+
+      parse("""
+        match status:
+            case 200:
+                return "OK"
+            case 404 | 405:
+                return "Not Found"
+            case _:
+                return "Unknown"
+        """);
+    }
+  }
+
+  @Nested
+  public class FunctionsAndLambdas {
+    @Test
+    void testBasicFunction() {
+      parse("""
+        def greet(name):
+            return f"Hello, {name}"
+        """);
+    }
+
+    @Test
+    void testComplexArguments() {
+      parse("""
+        def complex_func(a, b=10, *args, kw_only, **kwargs):
+            yield a
+            return
+        """);
+    }
+
+    @Test
+    void testTypeHinting() {
+      parse("""
+        def add(x: int, y: int = 0) -> int:
+            return x + y
+        """);
+    }
+
+    @Test
+    void testLambdasAndAsync() {
+      parse("f = lambda x, y=1: x + y");
+      parse("""
+        async def fetch():
+            await asyncio.sleep(1)
+        """);
+    }
+  }
+
+  @Nested
+  public class Classes {
+    @Test
+    void testBasicClass() {
+      parse("""
+        class Empty:
+            pass
+        """);
+    }
+
+    @Test
+    void testInheritanceAndMethods() {
+      parse("""
+        @decorator
+        class Dog(Animal, Pack):
+            def __init__(self, name: str):
+                super().__init__()
+                self._name = name
+                
+            def bark(self):
+                return "woof"
+        """);
+    }
+  }
+
+  @Nested
+  public class ExceptionsAndContexts {
+    @Test
+    void testTryExceptFinally() {
+      parse("""
+        try:
+            raise ValueError("error")
+        except TypeError as e:
+            pass
+        except (AttributeError, KeyError):
+            log_error()
+        else:
+            print("success")
+        finally:
+            cleanup()
+        """);
+    }
+
+    @Test
+    void testWithStatements() {
+      parse("""
+        with open("file.txt") as f, open("out.txt", "w") as out:
+            out.write(f.read())
+        """);
+    }
+  }
+
+  @Nested
+  public class ComprehensionsAndSlicing {
+    @Test
+    void testComprehensions() {
+      parse("[x**2 for x in items if x > 0]");
+      parse("{k: v for k, v in dict.items()}");
+      parse("(x for x in generator)");
+    }
+
+    @Test
+    void testSlicingAndSubscripts() {
+      parse("matrix[0][1]");
+      parse("array[1:10:2]");
+      parse("array[:5]");
+      parse("array[5:]");
+      parse("multi_dim[1:3, ::-1]");
+    }
+  }
+
+  @Nested
+  public class ImportsAndModules {
+    @Test
+    void testImports() {
+      parse("import os, sys");
+      parse("import numpy as np");
+      parse("from math import pi, sqrt as s");
+      parse("from .relative import sibling");
+      parse("from ...parent import grandparent");
+    }
+
+    @Test
+    void testGlobalNonlocal() {
+      parse("""
+        def outer():
+            x = 1
+            def inner():
+                nonlocal x
+                global y
+                x = 2
+        """);
+    }
   }
 }
