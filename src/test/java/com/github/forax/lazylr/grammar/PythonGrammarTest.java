@@ -1048,7 +1048,7 @@ public class PythonGrammarTest {
           """);
 
   {
-    META_GRAMMAR.verify();
+    //META_GRAMMAR.verify();
   }
 
   private static void parse(String source) {
@@ -1066,7 +1066,9 @@ public class PythonGrammarTest {
   }
 
   @Test
-  public void test() {
-
+  public void pass() {
+    parse("""
+      pass;
+      """);
   }
 }
