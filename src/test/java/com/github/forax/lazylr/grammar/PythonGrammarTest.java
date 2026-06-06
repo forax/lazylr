@@ -1458,6 +1458,9 @@ public class PythonGrammarTest {
   }
 
   private static void parse(String source) {
+    if (!source.endsWith("\n")) {
+      source += '\n';
+    }
     var input = PythonLexer.tokenize(source);
     var grammar = META_GRAMMAR.grammar();
     var precedenceMap = META_GRAMMAR.precedenceMap();
@@ -1484,7 +1487,7 @@ public class PythonGrammarTest {
 
   @Nested
   public class LiteralsAndExpressions {
-    @Test @Disabled
+    @Test
     void testNumericLiterals() {
       parse("42");
       parse("3.14159");
@@ -1494,17 +1497,22 @@ public class PythonGrammarTest {
       parse("3 + 4j"); // Complex numbers
     }
 
-    @Test @Disabled
+    @Test
     void testStringLiterals() {
       parse("'single quotes'");
       parse("\"double quotes\"");
-      parse("r'raw string\\n'");
-      parse("f'f-string {variable}'");
       parse("\"\"\"triple double quotes\"\"\"");
       parse("'''triple single\nmulti-line'''");
     }
 
     @Test @Disabled
+    void testRawOrFStringLiterals() {
+      parse("r'raw string\\n'");
+      parse("f'f-string {variable}'");
+    }
+
+
+    @Test
     void testCollections() {
       parse("[1, 2, 3, 4]"); // List
       parse("(1, 2, 3)");    // Tuple
@@ -1516,26 +1524,26 @@ public class PythonGrammarTest {
 
   @Nested
   public class OperatorsAndPrecedence {
-    @Test @Disabled
+    @Test
     void testArithmetic() {
       parse("x = a + b * c ** d / e // f % g");
       parse("x = -a + ~b");
     }
 
-    @Test @Disabled
+    @Test
     void testBitwiseAndBoolean() {
       parse("x = (a & b) | (c ^ d) >> 2 << 1");
       parse("x = not a and b or c");
     }
 
-    @Test @Disabled
+    @Test
     void testComparisons() {
       parse("x = a == b != c < d <= e > f >= g");
       parse("x = a is b and c is not d");
       parse("x = e in f or g not in h");
     }
 
-    @Test @Disabled
+    @Test
     void testTernaryAndWalrus() {
       parse("x = true_val if condition else false_val");
       parse("if (x := call()) > 0: pass");
@@ -1544,7 +1552,7 @@ public class PythonGrammarTest {
 
   @Nested
   public class ControlFlow {
-    @Test @Disabled
+    @Test @Disabled("reduce/reduce conflict")
     void testIfStatements() {
       parse("""
         if x > 0:
@@ -1556,7 +1564,7 @@ public class PythonGrammarTest {
         """);
     }
 
-    @Test @Disabled
+    @Test
     void testWhileLoops() {
       parse("""
         while condition:
@@ -1566,7 +1574,7 @@ public class PythonGrammarTest {
         """);
     }
 
-    @Test @Disabled
+    @Test @Disabled("reduce/reduce conflict")
     void testForLoops() {
       parse("""
         for i in range(10):
@@ -1576,7 +1584,7 @@ public class PythonGrammarTest {
         """);
     }
 
-    @Test @Disabled
+    @Test
     void testMatchCase() { // Python 3.10+
       parse("""
         match status:
@@ -1592,15 +1600,23 @@ public class PythonGrammarTest {
 
   @Nested
   public class FunctionsAndLambdas {
-    @Test @Disabled
-    void testBasicFunction() {
+    @Test
+    void testSimpleFunction() {
+      parse("""
+        def greet(name):
+            return "Hello " + name
+        """);
+    }
+
+    @Test @Disabled("f-string")
+    void testFStringFunction() {
       parse("""
         def greet(name):
             return f"Hello, {name}"
         """);
     }
 
-    @Test @Disabled
+    @Test
     void testComplexArguments() {
       parse("""
         def complex_func(a, b=10, *args, kw_only, **kwargs):
@@ -1609,7 +1625,7 @@ public class PythonGrammarTest {
         """);
     }
 
-    @Test @Disabled
+    @Test @Disabled("type hint")
     void testTypeHinting() {
       parse("""
         def add(x: int, y: int = 0) -> int:
@@ -1617,7 +1633,7 @@ public class PythonGrammarTest {
         """);
     }
 
-    @Test @Disabled
+    @Test
     void testLambdasAndAsync() {
       parse("f = lambda x, y=1: x + y");
       parse("""
@@ -1629,7 +1645,7 @@ public class PythonGrammarTest {
 
   @Nested
   public class Classes {
-    @Test @Disabled
+    @Test
     void testBasicClass() {
       parse("""
         class Empty:
@@ -1637,7 +1653,7 @@ public class PythonGrammarTest {
         """);
     }
 
-    @Test @Disabled
+    @Test @Disabled("reduce/reduce conflict")
     void testInheritanceAndMethods() {
       parse("""
         @decorator
@@ -1645,7 +1661,7 @@ public class PythonGrammarTest {
             def __init__(self, name: str):
                 super().__init__()
                 self._name = name
-                
+        
             def bark(self):
                 return "woof"
         """);
@@ -1654,7 +1670,7 @@ public class PythonGrammarTest {
 
   @Nested
   public class ExceptionsAndContexts {
-    @Test @Disabled
+    @Test @Disabled("reduce/reduce conflict")
     void testTryExceptFinally() {
       parse("""
         try:
@@ -1670,7 +1686,7 @@ public class PythonGrammarTest {
         """);
     }
 
-    @Test @Disabled
+    @Test @Disabled("reduce/reduce conflict")
     void testWithStatements() {
       parse("""
         with open("file.txt") as f, open("out.txt", "w") as out:
@@ -1681,14 +1697,14 @@ public class PythonGrammarTest {
 
   @Nested
   public class ComprehensionsAndSlicing {
-    @Test @Disabled
+    @Test
     void testComprehensions() {
       parse("[x**2 for x in items if x > 0]");
       parse("{k: v for k, v in dict.items()}");
       parse("(x for x in generator)");
     }
 
-    @Test @Disabled
+    @Test @Disabled("reduce/reduce conflict")
     void testSlicingAndSubscripts() {
       parse("matrix[0][1]");
       parse("array[1:10:2]");
@@ -1700,7 +1716,7 @@ public class PythonGrammarTest {
 
   @Nested
   public class ImportsAndModules {
-    @Test @Disabled
+    @Test
     void testImports() {
       parse("import os, sys");
       parse("import numpy as np");
@@ -1709,7 +1725,7 @@ public class PythonGrammarTest {
       parse("from ...parent import grandparent");
     }
 
-    @Test @Disabled
+    @Test
     void testGlobalNonlocal() {
       parse("""
         def outer():
