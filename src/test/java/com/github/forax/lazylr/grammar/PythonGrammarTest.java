@@ -1450,11 +1450,6 @@ public class PythonGrammarTest {
     });
   }
 
-  @Test
-  public void pass() {
-    parse("pass;");
-  }
-
   @Nested
   public class LiteralsAndExpressions {
     @Test
@@ -1470,9 +1465,14 @@ public class PythonGrammarTest {
     @Test
     public void testStringLiterals() {
       parse("'single quotes'");
-      parse("\"double quotes\"");
+      parse("""
+        "double quotes"
+        """);
       parse("\"\"\"triple double quotes\"\"\"");
-      parse("'''triple single\nmulti-line'''");
+      parse("""
+          '''triple single
+          multi-line'''
+          """);
     }
 
     @Test
@@ -1482,12 +1482,99 @@ public class PythonGrammarTest {
     }
 
     @Test
+    public void pass() {
+      parse("pass");
+    }
+
+    @Test
+    public void testEllipsis() {
+      parse("...");
+    }
+
+    @Test
     public void testCollections() {
       parse("[1, 2, 3, 4]");
       parse("(1, 2, 3)");
       parse("{1, 2, 3}");
       parse("{'a': 1, 'b': 2}");
       parse("{}");
+    }
+  }
+
+  @Nested
+  public class Assignments {
+    @Test
+    public void testAssignments() {
+      parse("x = 1");
+      parse("a = b = c = 42");
+      parse("x += 1");
+      parse("y -= 2");
+      parse("z *= 3");
+      parse("a //= 4");
+      parse("b **= 5");
+    }
+
+    @Test @Disabled
+    public void testUnpackingAssignments() {
+      parse("a, b = values");
+      parse("a, *rest = items");
+      parse("*head, tail = items");
+      parse("a, (b, c) = nested");
+    }
+
+    @Test
+    public void testAnnotatedAssignments() {
+      parse("x: int");
+      parse("x: int = 42");
+      parse("data: list[str] = []");
+    }
+  }
+
+  @Nested
+  public class AssertionStatements {
+    @Test
+    public void testAssertStatements() {
+      parse("assert x");
+      parse("assert x > 0, 'must be positive'");
+    }
+  }
+
+  @Nested
+  public class DeletionStatement {
+    @Test
+    public void testDelStatements() {
+      parse("del x");
+      parse("del a[0]");
+      parse("del a, b, c");
+    }
+  }
+
+  @Nested
+  public class RaiseStatements {
+    @Test
+    public void testRaise() {
+      parse("raise");
+      parse("raise ValueError()");
+      parse("raise ValueError() from exc");
+    }
+  }
+
+  @Nested
+  public class YieldStatements {
+    @Test
+    public void testYield() {
+      parse("""
+        def gen():
+            yield 1
+        """);
+    }
+
+    @Test
+    public void testYieldFrom() {
+      parse("""
+        def gen():
+            yield from other()
+        """);
     }
   }
 
@@ -1516,6 +1603,34 @@ public class PythonGrammarTest {
     public void testTernaryAndWalrus() {
       parse("x = true_val if condition else false_val");
       parse("if (x := call()) > 0: pass");
+    }
+  }
+
+  @Nested
+  public class Expressions {
+    @Test
+    public void testTupleExpressions() {
+      parse("()");
+      parse("(1,)");
+      parse("1, 2, 3");
+    }
+
+    @Test @Disabled
+    public void testStarredExpressions() {
+      parse("[*a]");
+      parse("(*a, *b)");
+      parse("{*a}");
+    }
+
+    @Test
+    public void testConditionalExpressions() {
+      parse("a if b else c");
+      parse("a if b else c if d else e");
+    }
+
+    @Test
+    public void testNamedExpression() {
+      parse("(n := len(items))");
     }
   }
 
@@ -1554,6 +1669,16 @@ public class PythonGrammarTest {
     }
 
     @Test
+    public void testExecStyleStatements() {
+      parse("return");
+      parse("break");
+      parse("continue");
+    }
+  }
+
+  @Nested
+  public class PatternMatching {
+    @Test
     public void testMatchCase() {
       parse("""
           match status:
@@ -1564,6 +1689,42 @@ public class PythonGrammarTest {
               case _:
                   return "Unknown"
           """);
+    }
+
+    @Test
+    public void testSequencePatterns() {
+      parse("""
+        match value:
+            case [x, y]:
+                pass
+        """);
+    }
+
+    @Test
+    public void testMappingPatterns() {
+      parse("""
+        match value:
+            case {"name": name}:
+                pass
+        """);
+    }
+
+    @Test
+    public void testClassPatterns() {
+      parse("""
+        match obj:
+            case Point(x, y):
+                pass
+        """);
+    }
+
+    @Test
+    public void testGuards() {
+      parse("""
+        match value:
+            case x if x > 0:
+                pass
+        """);
     }
   }
 
@@ -1594,6 +1755,30 @@ public class PythonGrammarTest {
           """);
     }
 
+    @Test
+    public void testPositionalOnlyArguments() {
+      parse("""
+        def f(a, b, /):
+            pass
+        """);
+    }
+
+    @Test
+    public void testKeywordOnlyArguments() {
+      parse("""
+        def f(*, x, y):
+            pass
+        """);
+    }
+
+    @Test
+    public void testMixedPositionalAndKeywordArguments() {
+      parse("""
+        def f(a, /, b, *, c):
+            pass
+        """);
+    }
+
     @Test @Disabled
     public void testTypeHinting() {
       parse("""
@@ -1609,6 +1794,74 @@ public class PythonGrammarTest {
           async def fetch():
               await asyncio.sleep(1)
           """);
+    }
+  }
+
+  @Nested
+  public class CallsAndAttributes {
+    @Test @Disabled
+    public void testFunctionCalls() {
+      parse("f()");
+      parse("f(1, 2, 3)");
+      parse("f(*args)");
+      parse("f(**kwargs)");
+      parse("f(1, *args, x=1, **kwargs)");
+    }
+
+    @Test @Disabled
+    public void testAttributes() {
+      parse("obj.field");
+      parse("obj.method().field");
+      parse("a.b.c.d");
+    }
+  }
+
+  @Nested
+  public class AsyncFeatures {
+    @Test
+    public void testAsyncFor() {
+      parse("""
+        async def f():
+            async for item in source:
+                pass
+        """);
+    }
+
+    @Test
+    public void testAsyncWith() {
+      parse("""
+        async def f():
+            async with lock:
+                pass
+        """);
+    }
+  }
+
+  @Nested
+  public class Decorators {
+    @Test
+    public void testFunctionDecorators() {
+      parse("""
+        @cache
+        def f():
+            pass
+        """);
+
+      parse("""
+        @decorator(arg)
+        def f():
+            pass
+        """);
+    }
+
+    @Test
+    public void testMultipleDecorators() {
+      parse("""
+        @a
+        @b
+        def f():
+            pass
+        """);
     }
   }
 
@@ -1671,6 +1924,26 @@ public class PythonGrammarTest {
       parse("[x**2 for x in items if x > 0]");
       parse("{k: v for k, v in dict.items()}");
       parse("(x for x in generator)");
+    }
+
+    @Test
+    public void testMoreComprehensions() {
+      parse("{x for x in items}");
+      parse("""
+        [x
+         for x in items
+         if x > 0
+         if x < 100]
+        """);
+    }
+
+    @Test @Disabled
+    public void testNestedComprehensions() {
+      parse("""
+        [(x, y)
+         for x in xs
+         for y in ys]
+        """);
     }
 
     @Test @Disabled
