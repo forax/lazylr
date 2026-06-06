@@ -10,14 +10,13 @@ import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayDeque;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
-import java.util.Stack;
-import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 public class PythonGrammarTest {
@@ -33,7 +32,7 @@ public class PythonGrammarTest {
       //interactive : statement_newline
 
       //eval : expressions opt_newlines EOF
-      
+    
       //opt_newlines :
       //opt_newlines : opt_newlines NEWLINE
 
@@ -999,19 +998,11 @@ public class PythonGrammarTest {
       PERCENT, TILDE, CIRCUMFLEX, AT, EXCLAMATION
     }
 
-    public static class Token {
-      public final TokenType type;
-      public final String value;
-      public final int line;
-      public final int column;
-
-      public Token(TokenType type, String value, int line, int column) {
-        this.type = type;
-        this.value = value;
-        this.line = line;
-        this.column = column;
-      }
-
+    public record Token(
+        TokenType type,
+        String value,
+        int line,
+        int column) {
       @Override
       public String toString() {
         return String.format("Token(%s, '%s', line=%d, col=%d)", type, value, line, column);
@@ -1148,16 +1139,16 @@ public class PythonGrammarTest {
     private static final Pattern LINE_CONT_PATTERN = Pattern.compile("\\\\[\\r]?\\n");
 
     // Indentation tracking
-    private static class IndentStack {
-      private final Stack<Integer> indents = new Stack<>();
+    private static final class IndentStack {
+      private final ArrayDeque<Integer> indents = new ArrayDeque<>();
 
       public IndentStack() {
         indents.push(0); // Start with 0 indentation
       }
 
       public List<Token> handleIndentation(int column, int line) {
-        List<Token> tokens = new ArrayList<>();
-        int currentIndent = indents.peek();
+        var tokens = new ArrayList<Token>();
+        var currentIndent = indents.peek();
 
         if (column > currentIndent) {
           indents.push(column);
@@ -1176,7 +1167,7 @@ public class PythonGrammarTest {
       }
 
       public List<Token> handleEOF(int line) {
-        List<Token> tokens = new ArrayList<>();
+        var tokens = new ArrayList<Token>();
         while (indents.size() > 1) {
           indents.pop();
           tokens.add(new Token(TokenType.DEDENT, "", line, 0));
@@ -1201,15 +1192,16 @@ public class PythonGrammarTest {
       this.indentStack = new IndentStack();
       this.atLineStart = true;
       this.parenDepth = 0;
+      super();
     }
 
     public List<Token> tokenize() {
-      List<Token> tokens = new ArrayList<>();
+      var tokens = new ArrayList<Token>();
 
       while (position < input.length()) {
         if (atLineStart) {
           // Handle indentation
-          int indent = skipWhitespace();
+          var indent = skipWhitespace();
           if (position >= input.length()) break;
 
           // Skip empty lines and comments
@@ -1243,9 +1235,11 @@ public class PythonGrammarTest {
         // Skip whitespace
         skipWhitespace();
 
-        if (position >= input.length()) break;
+        if (position >= input.length()) {
+          break;
+        }
 
-        char ch = input.charAt(position);
+        var ch = input.charAt(position);
 
         // Handle newlines
         if (ch == '\n' || ch == '\r') {
@@ -1271,15 +1265,15 @@ public class PythonGrammarTest {
 
         // Handle strings
         if (ch == '"' || ch == '\'') {
-          String str = readString();
-          tokens.add(new Token(TokenType.STRING, str, line, column - str.length()));
+          var string = readString();
+          tokens.add(new Token(TokenType.STRING, string, line, column - string.length()));
           continue;
         }
 
         // Handle f-strings (simplified - full implementation would be more complex)
         if (ch == 'f' || ch == 'F') {
-          String remaining = input.substring(position);
-          Matcher strMatcher = STRING_PATTERN.matcher(remaining);
+          var remaining = input.substring(position);
+          var strMatcher = STRING_PATTERN.matcher(remaining);
           String group;
           if (strMatcher.lookingAt() && ((group = strMatcher.group()).startsWith("f") || group.startsWith("F"))) {
             // This is a simplified f-string handling
@@ -1292,29 +1286,29 @@ public class PythonGrammarTest {
 
         // Handle numbers
         if (Character.isDigit(ch) || (ch == '.' && position + 1 < input.length() && Character.isDigit(input.charAt(position + 1)))) {
-          String num = readNumber();
-          tokens.add(new Token(TokenType.NUMBER, num, line, column - num.length()));
+          var number = readNumber();
+          tokens.add(new Token(TokenType.NUMBER, number, line, column - number.length()));
           continue;
         }
 
         // Handle identifiers and keywords
         if (Character.isLetter(ch) || ch == '_') {
-          String name = readName();
-          TokenType type = getIdentifierType(name);
+          var name = readName();
+          var type = getIdentifierType(name);
           tokens.add(new Token(type, name, line, column - name.length()));
           continue;
         }
 
         // Handle operators and punctuation
-        String op = readOperator();
-        if (op != null) {
-          TokenType type = OPERATORS.get(op);
+        var operator = readOperator();
+        if (operator != null) {
+          var type = OPERATORS.get(operator);
           if (type == TokenType.LPAR || type == TokenType.LSQB || type == TokenType.LBRACE) {
             parenDepth++;
           } else if (type == TokenType.RPAR || type == TokenType.RSQB || type == TokenType.RBRACE) {
             parenDepth = Math.max(0, parenDepth - 1);
           }
-          tokens.add(new Token(type, op, line, column - op.length()));
+          tokens.add(new Token(type, operator, line, column - operator.length()));
           continue;
         }
 
@@ -1331,50 +1325,50 @@ public class PythonGrammarTest {
     }
 
     private int skipWhitespace() {
-      Matcher m = WHITESPACE_PATTERN.matcher(input.substring(position));
-      if (m.lookingAt()) {
-        String ws = m.group();
-        position += ws.length();
-        column += ws.length();
-        return ws.length();
+      var matcher = WHITESPACE_PATTERN.matcher(input.substring(position));
+      if (matcher.lookingAt()) {
+        var whitespace = matcher.group();
+        position += whitespace.length();
+        column += whitespace.length();
+        return whitespace.length();
       }
       return 0;
     }
 
     private void skipNewline() {
-      Matcher m = NEWLINE_PATTERN.matcher(input.substring(position));
-      if (m.lookingAt()) {
-        String nl = m.group();
-        position += nl.length();
+      var matcher = NEWLINE_PATTERN.matcher(input.substring(position));
+      if (matcher.lookingAt()) {
+        var newline = matcher.group();
+        position += newline.length();
         line++;
         column = 1;
       }
     }
 
     private void skipComment() {
-      Matcher m = COMMENT_PATTERN.matcher(input.substring(position));
-      if (m.lookingAt()) {
-        position += m.group().length();
-        column += m.group().length();
+      var matcher = COMMENT_PATTERN.matcher(input.substring(position));
+      if (matcher.lookingAt()) {
+        position += matcher.group().length();
+        column += matcher.group().length();
       }
     }
 
     private void skipLineContinuation() {
-      Matcher m = LINE_CONT_PATTERN.matcher(input.substring(position));
-      if (m.lookingAt()) {
-        position += m.group().length();
+      var matcher = LINE_CONT_PATTERN.matcher(input.substring(position));
+      if (matcher.lookingAt()) {
+        position += matcher.group().length();
         line++;
         column = 1;
       }
     }
 
     private String readString() {
-      Matcher m = STRING_PATTERN.matcher(input.substring(position));
-      if (m.lookingAt()) {
-        String str = m.group();
-        position += str.length();
+      var matcher = STRING_PATTERN.matcher(input.substring(position));
+      if (matcher.lookingAt()) {
+        var string = matcher.group();
+        position += string.length();
         // Count lines in multi-line strings
-        for (char c : str.toCharArray()) {
+        for (char c : string.toCharArray()) {
           if (c == '\n') {
             line++;
             column = 1;
@@ -1382,26 +1376,26 @@ public class PythonGrammarTest {
             column++;
           }
         }
-        return str;
+        return string;
       }
       return "";
     }
 
     private String readNumber() {
-      Matcher m = NUMBER_PATTERN.matcher(input.substring(position));
-      if (m.lookingAt()) {
-        String num = m.group();
-        position += num.length();
-        column += num.length();
-        return num;
+      var matcher = NUMBER_PATTERN.matcher(input.substring(position));
+      if (matcher.lookingAt()) {
+        var number = matcher.group();
+        position += number.length();
+        column += number.length();
+        return number;
       }
       return "";
     }
 
     private String readName() {
-      Matcher m = NAME_PATTERN.matcher(input.substring(position));
-      if (m.lookingAt()) {
-        String name = m.group();
+      var matcher = NAME_PATTERN.matcher(input.substring(position));
+      if (matcher.lookingAt()) {
+        var name = matcher.group();
         position += name.length();
         column += name.length();
         return name;
@@ -1409,15 +1403,15 @@ public class PythonGrammarTest {
       return "";
     }
 
-    private String readOperator() {
-      String remaining = input.substring(position);
+    private @Nullable String readOperator() {
+      var remaining = input.substring(position);
 
       // Try longest match first
-      for (String op : OPERATORS.keySet()) {
-        if (remaining.startsWith(op)) {
-          position += op.length();
-          column += op.length();
-          return op;
+      for (var operator : OPERATORS.keySet()) {
+        if (remaining.startsWith(operator)) {
+          position += operator.length();
+          column += operator.length();
+          return operator;
         }
       }
 
@@ -1426,17 +1420,15 @@ public class PythonGrammarTest {
 
     private TokenType getIdentifierType(String name) {
       // Check hard keywords first
-      TokenType keyword = KEYWORDS.get(name);
-      if (keyword != null) {
-        return keyword;
+      var keywordType = KEYWORDS.get(name);
+      if (keywordType != null) {
+        return keywordType;
       }
-
       // Check soft keywords
-      TokenType softKeyword = SOFT_KEYWORDS.get(name);
-      if (softKeyword != null) {
-        return softKeyword;
+      var softKeywordType = SOFT_KEYWORDS.get(name);
+      if (softKeywordType != null) {
+        return softKeywordType;
       }
-
       return TokenType.NAME;
     }
 
