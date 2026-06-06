@@ -1140,15 +1140,17 @@ public class PythonGrammarTest {
 
     // Indentation tracking
     private static final class IndentStack {
-      private final ArrayDeque<Integer> indents = new ArrayDeque<>();
+      private final ArrayDeque<Integer> indents;
 
       public IndentStack() {
+        indents = new ArrayDeque<>();
+        super();
         indents.push(0); // Start with 0 indentation
       }
 
       public List<Token> handleIndentation(int column, int line) {
         var tokens = new ArrayList<Token>();
-        var currentIndent = indents.peek();
+        var currentIndent = (int) indents.peek();
 
         if (column > currentIndent) {
           indents.push(column);
