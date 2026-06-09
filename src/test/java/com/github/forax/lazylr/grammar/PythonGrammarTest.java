@@ -875,15 +875,8 @@ public class PythonGrammarTest {
       single_target : name
       single_target : LPAR single_target RPAR
     
-      single_subscript_attribute_target : t_primary DOT name
-      single_subscript_attribute_target : t_primary LSQB slices RSQB
-    
-      t_primary : atom
-      t_primary : t_primary DOT name
-      t_primary : t_primary LSQB slices RSQB
-      t_primary : t_primary genexp
-      t_primary : t_primary LPAR RPAR
-      t_primary : t_primary LPAR arguments RPAR
+      single_subscript_attribute_target : primary DOT name
+      single_subscript_attribute_target : primary LSQB slices RSQB
     
       del_stmt : DEL star_expressions
     
