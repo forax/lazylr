@@ -6,7 +6,6 @@ import com.github.forax.lazylr.Parser;
 import com.github.forax.lazylr.Production;
 import com.github.forax.lazylr.Terminal;
 import org.jspecify.annotations.Nullable;
-import org.junit.jupiter.api.Disabled;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
@@ -842,30 +841,18 @@ public class PythonGrammarTest {
       //  Function call arguments
       // -----------------------------------------------------------------
     
-      arguments : args
-      arguments : args COMMA
+      arguments : argument_list
+      arguments : argument_list COMMA
     
-      args : starred_expression
-      args : assignment_expression
-      args : expression
-      args : args COMMA starred_expression
-      args : args COMMA assignment_expression
-      args : args COMMA expression
-      args : args COMMA kwargs
-      args : kwargs
+      argument_list : argument
+      argument_list : argument_list COMMA argument
     
-      kwargs : kwarg_or_starred
-      kwargs : kwarg_or_double_starred
-      kwargs : kwargs COMMA kwarg_or_starred
-      kwargs : kwargs COMMA kwarg_or_double_starred
+      argument : expression
+      argument : starred_expression
+      argument : name EQUAL expression
+      argument : DOUBLESTAR expression
     
       starred_expression : STAR expression
-    
-      kwarg_or_starred : name EQUAL expression
-      kwarg_or_starred : starred_expression
-    
-      kwarg_or_double_starred : name EQUAL expression
-      kwarg_or_double_starred : DOUBLESTAR expression
     
       // -----------------------------------------------------------------
       //  Assignment targets
@@ -1753,7 +1740,7 @@ public class PythonGrammarTest {
 
   @Nested
   public class CallsAndAttributes {
-    @Test @Disabled
+    @Test
     public void testFunctionCalls() {
       parse("f()");
       parse("f(1, 2, 3)");
