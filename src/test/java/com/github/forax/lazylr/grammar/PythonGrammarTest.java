@@ -137,8 +137,6 @@ public class PythonGrammarTest {
     
       nonlocal_stmt : NONLOCAL name_list
     
-      del_stmt : DEL del_targets
-    
       yield_stmt : yield_expr
     
       assert_stmt : ASSERT expression
