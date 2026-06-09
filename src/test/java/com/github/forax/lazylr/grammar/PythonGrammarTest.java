@@ -1469,7 +1469,7 @@ public class PythonGrammarTest {
       parse("b **= 5");
     }
 
-    @Test @Disabled
+    @Test
     public void testUnpackingAssignments() {
       parse("a, b = values");
       parse("a, *rest = items");
@@ -1570,7 +1570,7 @@ public class PythonGrammarTest {
       parse("1, 2, 3");
     }
 
-    @Test @Disabled
+    @Test
     public void testStarredExpressions() {
       parse("[*a]");
       parse("(*a, *b)");
