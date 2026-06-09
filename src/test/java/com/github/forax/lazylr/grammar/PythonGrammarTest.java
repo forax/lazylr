@@ -18,6 +18,8 @@ import java.util.List;
 import java.util.regex.Pattern;
 
 public class PythonGrammarTest {
+  /// LR approximation of the Python grammar
+  /// [Python PEG grammar](https://docs.python.org/3/reference/grammar.html)
   private static final MetaGrammar META_GRAMMAR = MetaGrammar.load("""
     precedence {
       right: IF_NO_ELSE
