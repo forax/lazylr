@@ -821,10 +821,10 @@ public class PythonGrammarTest {
       for_if_clauses : for_if_clause
       for_if_clauses : for_if_clauses for_if_clause
     
-      for_if_clause : FOR star_expressions IN disjunction
-      for_if_clause : FOR star_expressions IN disjunction if_list
-      for_if_clause : ASYNC FOR star_expressions IN disjunction
-      for_if_clause : ASYNC FOR star_expressions IN disjunction if_list
+      for_if_clause : FOR star_targets IN disjunction
+      for_if_clause : FOR star_targets IN disjunction if_list
+      for_if_clause : ASYNC FOR star_targets IN disjunction
+      for_if_clause : ASYNC FOR star_targets IN disjunction if_list
     
       if_list : IF disjunction
       if_list : if_list IF disjunction
@@ -1873,14 +1873,14 @@ public class PythonGrammarTest {
 
   @Nested
   public class ComprehensionsAndSlicing {
-    @Test @Disabled
+    @Test
     public void testComprehensions() {
       parse("[x**2 for x in items if x > 0]");
       parse("{k: v for k, v in dict.items()}");
       parse("(x for x in generator)");
     }
 
-    @Test @Disabled
+    @Test
     public void testMoreComprehensions() {
       parse("{x for x in items}");
       parse("""
@@ -1891,7 +1891,7 @@ public class PythonGrammarTest {
         """);
     }
 
-    @Test @Disabled
+    @Test
     public void testNestedComprehensions() {
       parse("""
         [(x, y)
