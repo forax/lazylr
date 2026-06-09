@@ -1584,7 +1584,7 @@ public class PythonGrammarTest {
 
   @Nested
   public class ControlFlow {
-    @Test @Disabled
+    @Test
     public void testIfStatements() {
       parse("""
           if x > 0:
@@ -1756,7 +1756,7 @@ public class PythonGrammarTest {
       parse("f(1, *args, x=1, **kwargs)");
     }
 
-    @Test @Disabled
+    @Test
     public void testAttributes() {
       parse("obj.field");
       parse("obj.method().field");
@@ -1823,7 +1823,7 @@ public class PythonGrammarTest {
           """);
     }
 
-    @Test @Disabled
+    @Test
     public void testInheritanceAndMethods() {
       parse("""
           @decorator
@@ -1840,7 +1840,7 @@ public class PythonGrammarTest {
 
   @Nested
   public class ExceptionsAndContexts {
-    @Test @Disabled
+    @Test
     public void testTryExceptFinally() {
       parse("""
           try:
@@ -1856,7 +1856,7 @@ public class PythonGrammarTest {
           """);
     }
 
-    @Test @Disabled
+    @Test
     public void testWithStatements() {
       parse("""
           with open("file.txt") as f, open("out.txt", "w") as out:
@@ -1894,7 +1894,7 @@ public class PythonGrammarTest {
         """);
     }
 
-    @Test @Disabled
+    @Test
     public void testSlicingAndSubscripts() {
       parse("matrix[0][1]");
       parse("array[1:10:2]");
