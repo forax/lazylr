@@ -343,14 +343,14 @@ public class PythonGrammarTest {
       while_stmt : WHILE named_expression COLON block
       while_stmt : WHILE named_expression COLON block else_block
     
-      for_stmt : FOR star_expressions IN star_expressions COLON block
-      for_stmt : FOR star_expressions IN star_expressions COLON block else_block
-      for_stmt : FOR star_expressions IN star_expressions COLON TYPE_COMMENT block
-      for_stmt : FOR star_expressions IN star_expressions COLON TYPE_COMMENT block else_block
-      for_stmt : ASYNC FOR star_expressions IN star_expressions COLON block
-      for_stmt : ASYNC FOR star_expressions IN star_expressions COLON block else_block
-      for_stmt : ASYNC FOR star_expressions IN star_expressions COLON TYPE_COMMENT block
-      for_stmt : ASYNC FOR star_expressions IN star_expressions COLON TYPE_COMMENT block else_block
+      for_stmt : FOR star_targets IN star_expressions COLON block
+      for_stmt : FOR star_targets IN star_expressions COLON block else_block
+      for_stmt : FOR star_targets IN star_expressions COLON TYPE_COMMENT block
+      for_stmt : FOR star_targets IN star_expressions COLON TYPE_COMMENT block else_block
+      for_stmt : ASYNC FOR star_targets IN star_expressions COLON block
+      for_stmt : ASYNC FOR star_targets IN star_expressions COLON block else_block
+      for_stmt : ASYNC FOR star_targets IN star_expressions COLON TYPE_COMMENT block
+      for_stmt : ASYNC FOR star_targets IN star_expressions COLON TYPE_COMMENT block else_block
     
       with_stmt : WITH LPAR with_item_list RPAR COLON block
       with_stmt : WITH LPAR with_item_list COMMA RPAR COLON block
@@ -870,6 +870,12 @@ public class PythonGrammarTest {
       // -----------------------------------------------------------------
       //  Assignment targets
       // -----------------------------------------------------------------
+    
+      star_targets : star_target
+      star_targets : star_targets COMMA star_target
+    
+      star_target : STAR single_target
+      star_target : single_target
     
       single_target : single_subscript_attribute_target
       single_target : name
@@ -1606,7 +1612,7 @@ public class PythonGrammarTest {
           """);
     }
 
-    @Test @Disabled
+    @Test
     public void testForLoops() {
       parse("""
           for i in range(10):
@@ -1766,7 +1772,7 @@ public class PythonGrammarTest {
 
   @Nested
   public class AsyncFeatures {
-    @Test @Disabled
+    @Test
     public void testAsyncFor() {
       parse("""
         async def f():
