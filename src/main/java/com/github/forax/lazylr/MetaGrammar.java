@@ -216,6 +216,39 @@ public final class MetaGrammar {
     LALRVerifier.verify(grammar, precedenceMap, errorReporter);
   }
 
+  /// Parses the given input text using this meta-grammar verifying that
+  /// the input text is syntactically valid.
+  ///
+  /// This is a convenience method for validation: it tokenizes and
+  /// parses the input exactly as [#parse(CharSequence, Evaluator)] would,
+  /// but uses a no-op evaluator.
+  /// Use it when you only want to check that the input conforms to the grammar
+  /// without computing a result.
+  ///
+  /// @param inputText the input text to tokenize and parse.
+  /// @throws NullPointerException if {@code inputText} is {@code null}.
+  /// @throws IllegalStateException if no grammar section is defined in this meta-grammar.
+  /// @throws ParsingException if a lexing or parsing error occurs.
+  ///
+  /// @see #parse(CharSequence, Evaluator)
+  public void parse(CharSequence inputText) throws ParsingException {
+    Objects.requireNonNull(inputText);
+    if (grammar == null) {
+      throw new IllegalStateException("no grammar section is defined");
+    }
+    parse(inputText, new Evaluator<@Nullable Object>() {
+      @Override
+      public @Nullable Object evaluate(Terminal terminal) {
+        return null;
+      }
+
+      @Override
+      public @Nullable Object evaluate(Production production, List<@Nullable Object> arguments) {
+        return null;
+      }
+    });
+  }
+
   /// Parses the given input text using this meta-grammar and evaluates it using the provided evaluator.
   ///
   /// The parsing process is as follows:

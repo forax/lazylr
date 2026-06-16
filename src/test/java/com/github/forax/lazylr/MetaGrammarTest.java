@@ -15,7 +15,12 @@ import java.util.regex.Pattern;
 
 import static com.github.forax.lazylr.Precedence.Associativity.LEFT;
 import static com.github.forax.lazylr.Precedence.Associativity.RIGHT;
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertDoesNotThrow;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 public final class MetaGrammarTest {
 
@@ -920,6 +925,119 @@ public final class MetaGrammarTest {
     assertThrows(IllegalStateException.class, mg::verify);
   }
 
+
+  @Test
+  public void parseVoidAcceptsEpsilonProduction() {
+    var mg = MetaGrammar.load("""
+      grammar {
+        E:
+      }
+      """);
+
+    mg.parse("");
+  }
+
+  @Test
+  public void parseVoidAcceptsBinaryExpression() {
+    var mg = MetaGrammar.load("""
+      tokens {
+        num: /[0-9]+/
+        /[ \\t]+/
+      }
+      precedence {
+        left: '+'
+      }
+      grammar {
+        E: E '+' E
+        E: num
+      }
+      """);
+
+    mg.parse("1 + 2 + 3");
+  }
+
+  @Test
+  public void parseVoidAcceptsNestedStructure() {
+    var mg = MetaGrammar.load("""
+      tokens {
+        num: /[0-9]+/
+        /[ \\t]+/
+      }
+      precedence {
+        left: '+'
+        left: '*'
+      }
+      grammar {
+        E: E '+' E
+        E: E '*' E
+        E: num
+      }
+      """);
+
+    mg.parse("1 + 2 * 3");
+  }
+
+  @Test
+  public void parseVoidInvalidInputUnknownTokenThrowsParsingException() {
+    var mg = MetaGrammar.load("""
+      tokens {
+        num: /[0-9]+/
+      }
+      grammar {
+        E: num
+      }
+      """);
+
+    assertThrows(ParsingException.class, () -> mg.parse("@@@"));
+  }
+
+  @Test
+  public void parseVoidInvalidInputUnexpectedTokenThrowsParsingException() {
+    var mg = MetaGrammar.load("""
+      tokens {
+        num: /[0-9]+/
+        plus: /\\+/
+      }
+      grammar {
+        E: num
+      }
+      """);
+
+    assertThrows(ParsingException.class, () -> mg.parse("1 + 2"));
+  }
+
+  @Test
+  public void parseVoidInvalidInputMissingOperandThrowsParsingException() {
+    var mg = MetaGrammar.load("""
+      tokens {
+        num: /[0-9]+/
+        /[ \\t]+/
+      }
+      precedence {
+        left: '+'
+      }
+      grammar {
+        E: E '+' E
+        E: num
+      }
+      """);
+
+    assertThrows(ParsingException.class, () -> mg.parse("1 +"));
+  }
+
+  @Test
+  public void parseVoidInvalidInputPartialMatchThrowsParsingException() {
+    var mg = MetaGrammar.load("""
+      tokens {
+        num: /[0-9]+/
+      }
+      grammar {
+        E: num
+      }
+      """);
+
+    assertThrows(ParsingException.class, () -> mg.parse("42 abc"));
+  }
 
   @Test
   public void parseWithEvaluatorReturnsExpectedValue() {
