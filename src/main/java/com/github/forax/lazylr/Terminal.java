@@ -44,7 +44,7 @@ public final class Terminal implements Symbol, PrecedenceEntity {
   private final String name;
   private final @Nullable String value;
 
-  private Terminal(String name, @Nullable String value, boolean unused) {
+  Terminal(String name, @Nullable String value, boolean unused) {
     this.name = name;
     this.value = value;
     super();

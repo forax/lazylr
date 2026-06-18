@@ -131,9 +131,10 @@ final class Tokenizer implements Iterator<Terminal> {
       throw new NoSuchElementException();
     }
     terminalIndex = matchIndex;  // for error message
-    if (Terminal.ERROR.name().equals(terminal.name())) {
+    if (terminal == Terminal.ERROR) {
       this.terminal = null;
-      return terminal;
+      var errorMessage = ErrorHandler.lexingErrorMessage(terminalIndex, input);
+      return new Terminal(Terminal.ERROR.name(), errorMessage, false);
     }
     matchIndex += terminal.value().length();
     computed = false;
@@ -175,7 +176,7 @@ final class Tokenizer implements Iterator<Terminal> {
       return null;
     }
     terminalIndex = matchIndex;  // for error message
-    if (Terminal.ERROR.name().equals(terminal.name())) {
+    if (terminal == Terminal.ERROR) {
       this.terminal = null;
       return terminal;
     }
