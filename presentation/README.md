@@ -5,5 +5,7 @@ Run using
 java -jar jvisualbook.jar
 ```
 
-The lazylr jar in the folder `../target` must be present
+The lazylr jar in the folder `../target` must be present,
+otherwise run `mvn clean package` in the 'lazylr' folder to build it.
+
 
