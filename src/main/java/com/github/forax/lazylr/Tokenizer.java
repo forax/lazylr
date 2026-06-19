@@ -178,7 +178,10 @@ final class Tokenizer implements Iterator<Terminal> {
     terminalIndex = matchIndex;  // for error message
     if (terminal == Terminal.ERROR) {
       this.terminal = null;
-      return terminal;
+      // Design note: unlike next(), we return the bare ERROR sentinel here,
+      // not a formatted message. Parser.parse() already centralizes error
+      // reporting, so there is no need for a special case here.
+      return Terminal.ERROR;
     }
     matchIndex += terminal.value().length();
     computed = false;
