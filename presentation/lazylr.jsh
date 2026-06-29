@@ -83,6 +83,24 @@ var mg = MetaGrammar.load("""
 mg.parse("let hello = 42");
 
 
+// ## Context sensitive lexing
+// No keyword-vs-identifier ambiguity
+
+var mg = MetaGrammar.load("""
+  tokens {
+    IF: /if/
+    ID: /[a-z]+/
+    /[ ]+/
+  }
+  grammar {
+    start : IF '(' ID ')' ID
+  }
+  """);
+
+mg.parse("if (x) foo");
+//mg.parse("if (if) if");
+
+
 // # What is 🦥 Lazy LR?
 // ` `
 
