@@ -84,7 +84,7 @@ mg.parse("let hello = 42");
 
 
 // ## Context sensitive lexing
-// No keyword-vs-identifier ambiguity
+// Only tokens that are valid are activated
 
 var mg = MetaGrammar.load("""
   tokens {
