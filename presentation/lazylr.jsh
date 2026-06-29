@@ -14,7 +14,7 @@
 // Let's use the library LazyLR
 /env --class-path ../target/lazylr-13.0.1.jar
 
-// Then imports all the classes
+// Then imports the classes
 import com.github.forax.lazylr.*;
 
 
@@ -97,8 +97,7 @@ var mg = MetaGrammar.load("""
   }
   """);
 
-mg.parse("if (x) foo");
-//mg.parse("if (if) if");
+mg.parse("if (if) if");
 
 
 // # What is 🦥 Lazy LR?
@@ -201,7 +200,7 @@ mg.parse("let x = 40 + 1 + 1");
 // ## Fix the conflict using precedence
 // We can say that '+' is left-associative
 
-mg = MetaGrammar.load(TOKENS + """
+var mg = MetaGrammar.load(TOKENS + """
   precedence {
     left: '+'
   }
@@ -212,6 +211,24 @@ mg = MetaGrammar.load(TOKENS + """
     }
   """);
 mg.parse("let x = 40 + 1 + 1");
+
+
+// ## Precedence of a production?
+// Inherits from the precedence of the rightmost terminal
+// that have a precedence (can be overridden by %prec)
+
+var mg = MetaGrammar.load(TOKENS + """
+  precedence {
+    left: '+'
+  }
+  grammar {
+      start : 'let' ID '=' expr
+      expr : expr '+' expr       %prec '+'
+      expr : NUMBER
+    }
+  """);
+mg.parse("let x = 40 + 1 + 1");
+
 
 // ## Multiplication of numbers
 
