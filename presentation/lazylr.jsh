@@ -398,7 +398,7 @@ IO.println(mg.parse("let x = 40 + 2", visitor));
 // * Lexing is not fast (`java.util.regex` is slow).
 //   Maybe, use a faster regex engine (pluggable?)
 
-// * Feature Ideas: lazier, support incremental parsing, have a generic parse tree,
+// * Other Ideas: lazier, support incremental parsing, have a generic parse tree,
 //   IntelliJ/LSP plugin for the grammar, LALR runtime option, support non-assoc,
 //   use JaCoCo format for coverage?
 
