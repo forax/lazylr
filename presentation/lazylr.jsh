@@ -386,7 +386,7 @@ var visitor = new Visitor<Expr>() {
   @ProductionName("expr : expr + expr")
   public Expr add(Expr left, Expr right) { return new Expr.Add(left, right); }
   @ProductionName("expr : expr * expr")
-  public Expr method(Expr left, Expr right) { return new Expr.Mul(left, right); }
+  public Expr mul(Expr left, Expr right) { return new Expr.Mul(left, right); }
 };
 IO.println(mg.parse("let x = 36 + 2 * 3", visitor));
 
