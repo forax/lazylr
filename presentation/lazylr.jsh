@@ -311,13 +311,13 @@ parser.parse(terminals, new ParserListener() {
 //   shift 'let'
 //   shift ID('x')
 //   shift '='
-//   shift NUMBER(40)                    ← leaf value: "40"
-//     reduce [expr : NUMBER]            ← Integer.parseInt()  →  40
+//   shift NUMBER(40)                    ← Integer.parseInt("40")
+//     reduce [expr : NUMBER]            ← 40
 //   shift '+'
-//   shift NUMBER(2)                     ← leaf value: "2"
-//     reduce [expr : NUMBER]            ← Integer.parseInt()  →  2
-//     reduce [expr : expr + expr]       ← add(40, 2)  →  42
-//     reduce [start : let ID = expr]    ← start(42)  →  42
+//   shift NUMBER(2)                     ← Integer.parseInt("2")
+//     reduce [expr : NUMBER]            ← 2
+//     reduce [expr : expr + expr]       ← add(40, 2)
+//     reduce [start : let ID = expr]    ← start(42)
 //          │
 //          ▼
 //       result: 42
@@ -326,10 +326,10 @@ parser.parse(terminals, new ParserListener() {
 //   start
 //   └── expr  (42)
 //       ├── expr  (40)
-//       │   └── NUMBER("40")
+//       │   └── NUMBER(40)
 //       ├── '+'
 //       └── expr  (2)
-//           └── NUMBER("2")
+//           └── NUMBER(2)
 // ```
 
 
