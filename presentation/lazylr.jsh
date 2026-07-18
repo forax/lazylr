@@ -334,7 +334,7 @@ parser.parse(terminals, new ParserListener() {
 
 
 // ## Evaluation of an expression
-// Build a visitor iteratively to propagate values along the tree
+// Build a `Visitor` iteratively to propagate values along the tree
 
 // Methods with the name of a terminal are called when shifting to provide a value
 
