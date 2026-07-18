@@ -148,7 +148,7 @@ var mg = MetaGrammar.load(TOKENS + """
   """);
 mg.parse("let x = 40 + 2");
 
-// Problem: can only parses two numbers!
+// Problem: can only parse two numbers!
 
 
 // ## With a left-recursive grammar
