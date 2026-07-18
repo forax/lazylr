@@ -93,7 +93,7 @@ mg.parse("if (if) if");
 // # What is 🦥 Lazy LR?
 // ` `
 
-// **Does not** generate parsers from grammars (unlike Bison, ANTLR, etc)
+// **Does not** generate parsers from a grammar (unlike Bison, ANTLR, etc)
 
 // Instantiates LR(1) parsers that **lazily** evaluate an input using a grammar
 
@@ -375,7 +375,6 @@ IO.println(mg.parse("let x = 40 + 2", visitor));
 sealed interface Expr {
   record Value(int value) implements Expr {}
   record Add(Expr left, Expr right) implements Expr {}
-  record Mul(Expr left, Expr right) implements Expr {}
 }
 
 var visitor = new Visitor<Expr>() {
@@ -386,10 +385,8 @@ var visitor = new Visitor<Expr>() {
   public Expr expr(int value) { return new Expr.Value(value); }
   @ProductionName("expr : expr + expr")
   public Expr add(Expr left, Expr right) { return new Expr.Add(left, right); }
-  @ProductionName("expr : expr * expr")
-  public Expr mul(Expr left, Expr right) { return new Expr.Mul(left, right); }
 };
-IO.println(mg.parse("let x = 36 + 2 * 3", visitor));
+IO.println(mg.parse("let x = 40 + 2", visitor));
 
 
 // # Future?
