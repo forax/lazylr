@@ -105,7 +105,7 @@ mg.parse("if (if) if");
 
 // A library that **does not** generates parsers from grammars (unlike Bison, ANTLR, etc)
 
-// A library that creates parsers that **lazily** evaluate an input using a grammar
+// A library that creates LR(1) parsers that **lazily** evaluate an input using a grammar
 
 // Enabling **fast feedback loop**
 
@@ -265,7 +265,9 @@ mg.parse("let x = 40 + 1 * 2");
 
 
 // ## Offline Grammar verification
-// The full grammar can be verified (LALR) using the `verify()` method
+// The full grammar can be verified 'offline' (slow!) using the `verify()` method
+
+// `verify()` build a LALR(1) automaton, less powerful than LazyLR, but more classical
 
 mg = MetaGrammar.load(TOKENS + """
   precedence {
@@ -390,24 +392,12 @@ parser.parse(terminals, new ParserListener() {
 // ```
 
 
-// ## Evaluation
-// A `Visitor` can be used to evaluate the grammar (propagate values along the tree)
+// ## Evaluation of an expressions
+// A visitor can be built iteratively to propagate values along the tree
 
-var visitor = new Visitor<Integer>() {
-  public int NUMBER(Terminal terminal) {
-    return Integer.parseInt(terminal.value());
-  }
-};
-mg.parse("let x = 42", visitor);
-
-// Oops: we forget the evaluation of start
-
-
-// ## Evaluation of the expressions
-// Like the grammar, the visitor can be built iteratively
+// A method with the name of a terminal provides the terminal value
 
 // `@ProductionName` is used to specify the name of the production,
-// 'let', ID and '=' have no value
 
 var visitor = new Visitor<Integer>() {
   public int NUMBER(Terminal t) { return Integer.parseInt(t.value()); }
@@ -419,21 +409,7 @@ var visitor = new Visitor<Integer>() {
 };
 mg.parse("let x = 42", visitor);
 
-// How to get the value of ID?
-
-
-// ## We need a terminal method 'ID'
-
-var visitor = new Visitor<Integer>() {
-  public int NUMBER(Terminal t) { return Integer.parseInt(t.value()); }
-  public String ID(Terminal terminal) { return terminal.value(); }
-  @ProductionName("start : let ID = expr")
-  public int start(String id, int value) {
-    IO.println("start " + id + " " + value);
-    return value;
-  }
-};
-mg.parse("let x = 42", visitor);
+// Here, 'let', ID and '=' have no value
 
 
 // ## parse() returns a result
@@ -447,8 +423,6 @@ var visitor = new Visitor<Integer>() {
 };
 IO.println(mg.parse("let x = 42", visitor));
 
-// How to add the addition?
-
 
 // ## With the addition
 
@@ -458,10 +432,10 @@ var visitor = new Visitor<Integer>() {
   public int start(int value) {
     return value;
   }
-  @ProductionName("expr : expr + expr")
+  /*@ProductionName("expr : expr + expr")
   public int add(int left, int right) {
     return left + right;
-  }
+  }*/
 };
 IO.println(mg.parse("let x = 40 + 2", visitor));
 
