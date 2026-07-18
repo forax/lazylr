@@ -267,18 +267,11 @@ mg.verify();
 
 // # How LazyLR works?
 // The implementation is split into two parts:
-// * a `Lexer` that transform the input into an iterator of terminals using the regexes
 
-var lexer = Lexer.createLexer(mg.tokens());
-var terminals = lexer.tokenize("let x = 40 + 1 * 2");
+// * a `Lexer` that transform the input into an iterator of terminals using the regexes
 
 // * a `Parser` that scan the terminals and generate events
 
-var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
-parser.parse(terminals, new ParserListener() {
-  public void onShift(Terminal terminal) { }
-  public void onReduce(Production production) { }
-});
 
 // ## The Lexer
 // Splits the input into `Terminal` using the regexes
@@ -348,7 +341,7 @@ parser.parse(terminals, new ParserListener() {
 // ```
 
 
-// ## Evaluation of expressions
+// ## Evaluation of an expression
 // A visitor can be built iteratively to propagate values along the tree
 
 // Methods with the name of a terminal provides the terminal value
