@@ -84,7 +84,7 @@ mg.parse("let hello = 42");
 
 
 // ## Context sensitive lexing
-// Only tokens that are valid are activated
+// Solve keyword vs identifier, only tokens that are valid are activated
 
 var mg = MetaGrammar.load("""
   tokens {
@@ -103,11 +103,11 @@ mg.parse("if (if) if");
 // # What is 🦥 Lazy LR?
 // ` `
 
-// A library that **does not** generates parsers from grammars (unlike Bison, ANTLR, etc)
+// **Does not** generate parsers from grammars (unlike Bison, ANTLR, etc)
 
-// A library that creates LR(1) parsers that **lazily** evaluate an input using a grammar
+// Instantiates LR(1) parsers that **lazily** evaluate an input using a grammar
 
-// Enabling **fast feedback loop**
+// Enabling a **fast feedback loop**
 
 
 // # Guiding principles of Lazy LR
@@ -161,7 +161,7 @@ mg.parse("let x = 40 + 2");
 // Problem: can only adds two numbers!
 
 
-// ## Use a left-recursive grammar
+// ## With a left-recursive grammar
 
 var mg = MetaGrammar.load(TOKENS + """
   grammar {
@@ -213,26 +213,9 @@ var mg = MetaGrammar.load(TOKENS + """
 mg.parse("let x = 40 + 1 + 1");
 
 
-// ## Precedence of a production?
-// Inherits from the precedence of the rightmost terminal
-// that have a precedence (can be overridden by %prec)
-
-var mg = MetaGrammar.load(TOKENS + """
-  precedence {
-    left: '+'
-  }
-  grammar {
-      start : 'let' ID '=' expr
-      expr : expr '+' expr       %prec '+'
-      expr : NUMBER
-    }
-  """);
-mg.parse("let x = 40 + 1 + 1");
-
-
 // ## Multiplication of numbers
 
-mg = MetaGrammar.load(TOKENS + """
+var mg = MetaGrammar.load(TOKENS + """
   precedence {
     left: '+'
   }
@@ -249,7 +232,7 @@ mg.parse("let x = 40 + 1 * 2");
 // ## Fixing the conflict
 // We can say that '*' is more important than '+'
 
-mg = MetaGrammar.load(TOKENS + """
+var mg = MetaGrammar.load(TOKENS + """
   precedence {
     left: '+'    // lower priority
     left: '*'    // higher priority
@@ -269,7 +252,7 @@ mg.parse("let x = 40 + 1 * 2");
 
 // `verify()` build a LALR(1) automaton, less powerful than LazyLR, but more classical
 
-mg = MetaGrammar.load(TOKENS + """
+var mg = MetaGrammar.load(TOKENS + """
   precedence {
     //left: '+'
   }
@@ -284,7 +267,7 @@ mg.verify();
 // ## Grammar verification
 // `verify()` has also a less verbose version
 
-mg = MetaGrammar.load(TOKENS + """
+var mg = MetaGrammar.load(TOKENS + """
   precedence {
     left: '+'
     left: '*'
@@ -392,7 +375,7 @@ parser.parse(terminals, new ParserListener() {
 // ```
 
 
-// ## Evaluation of an expressions
+// ## Evaluation of expressions
 // A visitor can be built iteratively to propagate values along the tree
 
 // A method with the name of a terminal provides the terminal value
@@ -469,7 +452,7 @@ IO.println(mg.parse("let x = 40 + 2", visitor));
 // * Lexing is not fast (`java.util.regex` is slow).
 //   Maybe, use a faster regex engine (pluggable?)
 
-// * Feature Envy: lazier, support incremental parsing, have a generic parse tree,
+// * Feature Ideas: lazier, support incremental parsing, have a generic parse tree,
 //   IntelliJ/LSP plugin for the grammar, LALR runtime option, support non-assoc,
 //   coverage to use JaCoCo format
 
