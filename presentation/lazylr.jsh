@@ -111,7 +111,7 @@ mg.parse("if (if) if");
 // ## Why?
 // Generating a parser is a secondary goal!
 
-// Parsers of Java, Kotlin, Scala, C#, C++ (GCC/clang), Rust, Go are hand written (exceptions Python, Eclipse)
+// Parsers of Java, Kotlin, Scala, C#, C++ (GCC/clang), Rust, Go are hand written (exceptions Python, ECJ)
 
 // The code is usually faster and has better error recovery
 
@@ -245,7 +245,7 @@ mg.parse("let x = 40 + 1 * 2");
 var mg = MetaGrammar.load(TOKENS + """
   precedence {
     left: '+'
-    right: '*'
+    left: '*'
   }
   grammar {
       start : 'let' ID '=' expr
@@ -402,9 +402,11 @@ IO.println(mg.parse("let x = 36 + 2 * 3", visitor));
 
 // * Feature Ideas: lazier, support incremental parsing, have a generic parse tree,
 //   IntelliJ/LSP plugin for the grammar, LALR runtime option, support non-assoc,
-//   coverage to use JaCoCo format
+//   use JaCoCo format for coverage?
 
 // # 🦥 Lazy LR
+// Play with it!
+
 // [https://github.com/forax/lazylr](https://github.com/forax/lazylr)
 
 // - Lazy State Generation
