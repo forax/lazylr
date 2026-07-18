@@ -19,16 +19,6 @@ import com.github.forax.lazylr.*;
 
 
 // ## Defining a Grammar
-// A grammar is defined in the 'grammar' section
-
-var mg = MetaGrammar.load("""
-  grammar {
-  }
-  """);
-IO.println(mg);
-
-
-// ## Our first Grammar
 // Let's try to recognize the JavaScript variable assignment
 
 var mg = MetaGrammar.load("""
@@ -84,7 +74,7 @@ mg.parse("let hello = 42");
 
 
 // ## Context sensitive lexing
-// Solve keyword vs identifier, only tokens that are valid are activated
+// To solve keyword vs identifier, only tokens that are valid are activated
 
 var mg = MetaGrammar.load("""
   tokens {
@@ -254,11 +244,13 @@ mg.parse("let x = 40 + 1 * 2");
 
 var mg = MetaGrammar.load(TOKENS + """
   precedence {
-    //left: '+'
+    left: '+'
+    right: '*'
   }
   grammar {
       start : 'let' ID '=' expr
       expr : expr '+' expr
+      expr : expr '*' expr
       expr : NUMBER
     }
   """);
@@ -344,7 +336,7 @@ parser.parse(terminals, new ParserListener() {
 // ## Evaluation of an expression
 // A visitor can be built iteratively to propagate values along the tree
 
-// Methods with the name of a terminal provides the terminal value
+// Methods with the name of a terminal are called when shifting to provide a value
 
 // Methods annotated by `@ProductionName` are called when reducing
 
@@ -352,25 +344,12 @@ var visitor = new Visitor<Integer>() {
   public int NUMBER(Terminal t) { return Integer.parseInt(t.value()); }
   @ProductionName("start : let ID = expr")
   public int start(int param0) {
-    IO.println("start " + param0);
     return param0;
   }
 };
-mg.parse("let x = 42", visitor);
+IO.println(mg.parse("let x = 42", visitor));
 
 // Here, 'let', ID and '=' have no value
-
-
-// ## parse() returns a result
-
-var visitor = new Visitor<Integer>() {
-  public int NUMBER(Terminal terminal) { return Integer.parseInt(terminal.value()); }
-  @ProductionName("start : let ID = expr")
-  public int start(int value) {
-    return value;
-  }
-};
-IO.println(mg.parse("let x = 42", visitor));
 
 
 // ## With the addition
@@ -395,6 +374,7 @@ IO.println(mg.parse("let x = 40 + 2", visitor));
 sealed interface Expr {
   record Value(int value) implements Expr {}
   record Add(Expr left, Expr right) implements Expr {}
+  record Mul(Expr left, Expr right) implements Expr {}
 }
 
 var visitor = new Visitor<Expr>() {
@@ -405,8 +385,10 @@ var visitor = new Visitor<Expr>() {
   public Expr expr(int value) { return new Expr.Value(value); }
   @ProductionName("expr : expr + expr")
   public Expr add(Expr left, Expr right) { return new Expr.Add(left, right); }
+  @ProductionName("expr : expr * expr")
+  public Expr method(Expr left, Expr right) { return new Expr.Mul(left, right); }
 };
-IO.println(mg.parse("let x = 40 + 2", visitor));
+IO.println(mg.parse("let x = 36 + 2 * 3", visitor));
 
 
 // # Future?
