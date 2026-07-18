@@ -93,11 +93,11 @@ mg.parse("if (if) if");
 // # What is 🦥 Lazy LR?
 // ` `
 
-// **Does not** generate parsers from a grammar (unlike Bison, ANTLR, etc)
+// - **Does not** generate parsers from a grammar (unlike Bison, ANTLR, etc)
 
-// Instantiates LR(1) parsers that **lazily** evaluate an input using a grammar
+// - Instantiates LR(1) parsers that **lazily** evaluate an input using a grammar
 
-// Enabling a **fast feedback loop**
+// - Enables a **fast feedback loop**
 
 
 // # Guiding principles of Lazy LR
