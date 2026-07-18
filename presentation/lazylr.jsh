@@ -264,23 +264,6 @@ var mg = MetaGrammar.load(TOKENS + """
   """);
 mg.verify();
 
-// ## Grammar verification
-// `verify()` has also a less verbose version
-
-var mg = MetaGrammar.load(TOKENS + """
-  precedence {
-    left: '+'
-    left: '*'
-  }
-  grammar {
-      start : 'let' ID '=' expr
-      expr : expr '+' expr
-      expr : expr '*' expr
-      expr : NUMBER
-    }
-  """);
-mg.verify(IO::println);
-
 
 // # How LazyLR works?
 // The implementation is split into two parts:
@@ -321,16 +304,6 @@ parser.parse(terminals, new ParserListener() {
 
 
 // ## Events can be seen as a virtual tree
-
-var terminals = Lexer.createLexer(mg.tokens()).tokenize("let x = 40 + 2");
-var parser = Parser.createParser(mg.grammar(), mg.precedenceMap());
-parser.parse(terminals, new ParserListener() {
-  public void onShift(Terminal terminal) { IO.println("shift " + terminal); }
-  public void onReduce(Production production) { IO.println("  reduce " + production); }
-});
-
-
-// ## The virtual tree?
 // The events are the leafs and nodes of a tree from bottom to top
 
 // ```
@@ -378,9 +351,9 @@ parser.parse(terminals, new ParserListener() {
 // ## Evaluation of expressions
 // A visitor can be built iteratively to propagate values along the tree
 
-// A method with the name of a terminal provides the terminal value
+// Methods with the name of a terminal provides the terminal value
 
-// `@ProductionName` is used to specify the name of the production,
+// Methods annotated by `@ProductionName` are called when reducing
 
 var visitor = new Visitor<Integer>() {
   public int NUMBER(Terminal t) { return Integer.parseInt(t.value()); }
