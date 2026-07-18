@@ -14,7 +14,7 @@
 // Let's use the library LazyLR
 /env --class-path ../target/lazylr-13.0.1.jar
 
-// Then imports the classes
+// Import the classes
 import com.github.forax.lazylr.*;
 
 
@@ -158,7 +158,7 @@ var mg = MetaGrammar.load(TOKENS + """
   """);
 mg.parse("let x = 40 + 2");
 
-// Problem: can only adds two numbers!
+// Problem: can only parses two numbers!
 
 
 // ## With a left-recursive grammar
@@ -173,7 +173,7 @@ var mg = MetaGrammar.load(TOKENS + """
 mg.parse("let x = 40 + 1 + 1");
 
 
-// ## Using two recursions?
+// ## Using both left and right recursion?
 
 var mg = MetaGrammar.load(TOKENS + """
   grammar {
@@ -265,7 +265,7 @@ var mg = MetaGrammar.load(TOKENS + """
 mg.verify();
 
 
-// # How LazyLR works?
+// # How does LazyLR work?
 // The implementation is split into two parts:
 
 // * a `Lexer` that transform the input into an iterator of terminals using the regexes
@@ -413,7 +413,7 @@ IO.println(mg.parse("let x = 40 + 2", visitor));
 // ` `
 
 // * The project is new and not yet mature.
-//   I need feedbacks to improve it
+//   I need feedback to improve it
 
 // * Lexing is not fast (`java.util.regex` is slow).
 //   Maybe, use a faster regex engine (pluggable?)
