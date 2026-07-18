@@ -240,7 +240,7 @@ mg.parse("let x = 40 + 1 * 2");
 // ## Offline Grammar verification
 // The full grammar can be verified 'offline' (slow!) using the `verify()` method
 
-// `verify()` build a LALR(1) automaton, less powerful than LazyLR, but more classical
+// `verify()` builds a LALR(1) automaton, less powerful than LazyLR, but more classical
 
 var mg = MetaGrammar.load(TOKENS + """
   precedence {
