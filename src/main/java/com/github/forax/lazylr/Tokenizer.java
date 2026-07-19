@@ -126,11 +126,11 @@ final class Tokenizer implements Iterator<Terminal> {
       terminal = nextTerminal(matchIndex, null);
       computed = true;
     }
+    terminalIndex = matchIndex;  // for error message
     var terminal = this.terminal;
     if (terminal == null) {
       throw new NoSuchElementException();
     }
-    terminalIndex = matchIndex;  // for error message
     if (terminal == Terminal.ERROR) {
       this.terminal = null;
       var errorMessage = ErrorHandler.lexingErrorMessage(terminalIndex, input);
@@ -171,11 +171,11 @@ final class Tokenizer implements Iterator<Terminal> {
       terminal = nextTerminal(matchIndex, activated);
       computed = true;
     }
+    terminalIndex = matchIndex;  // for error message
     var terminal = this.terminal;
     if (terminal == null) {
       return null;
     }
-    terminalIndex = matchIndex;  // for error message
     if (terminal == Terminal.ERROR) {
       this.terminal = null;
       // Design note: unlike next(), we return the bare ERROR sentinel here,
@@ -273,6 +273,13 @@ final class Tokenizer implements Iterator<Terminal> {
           .collect(Collectors.joining(", "));
     }
 
+    /// Formats the unexpected terminal for display in error messages.
+    private static String unexpectedTerminal(Terminal terminal) {
+      return terminal == Terminal.EOF ?
+          "<end of file>" :
+          "terminal '" + terminal.name() + "'" + (terminal.hasValue() ? "(" + terminal.value() + ")": "");
+    }
+
     /// Generates a detailed lexing error message with position information.
     ///
     /// @param index    The character index where the error occurred.
@@ -311,7 +318,7 @@ final class Tokenizer implements Iterator<Terminal> {
       errorMessage
           .append("Parsing error at line ").append(line)
           .append(", column ").append(column)
-          .append(": unexpected terminal '").append(terminal.name()).append("'")
+          .append(": unexpected ").append(unexpectedTerminal(terminal))
           .append(", expected ").append(expectedTerminals(expected))
           .append('\n');
       appendLineContentAndCaret(errorMessage, index, input);

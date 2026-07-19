@@ -792,7 +792,6 @@ public final class ParserTest {
     var precedence = Map.of(
         plus, new Precedence(10, Precedence.Associativity.LEFT)
     );
-
     var parser = Parser.createParser(grammar, precedence);
 
     // Try to parse invalid input: "id id"
@@ -824,7 +823,6 @@ public final class ParserTest {
     var precedence = Map.of(
         plus, new Precedence(10, Precedence.Associativity.LEFT)
     );
-
     var parser = Parser.createParser(grammar, precedence);
 
     var tokens = List.of(
@@ -855,6 +853,42 @@ public final class ParserTest {
   }
 
   @Test
+  public void parsingErrorEndOfFileWithPosition() {
+    var E    = new NonTerminal("E");
+    var id   = new Terminal("id");
+
+    var grammar = new Grammar(E, List.of(
+        new Production(E, List.of(id, id))
+    ));
+    var parser = Parser.createParser(grammar, Map.of());
+
+    var tokens = List.of(
+        new Token("id", "[a-z]+"),
+        new Token("\\s+")
+    );
+    var lexer = Lexer.createLexer(tokens);
+
+    // Try to parse invalid input: "id"
+    var input = "id";
+    var terminals = lexer.tokenize(input);
+
+    var exception = assertThrows(ParsingException.class, () ->
+        parser.parse(terminals, new ParserListener() {
+          @Override public void onShift(Terminal token) {}
+          @Override public void onReduce(Production production) {}
+        })
+    );
+
+    var message = exception.getMessage();
+    assertTrue(message.contains("Parsing error"));
+    assertTrue(message.contains("unexpected <end of file>"));
+    assertTrue(message.contains("expected id"));
+    assertTrue(message.contains("line 1"));
+    assertTrue(message.contains("column 3"));
+    assertTrue(message.contains("^"));
+  }
+
+  @Test
   public void parsingErrorNotAllowedByTheGrammarWithPosition() {
     var E    = new NonTerminal("E");
     var plus = new Terminal("+");
@@ -867,7 +901,6 @@ public final class ParserTest {
     var precedence = Map.of(
         plus, new Precedence(10, Precedence.Associativity.LEFT)
     );
-
     var parser = Parser.createParser(grammar, precedence);
 
     var tokens = List.of(
@@ -911,7 +944,6 @@ public final class ParserTest {
     var precedence = Map.of(
         plus, new Precedence(10, Precedence.Associativity.LEFT)
     );
-
     var parser = Parser.createParser(grammar, precedence);
 
     var tokens = List.of(
