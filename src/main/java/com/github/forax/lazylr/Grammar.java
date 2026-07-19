@@ -1,5 +1,6 @@
 package com.github.forax.lazylr;
 
+import java.util.Collections;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
@@ -46,7 +47,7 @@ public final class Grammar {
       throw new IllegalArgumentException("start symbol has no production");
     }
     checkOrphanNonTerminals(productionMap);
-    this(startSymbol, productions, productionMap);
+    this(startSymbol, productions, Collections.unmodifiableMap(productionMap));
   }
 
   /// Checks for non-terminals with no production.
