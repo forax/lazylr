@@ -86,10 +86,11 @@ public final class Lexer {
   }
 
   /// Returns the start position of the last terminal returned by [Iterator#next()]
-  /// in the input or -1 if unknown.
+  /// in the input, 0 if no terminal has yet been seen or -1 if the position
+  /// is not tracked.
   ///
   /// @param iterator An iterator produced by [Lexer#tokenize(CharSequence)].
-  /// @return The position of the iterator in the input or -1 if unknown.
+  /// @return The position of the iterator in the input or -1 if not tracked.
   public static int position(Iterator<Terminal> iterator) {
     Objects.requireNonNull(iterator);
     if (iterator instanceof Tokenizer tokenizer) {
