@@ -120,7 +120,7 @@ mg.parse("if (if) if");
 // * Iterate fast when developing the grammar
 // * Develop unit tests to check if the 'recursive descent' parser is aligned with the grammar
 
-// ## Just for the demo
+// ## Reusable tokens definition
 // Let's separate the tokens and the grammar using two strings
 var TOKENS = """
   tokens {
@@ -240,7 +240,8 @@ mg.parse("let x = 40 + 1 * 2");
 // ## Offline Grammar verification
 // The full grammar can be verified 'offline' (slow!) using the `verify()` method
 
-// `verify()` builds a LALR(1) automaton, less powerful than LazyLR, but more classical
+// `verify()` builds a LALR(1) automaton upfront, merging states can introduce
+// artificial conflicts, but it's the classical algorithm (YACC/bison)
 
 var mg = MetaGrammar.load(TOKENS + """
   precedence {
@@ -258,7 +259,7 @@ mg.verify();
 
 
 // # How does LazyLR work?
-// The implementation is split into two parts:
+// Under the hood, the implementation is split into two parts:
 
 // * a `Lexer` that transform the input into an iterator of terminals using the regexes
 
@@ -289,7 +290,7 @@ parser.parse(terminals, new ParserListener() {
 
 
 // ## Events can be seen as a virtual tree
-// The events are the leafs and nodes of a tree from bottom to top
+// The events are the leaves and nodes of a tree from bottom to top
 
 // ```
 // Input:  "let x = 40 + 2"
@@ -340,7 +341,7 @@ parser.parse(terminals, new ParserListener() {
 
 // Methods annotated by `@ProductionName` are called when reducing
 
-var visitor = new Visitor<Integer>() {
+var visitor = new Visitor<Integer>() {  // type of the result = Integer
   public int NUMBER(Terminal t) { return Integer.parseInt(t.value()); }
   @ProductionName("start : let ID = expr")
   public int start(int param0) {
@@ -352,8 +353,8 @@ IO.println(mg.parse("let x = 42", visitor));
 // Here, 'let', ID and '=' have no value
 
 
-// ## With the addition
-// This fails because no visitor method handles `expr : expr + expr`
+// ## Adding the addition
+// No visitor method handles `expr : expr + expr`, uncomment the code below
 
 var visitor = new Visitor<Integer>() {
   public int NUMBER(Terminal terminal) { return Integer.parseInt(terminal.value()); }
@@ -378,6 +379,7 @@ sealed interface Expr {
 }
 
 var visitor = new Visitor<Expr>() {
+  // terminal method still returns the raw value
   public int NUMBER(Terminal terminal) { return Integer.parseInt(terminal.value()); }
   @ProductionName("start : let ID = expr")
   public Expr start(Expr expr) { return expr; }
