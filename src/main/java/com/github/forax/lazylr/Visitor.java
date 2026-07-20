@@ -318,6 +318,7 @@ public interface Visitor<V extends @Nullable Object> {
           var argument = parameterizedType.getActualTypeArguments()[0];
           if (argument instanceof Class<?> clazz) {
             return switch (clazz.getName()) {
+              case "java.lang.Boolean" -> boolean.class;
               case "java.lang.Byte" -> byte.class;
               case "java.lang.Short" -> short.class;
               case "java.lang.Character" -> char.class;
