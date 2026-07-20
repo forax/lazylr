@@ -142,7 +142,12 @@ final class LRTransitionEngine {
       }
     }
     /// Report an error
-    record Error(ErrorKind kind, String message) implements Action {}
+    record Error(ErrorKind kind, String message) implements Action {
+      public Error {
+        Objects.requireNonNull(kind);
+        Objects.requireNonNull(message);
+      }
+    }
     enum ErrorKind { CONFLICT, PARSE }
   }
 
@@ -254,8 +259,8 @@ final class LRTransitionEngine {
 
   /// Implements the GOTO function of LR parsing.
   ///
-  /// This method calculates the next state when transitioning from [currentState]
-  /// via [symbol]. It computes the kernel, expands it via [LRAlgorithm#computeClosure],
+  /// This method calculates the next state when transitioning from `currentState``
+  /// via `symbol`. It computes the kernel, expands it via [LRAlgorithm#computeClosure],
   /// and retrieves the canonical [State] from the cache.
   public @Nullable State move(State currentState, Symbol symbol) {
     // 1. Check if the transition is already cached
