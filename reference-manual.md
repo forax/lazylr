@@ -1842,7 +1842,7 @@ public final class CoverageTest {
 ### Reduce/reduce conflicts ("My grammar is on 🔥")
 
 - The preferred fix is to **rewrite the grammar** to remove the ambiguity.
-- If rewriting the grammar makes it unecesssary complex, you can assign
+- If rewriting the grammar makes it unnecessary complex, you can assign
   different precedence levels to the conflicting productions using `%prec`
   in the `grammar` section and a virtual token in the `precedence` section.
   The production with the higher level wins:
