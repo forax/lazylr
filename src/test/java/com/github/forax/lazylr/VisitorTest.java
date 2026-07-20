@@ -8,7 +8,11 @@ import java.lang.reflect.UndeclaredThrowableException;
 import java.util.List;
 import java.util.Map;
 
-import static org.junit.jupiter.api.Assertions.*;
+import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertInstanceOf;
+import static org.junit.jupiter.api.Assertions.assertNull;
+import static org.junit.jupiter.api.Assertions.assertThrows;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 @SuppressWarnings("unused")
 public final class VisitorTest {
@@ -286,6 +290,22 @@ public final class VisitorTest {
   public void reflectObjectNullThrows() {
     assertThrows(NullPointerException.class,
         () -> Visitor.reflect(MethodHandles.lookup(), (Visitor<?>) null));
+  }
+
+  @Test
+  public void reflectObjectMethodWithInheritance() {
+    class BaseVisitor implements Visitor<Integer> {}
+    class Bad extends BaseVisitor {}
+    assertThrows(IllegalStateException.class,
+        () -> Visitor.reflect(MethodHandles.lookup(), new Bad()));
+  }
+
+  @Test
+  public void reflectObjectMethodWithSeveralInterfaces() {
+    interface AnotherInterface {}
+    class Bad implements Visitor<Integer>, AnotherInterface {}
+    assertThrows(IllegalStateException.class,
+        () -> Visitor.reflect(MethodHandles.lookup(), new Bad()));
   }
 
   @Test

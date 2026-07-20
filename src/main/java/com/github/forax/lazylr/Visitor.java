@@ -78,13 +78,14 @@ import java.util.stream.IntStream;
 /// Methods must not return `void`.
 ///
 /// ### Validation
-/// [#reflect(MethodHandles.Lookup, Visitor)] validates all public methods declared
-/// on the visitor's class (excluding those inherited from [Object]) at the time
-/// it is called.
-/// A public method is rejected immediately with [IllegalStateException] if:
-/// - its return type is `void`,
-/// - it has a single parameter that is not [Terminal] and carries no
-///   [ProductionName] annotation.
+/// [#reflect(MethodHandles.Lookup, Visitor)] validates that:
+/// - the visitor class only inherits from `java.lang.Object`.
+/// - the visitor class only implements the interface `Visitor'.
+/// - all public methods declared are rejected immediately with  if:
+///   - its return type is `void`,
+///   - it has a single parameter that is not [Terminal] and carries no [ProductionName] annotation.
+///
+/// Otherwise, an exception [IllegalStateException] is thrown.
 ///
 /// ### Usage
 /// The simple way to use a `Visitor` is through [MetaGrammar#parse(CharSequence, Visitor)],
@@ -142,6 +143,8 @@ public interface Visitor<V extends @Nullable Object> {
       private static final ClassValue<VisitorCache> CACHE = new ClassValue<>() {
         @Override
         protected VisitorCache computeValue(Class<?> type) {
+          checkVisitorClass(type);
+
           var lookup = SCOPED_LOOKUP.get();
 
           var methods = type.getMethods();
@@ -241,6 +244,17 @@ public interface Visitor<V extends @Nullable Object> {
         }
       }
     };
+  }
+
+  /// Ensure that no bridge methods can appear
+  private static void checkVisitorClass(Class<?> type) {
+    if (type.getSuperclass() != Object.class) {
+      throw new IllegalStateException("visitor class " + type.getSuperclass() + " is not an Object");
+    }
+    Class<?>[] interfaces = type.getInterfaces();
+    if (interfaces.length != 1 || interfaces[0] != Visitor.class) {
+      throw new IllegalStateException("visitor class can only implement the interface Visitor");
+    }
   }
 
   private static List<ProductionName> productionNames(Method method) {
