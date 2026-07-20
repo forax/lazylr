@@ -2,7 +2,8 @@ package com.github.forax.lazylr;
 
 import org.jspecify.annotations.Nullable;
 
-import java.util.HashMap;
+import java.util.Collections;
+import java.util.LinkedHashMap;
 import java.util.Map;
 import java.util.Objects;
 
@@ -65,14 +66,14 @@ public record Precedence(int level, Associativity associativity) {
     Objects.requireNonNull(associativity);
   }
 
-  /// Returns a copy of [precedenceMap] extended with an inferred [Precedence]
+  /// Returns an immutable copy of the `precedenceMap` extended with an inferred [Precedence]
   /// for each [Production] not already present, derived from its rightmost terminal.
   static Map<PrecedenceEntity, Precedence> complete(Grammar grammar, Map<? extends PrecedenceEntity, ? extends Precedence> precedenceMap) {
-    var newPrecedenceMap = new HashMap<PrecedenceEntity, Precedence>(precedenceMap);
+    var newPrecedenceMap = new LinkedHashMap<PrecedenceEntity, Precedence>(precedenceMap);
     for (var production : grammar.productions()) {
       newPrecedenceMap.computeIfAbsent(production, _ -> computePrecedence(production, newPrecedenceMap));
     }
-    return newPrecedenceMap;
+    return Collections.unmodifiableMap(newPrecedenceMap);
   }
 
   private static @Nullable Precedence computePrecedence(Production production, Map<PrecedenceEntity, Precedence> precedenceMap) {
