@@ -479,7 +479,7 @@ public final class MetaGrammar {
       new Token("grammar",    "grammar"),
       new Token("left",       "left"),
       new Token("right",      "right"),
-      new Token("prec",       "\\%prec"),
+      new Token("prec",       "%prec"),
       new Token("{",          "\\{"),
       new Token("}",          "\\}"),
       new Token(":",          ":"),
