@@ -12,7 +12,7 @@
 // ## Setup
 
 // Let's use the library LazyLR
-/env --class-path ../target/lazylr-13.0.1.jar
+/env --class-path ../target/lazylr-13.0.2.jar
 
 // Import the classes
 import com.github.forax.lazylr.*;
