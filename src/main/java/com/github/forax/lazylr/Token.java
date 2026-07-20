@@ -124,6 +124,8 @@ public final class Token {
   /// @return A hash code derived from the rule's name and the rule's regex.
   @Override
   public int hashCode() {
+    // Design Note: String.hashCode() already cache the hashCode, so
+    // there is no need to cache the result of hashCode here.
     return 31 * (31 + (name == null ? 0 : name.hashCode())) + pattern.pattern().hashCode();
   }
 
