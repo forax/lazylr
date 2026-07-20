@@ -160,8 +160,9 @@ public final class MetaGrammar {
 
   /// The operator precedence table derived from the `precedence` section.
   ///
-  /// Keys are [PrecedenceEntity] instances (terminals) and values carry the precedence
-  /// level (lower index = lower precedence) and associativity direction.
+  /// Keys may be terminals or productions ([PrecedenceEntity]) and
+  /// values carry the precedence level (lower index = lower precedence) and
+  /// associativity direction.
   ///
   /// @return the precedence map, in declaration order.
   public Map<PrecedenceEntity, Precedence> precedenceMap() {
