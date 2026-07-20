@@ -500,11 +500,7 @@ public final class MetaGrammar {
 
   /// Parses a grammar specification.
   ///
-  /// All the `grammar`, `tokens` and `precedence` sections are optional.
-  /// The `tokens` and `precedence` sections can be empty, the `grammar`
-  /// section, if present, must contain at least one production rule.
-  /// Quoted literals in production rules are automatically promoted to terminals
-  /// without requiring an explicit entry in the `tokens` section.
+  /// All the `tokens`, `precedence` and `grammar` sections are optional and can be empty.
   ///
   /// @param input the full text of the grammar specification; must not be `null`
   /// @return a new `MetaGrammar` reflecting the tokens, precedence rules, and productions
