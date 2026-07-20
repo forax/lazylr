@@ -487,7 +487,7 @@ public final class MetaGrammar {
       new Token("[ \\t]+")         // whitespace ignored
   );
 
-  private static final Grammar GRAMMAR = createGrammar();
+  private static final ParserFactory PARSER_FACTORY = ParserFactory.createFactory(createGrammar(), Map.of());
 
   private record RawToken(@Nullable String name, String regex) {}
   private record RawSymbol(String name, boolean quoted) {}
@@ -515,7 +515,7 @@ public final class MetaGrammar {
     var rawProductions = new ArrayList<RawProduction>();
 
     var lexer = Lexer.createLexer(TOKENS);
-    var parser = Parser.createParser(GRAMMAR, Map.of());
+    var parser = PARSER_FACTORY.createParser();
     parser.parse(lexer.tokenize(input), new Evaluator<@Nullable Object>() {
 
       @Override
