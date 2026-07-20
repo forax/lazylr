@@ -267,7 +267,7 @@ final class Tokenizer implements Iterator<Terminal> {
               expected.stream()
                   .filter(Predicate.not(Terminal.EOF.name()::equals))
                   .map(name ->
-                      Character.isJavaIdentifierPart(name.charAt(0)) ? name : "'" + name + "'")
+                      Character.isJavaIdentifierStart(name.charAt(0)) ? name : "'" + name + "'")
                   .sorted(),
               expected.contains(Terminal.EOF.name()) ? Stream.of("<end of file>") : Stream.empty())
           .collect(Collectors.joining(", "));
