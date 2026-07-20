@@ -15,7 +15,6 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Objects;
-import java.util.stream.IntStream;
 
 /// A typed, reflection-based alternative to [com.github.forax.lazylr.Evaluator]
 /// for visiting a parse into a result of type `V`.
@@ -216,6 +215,19 @@ public interface Visitor<V extends @Nullable Object> {
         }
       }
 
+      private Object[] extractArguments(Production production, List<V> arguments) {
+        var size = production.body().size();
+        var array = new Object[size];
+        var index = 0;
+        for (var i = 0; i < size; i++) {
+          if (!(production.body().get(i) instanceof Terminal terminal) || terminalMap.containsKey(terminal.name())) {
+            var value = arguments.get(i);
+            array[index++] = value;
+          }
+        }
+        return index == size ? array : Arrays.copyOf(array, index);
+      }
+
       @Override
       @SuppressWarnings("unchecked")
       public V evaluate(Production production, List<V> arguments) {
@@ -227,11 +239,7 @@ public interface Visitor<V extends @Nullable Object> {
           }
           throw new IllegalStateException(missingProductionEvaluator(production, visitor));
         }
-        var values = IntStream.range(0, production.body().size())
-            .filter(i ->
-                !(production.body().get(i) instanceof Terminal terminal) || terminalMap.containsKey(terminal.name()))
-            .mapToObj(arguments::get)
-            .toArray();
+        var values = extractArguments(production, arguments);
         try {
           return (V) mh.invokeExact((Object) visitor, values);
         } catch(WrongMethodTypeException | ClassCastException e) {
