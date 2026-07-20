@@ -140,7 +140,9 @@ public final class Parser {
       @Override
       public Terminal pollTerminal(State unused) {
         if (iterator.hasNext()) {
-          return iterator.next();
+          var terminal = iterator.next();
+          Objects.requireNonNull(terminal, "terminal iterator returned null");
+          return terminal;
         }
         return Terminal.EOF;
       }
