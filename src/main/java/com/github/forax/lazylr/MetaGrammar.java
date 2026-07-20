@@ -43,7 +43,6 @@ import java.util.stream.Stream;
 /// ```
 ///
 /// - **tokens** — defines named and unnamed terminal symbols as Java regular expressions.
-///   The declaration order controls lexer token priority.
 ///   Named terminals (e.g. `ident: /[a-z]+/`) become lexer tokens; unnamed ones
 ///   (e.g. `/[ \t]+/`) are matched and silently discarded.
 ///
@@ -58,6 +57,11 @@ import java.util.stream.Stream;
 ///   Any symbol written in single quotes (e.g. `'+'`) is automatically extracted
 ///   from the productions, converted to an escaped regex, and registered as a terminal.
 ///   No explicit declaration in the `tokens` section is required.
+///
+/// The token priority order (from high priority to low) is the following:
+/// - the quoted token, in the order of the grammar section.
+/// - the named token, in the order of the tokens section.
+/// - the unnamed token, in the order of the tokens section.
 ///
 /// ## End-to-end Example
 ///
