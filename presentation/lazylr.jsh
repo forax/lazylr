@@ -354,7 +354,8 @@ IO.println(mg.parse("let x = 42", visitor));
 
 
 // ## Adding the addition
-// No visitor method handles `expr : expr + expr`, uncomment the code below
+// This fails, no visitor method handles `expr : expr + expr`,
+// uncomment the code below
 
 var visitor = new Visitor<Integer>() {
   public int NUMBER(Terminal terminal) { return Integer.parseInt(terminal.value()); }
