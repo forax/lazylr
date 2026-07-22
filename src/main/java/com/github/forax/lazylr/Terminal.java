@@ -63,7 +63,7 @@ public final class Terminal implements Symbol, PrecedenceEntity {
   ///
   /// @param name The unique identifier for the terminal.
   /// @param value The actual text fragment matched in the source.
-  /// @throws NullPointerException if `name` is null or `value` is null.
+  /// @throws NullPointerException if `name` is `null` or `value` is `null`.
   /// @throws IllegalArgumentException if the name is empty.
   public Terminal(String name, String value) {
     Objects.requireNonNull(name);
@@ -82,7 +82,7 @@ public final class Terminal implements Symbol, PrecedenceEntity {
   /// ```
   ///
   /// @param name The unique identifier for the terminal.
-  /// @throws NullPointerException if the name is ``null`.
+  /// @throws NullPointerException if the name is `null`.
   /// @throws IllegalArgumentException if the name is empty.
   public Terminal(String name) {
     Objects.requireNonNull(name);
