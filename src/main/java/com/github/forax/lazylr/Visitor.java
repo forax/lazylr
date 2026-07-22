@@ -86,6 +86,8 @@ import java.util.Objects;
 ///
 /// Otherwise, an exception [IllegalStateException] is thrown.
 ///
+/// If you want to share code between different visitors, use delegation, not inheritance.
+///
 /// ### Usage
 /// The simple way to use a `Visitor` is through [MetaGrammar#parse(CharSequence, Visitor)],
 /// which handles the reflection call internally:
