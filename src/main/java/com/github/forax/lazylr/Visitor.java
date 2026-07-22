@@ -209,7 +209,7 @@ public interface Visitor<V extends @Nullable Object> {
         try {
           return (V) mh.invokeExact((Object) visitor, terminal);
         } catch(WrongMethodTypeException | ClassCastException e) {
-          throw new IllegalStateException("terminal method " + terminal.name() + " has wrong parameter type", e);
+          throw new IllegalStateException("terminal method " + terminal.name() + " has wrong parameters", e);
         } catch (RuntimeException | Error e) {
           throw e;
         } catch (Throwable e) {
@@ -246,7 +246,7 @@ public interface Visitor<V extends @Nullable Object> {
           return (V) mh.invokeExact((Object) visitor, values);
         } catch(WrongMethodTypeException | ClassCastException e) {
           throw new IllegalStateException("production method " + production.name() +
-              " has wrong parameter types, arguments " + Arrays.toString(values), e);
+              " has wrong parameters, arguments " + Arrays.toString(values), e);
         } catch (RuntimeException | Error e) {
           throw e;
         } catch (Throwable e) {
