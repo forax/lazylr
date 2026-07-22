@@ -89,7 +89,7 @@ import java.util.Objects;
 /// If you want to share code between different visitors, use delegation, not inheritance.
 ///
 /// ### Usage
-/// The simple way to use a `Visitor` is through [MetaGrammar#parse(CharSequence, Visitor)],
+/// The simplest way to use a `Visitor` is through [MetaGrammar#parse(CharSequence, Visitor)],
 /// which handles the reflection call internally:
 ///
 /// ```java
