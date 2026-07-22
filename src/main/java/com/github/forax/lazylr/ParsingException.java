@@ -2,6 +2,8 @@ package com.github.forax.lazylr;
 
 import org.jspecify.annotations.Nullable;
 
+import java.io.Serial;
+
 /// Exception thrown by the [Parser] during parsing.
 ///
 /// All runtime parse failures surface as this exception type:
@@ -34,6 +36,9 @@ import org.jspecify.annotations.Nullable;
 ///
 /// @see Parser#parse(java.util.Iterator, Evaluator)
 public final class ParsingException extends RuntimeException {
+  @Serial
+  private static final long serialVersionUID = -7572674787733662298L;
+
   /// Creates a new ParsingException with a message.
   /// @param message The error message.
   public ParsingException(@Nullable String message) {
