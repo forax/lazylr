@@ -34,7 +34,7 @@ import java.util.stream.Stream;
 ///   right: '%'                              // level 2
 /// }
 /// grammar {
-///   StartRule : StartRule '->' Item         // StartRole is the start symbol
+///   StartRule : StartRule '->' Item         // StartRule is the start symbol
 ///   StartRule : StartRule tokenName Item
 ///   StartRule : Item '%' Item
 ///   Item : tokenName
