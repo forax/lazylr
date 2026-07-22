@@ -1040,6 +1040,17 @@ public final class MetaGrammarTest {
   }
 
   @Test
+  public void parseVoidNoGrammarThrowsIllegalStateException() {
+    var mg = MetaGrammar.load("""
+      tokens {
+        num: /[0-9]+/
+      }
+      """);
+
+    assertThrows(IllegalStateException.class, () -> mg.parse(""));
+  }
+
+  @Test
   public void parseWithEvaluatorReturnsExpectedValue() {
     var mg = MetaGrammar.load("""
         tokens {
