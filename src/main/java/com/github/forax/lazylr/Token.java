@@ -36,6 +36,19 @@ import java.util.regex.PatternSyntaxException;
 ///
 /// This class is immutable and thread-safe.
 public final class Token {
+  // Design Note: this class is not a record because we do not want to publish
+  // the type of the field `pattern`, we may change the implementation and
+  // not use the Java builtin regex in the future.
+
+  private final @Nullable String name;
+  final Pattern pattern;
+
+  private Token(@Nullable String name, Pattern pattern) {
+    this.name = name;
+    this.pattern = pattern;
+    super();
+  }
+
   private static Pattern asPattern(String regex) {
     try {
       return Pattern.compile(regex);
@@ -50,15 +63,6 @@ public final class Token {
       throw new IllegalArgumentException("regex '" + pattern.pattern() + "' matches empty input");
     }
   }
-
-   private final @Nullable String name;
-   final Pattern pattern;
-
-   private Token(@Nullable String name, Pattern pattern) {
-     this.name = name;
-     this.pattern = pattern;
-     super();
-   }
 
   /// Creates a new Rule with a name.
   ///
