@@ -73,7 +73,7 @@ public record Precedence(int level, Associativity associativity) {
     for (var production : grammar.productions()) {
       newPrecedenceMap.computeIfAbsent(production, _ -> computePrecedence(production, newPrecedenceMap));
     }
-    return Collections.unmodifiableMap(newPrecedenceMap);
+    return Collections.unmodifiableSequencedMap(newPrecedenceMap);
   }
 
   private static @Nullable Precedence computePrecedence(Production production, Map<PrecedenceEntity, Precedence> precedenceMap) {

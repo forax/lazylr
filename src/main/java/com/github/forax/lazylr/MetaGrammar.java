@@ -746,11 +746,7 @@ public final class MetaGrammar {
       var startSymbol = nonTerminalMap.values().iterator().next();
       var productionMap = productions.stream()
           .collect(Collectors.groupingBy(Production::head, LinkedHashMap::new, Collectors.toUnmodifiableList()));
-      try {
-        grammar = new Grammar(startSymbol, List.copyOf(productions), productionMap);
-      } catch (IllegalArgumentException e) {
-        throw new ParsingException("Invalid grammar: " + e.getMessage(), e);
-      }
+      grammar = new Grammar(startSymbol, List.copyOf(productions), Collections.unmodifiableSequencedMap(productionMap));
     } else {
       grammar = null;
     }

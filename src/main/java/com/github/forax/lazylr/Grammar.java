@@ -47,7 +47,7 @@ public final class Grammar {
       throw new IllegalArgumentException("start symbol has no production");
     }
     checkOrphanNonTerminals(productionMap);
-    this(startSymbol, productions, Collections.unmodifiableMap(productionMap));
+    this(startSymbol, productions, Collections.unmodifiableSequencedMap(productionMap));
   }
 
   /// Checks for non-terminals with no production.
