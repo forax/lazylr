@@ -106,7 +106,6 @@ final class LRTransitionEngine {
     private final int hashCode;  // cached hashCode for perf reason
 
     State(Set<Item> items) {
-      items = Set.copyOf(items);
       this.items = items;
       this.hashCode = items.hashCode();
       super();

@@ -40,7 +40,7 @@ final class LRAlgorithm {
   /// might be encountered next.
   ///
   /// @param seedItems The kernel or initial items of a state.
-  /// @return A complete set of items representing a full LR(1) state.
+  /// @return An immutable set of items representing a full LR(1) state.
   public static Set<Item> computeClosure(Grammar grammar, Map<Symbol, Set<Terminal>> firstSets, Set<Item> seedItems) {
     var closure = new HashSet<>(seedItems);
     var workList = new ArrayList<>(seedItems);
@@ -68,7 +68,7 @@ final class LRAlgorithm {
         }
       }
     }
-    return closure;
+    return Set.copyOf(closure);
   }
 
   /// Calculates the FIRST(βa) lookahead set for a given item expansion.
